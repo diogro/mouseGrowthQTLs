@@ -22,5 +22,5 @@ mouse.gen = raw.mouse.gen[raw.mouse.gen$ID %in% mouse.phen$ID,]
 mouse.phen = mouse.phen[mouse.phen$ID %in% mouse.gen$ID,]
 mouse.data = cbind(arrange(mouse.phen, ID), arrange(mouse.gen, ID)[,-1])
 
-m.data = melt(mouse.phen, id.vars = names(mouse.phen)[1:27])
+m.data = melt(mouse.data, id.vars = names(mouse.data)[c(1:27, 41:133)])
 
