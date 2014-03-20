@@ -26,9 +26,9 @@ mouse.data = cbind(arrange(mouse.phen, ID), arrange(mouse.gen, ID)[,-1])
 m.data = melt(mouse.data, id.vars = names(mouse.data)[c(1:27, 35:127)])
 names(m.data) = gsub('variable', 'trait', names(m.data))
 
-ggplot(m.data, aes(trait, value, color =SEX)) + geom_boxplot()
+ggplot(m.data, aes(trait, value, color = SEX)) + geom_boxplot()
 
-null.formula = "value ~ 1 + trait * SEX + (1 + trait | FAMILY)"
+null.formula = "value ~ 1 + trait * SEX + (1|FAMILY) + (0 + trait | FAMILY)"
 mouse.model.no.gen = lmer(as.formula(null.formula), 
                           data = m.data, 
                           REML=FALSE)
