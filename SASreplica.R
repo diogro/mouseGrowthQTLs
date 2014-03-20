@@ -1,4 +1,5 @@
 library(gdata)
+library(plyr)
 library(dplyr)
 library(reshape2)
 library(lme4)
@@ -17,7 +18,6 @@ raw.mouse.phen = mutate(raw.mouse.phen,
                         grow78 = WEEK8 - WEEK7)
 
 mouse.phen = select(raw.mouse.phen, ID:LIVER, grow12:grow78)
-
 raw.mouse.gen = read.xls("./chrom1.xls")
 mouse.gen = raw.mouse.gen[raw.mouse.gen$ID %in% mouse.phen$ID,]
 mouse.phen = mouse.phen[mouse.phen$ID %in% mouse.gen$ID,]
@@ -32,16 +32,23 @@ null.formula = "value ~ 1 + trait * SEX + (1|FAMILY) + (0 + trait | FAMILY)"
 mouse.model.no.gen = lmer(as.formula(null.formula), 
                           data = m.data, 
                           REML=FALSE)
+G = VarCorr(mouse.model.no.gen)[[2]]
 
-locus = 1
-genotype.formula = paste(null.formula, 
-                         paste(paste('trait*', c('A', 'D', 'I'), 
-                                     locus, sep = ''), collapse = ' + '), 
-                         sep = ' + ')
-mouse.model = lmer(as.formula(genotype.formula), 
-                   data = m.data, 
-                   REML=FALSE)
-anova(mouse.model.no.gen, mouse.model)
+runSingleLocusModel <- function(locus, null.formula){
+  genotype.formula = paste(null.formula, 
+                           paste(paste('trait*', c('A', 'D', 'I'), 
+                                       locus, sep = ''), collapse = ' + '), 
+                           sep = ' + ')
+  mouse.model = lmer(as.formula(genotype.formula), 
+                     data = m.data, 
+                     REML=FALSE)
+  test = anova(mouse.model.no.gen, mouse.model)
+  print(test)
+  
+  return(list(model = mouse.model, anova = test, G = VarCorr(mouse.model.no.gen)[[2]], p.value = test$'Pr(>Chisq)'[2]))
+}
 
-
+all.loci = alply(1:31, 1, runSingleLocusModel, null.formula)
+#save(all.loci, file= 'mouse.cromossome1.Rdata')
+significant = laply(all.loci, function(x) x$p.value < 0.05/31)
 
