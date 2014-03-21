@@ -13,7 +13,7 @@ null.formula = "value ~ 1 + variable * SEX + (1|FAMILY) + (0 + variable | FAMILY
 mouse.model.no.gen = lmer(as.formula(null.formula), 
                           data = m.data, 
                           REML = FALSE)
-G = VarCorr(mouse.model.no.gen)[[2]]
+G.lme4 = VarCorr(mouse.model.no.gen)[[2]]
 
 runSingleLocusModel <- function(locus, null.formula){
   genotype.formula = paste(null.formula, 

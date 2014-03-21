@@ -27,6 +27,6 @@ mcmc.mouse.model = MCMCglmm( as.formula(null.formula),
                              prior = prior,
                              verbose = TRUE)
 
-Gmatrix = apply(array(mcmc.mouse.model$VCV, dim = c(1000, num.traits, num.traits)), 2:3, mean)
+G.mcmc = apply(array(mcmc.mouse.model$VCV, dim = c(1000, num.traits, num.traits)), 2:3, mean)
 
 pedigree = select(mouse.data, ID, Dam, Sire)
