@@ -25,10 +25,6 @@ mcmc.mouse.model = MCMCglmm( as.formula(null.formula),
                              rcov = ~us(trait):units,
                              family = rep("gaussian", 7),
                              prior = prior,
-                             nitt=10000,thin=10,burnin=9000,
                              verbose = TRUE)
 
-Ematrix = apply(array(mcmc.mouse.model$VCV, dim = c(100, num.traits, num.traits)), 2:3, mean)
-
-rcov=~us(trait:at(sex, "M")):units+us(trait:at(sex, "F")):units
-
+Gmatrix = apply(array(mcmc.mouse.model$VCV, dim = c(1000, num.traits, num.traits)), 2:3, mean)
