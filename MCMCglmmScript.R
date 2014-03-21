@@ -17,8 +17,8 @@ fixed.effects = "trait:SEX - 1"
 
 null.formula = paste(values, fixed.effects, sep = ' ~ ')
 
-prior = list(R = list(V = 100*diag(7), n = 8),
-             G = list(G1 = list(V = diag(7), n = 0.1)))
+prior = list(R = list(V = diag(7), n = 0.002),
+             G = list(G1 = list(V = diag(7) * 0.02, n = 8)))
 mcmc.mouse.model = MCMCglmm( as.formula(null.formula),
                              random = ~us(trait):FAMILY,
                              data = mouse.data,
