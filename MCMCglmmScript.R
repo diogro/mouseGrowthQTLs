@@ -17,16 +17,18 @@ fixed.effects = "trait:SEX - 1"
 
 null.formula = paste(values, fixed.effects, sep = ' ~ ')
 
-
-prior = list(R = list(V = diag(7), n = 20),
-             G = list(G1 = list(V = diag(7), n = 20)))
+prior = list(R = list(V = 100*diag(7), n = 8),
+             G = list(G1 = list(V = diag(7), n = 0.1)))
 mcmc.mouse.model = MCMCglmm( as.formula(null.formula),
-                             random = ~us(trait:FAMILY),
+                             random = ~us(trait):FAMILY,
                              data = mouse.data,
                              rcov = ~us(trait):units,
                              family = rep("gaussian", 7),
                              prior = prior,
+                             nitt=10000,thin=10,burnin=9000,
                              verbose = TRUE)
 
-Ematrix = apply(array(mcmc.mouse.model$VCV, dim = c(1000, num.traits, num.traits)), 2:3, mean)
+Ematrix = apply(array(mcmc.mouse.model$VCV, dim = c(100, num.traits, num.traits)), 2:3, mean)
+
+rcov=~us(trait:at(sex, "M")):units+us(trait:at(sex, "F")):units
 

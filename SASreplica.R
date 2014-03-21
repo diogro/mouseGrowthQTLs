@@ -6,11 +6,10 @@ library(ggplot2)
 source('read.mouse.data.R')
 
 m.data = melt(mouse.data, id.vars = names(mouse.data)[c(1:27, 35:127)])
-names(m.data) = gsub('variable', 'trait', names(m.data))
 
-ggplot(m.data, aes(trait, value, color = SEX)) + geom_boxplot()
+ggplot(m.data, aes(variable, value, color = SEX)) + geom_boxplot()
 
-null.formula = "value ~ 1 + trait * SEX + (1|FAMILY) + (0 + trait | FAMILY)"
+null.formula = "value ~ 1 + variable * SEX + (1|FAMILY) + (0 + variable | FAMILY)"
 mouse.model.no.gen = lmer(as.formula(null.formula), 
                           data = m.data, 
                           REML = FALSE)
@@ -18,7 +17,7 @@ G = VarCorr(mouse.model.no.gen)[[2]]
 
 runSingleLocusModel <- function(locus, null.formula){
   genotype.formula = paste(null.formula, 
-                           paste(paste('trait*', c('A', 'D', 'I'), 
+                           paste(paste('variable*', c('A', 'D', 'I'), 
                                        locus, sep = ''), collapse = ' + '), 
                            sep = ' + ')
   mouse.model = lmer(as.formula(genotype.formula), 
