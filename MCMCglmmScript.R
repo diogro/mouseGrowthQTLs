@@ -12,20 +12,24 @@ num.traits = 7
 
 values = paste("cbind(", 
                paste(paste("grow", 
-                           paste(1:7, 2:8, sep = ''), 
+                           paste(1:num.traits, 2:(num.traits+1), sep = ''), 
                            sep = ''), collapse = ', '),
                ")", sep = '')
 fixed.effects = "trait:SEX - 1"
 
 null.formula = paste(values, fixed.effects, sep = ' ~ ')
 
-prior = list(R = list(V = diag(7), n = 0.002),
-             G = list(G1 = list(V = diag(7) * 0.02, n = 8)))
+mouse.data$D1 = as.factor(mouse.data$D1)
+
+prior = list(R = list(V = diag(num.traits), n = 0.002),
+             G = list(G1 = list(V = diag(num.traits) * 0.02, n = num.traits+1),
+                      G2 = list(V = diag(num.traits) * 0.02, n = num.traits+1)))
 mcmc.mouse.model = MCMCglmm( as.formula(null.formula),
-                             random = ~us(trait):FAMILY,
+                             random = ~us(at.level(D1,"1"):trait):FAMILY+
+                                       us(at.level(D1,"0"):trait):FAMILY,
                              data = mouse.data,
                              rcov = ~us(trait):units,
-                             family = rep("gaussian", 7),
+                             family = rep("gaussian", num.traits),
                              prior = prior,
                              verbose = TRUE)
 
