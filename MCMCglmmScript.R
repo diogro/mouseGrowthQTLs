@@ -19,15 +19,20 @@ fixed.effects = "trait:SEX - 1"
 
 null.formula = paste(values, fixed.effects, sep = ' ~ ')
 
-prior = list(R = list(V = diag(num.traits), n = 0.002),
-             G = list(G1 = list(V = diag(num.traits) * 0.02, n = num.traits+1)))
-mcmc.mouse.model = MCMCglmm( as.formula(null.formula),
-                             random = ~us(trait):FAMILY,
-                             data = mouse.data,
-                             rcov = ~us(trait):units,
-                             family = rep("gaussian", num.traits),
-                             prior = prior,
-                             verbose = TRUE)
+runNullMCMCModel <- function(null.formula){
+  prior = list(R = list(V = diag(num.traits), n = 0.002),
+               G = list(G1 = list(V = diag(num.traits) * 0.02, n = num.traits+1)))
+  mcmc.mouse.model = MCMCglmm( as.formula(null.formula),
+                               random = ~us(trait):FAMILY,
+                               data = mouse.data,
+                               rcov = ~us(trait):units,
+                               family = rep("gaussian", num.traits),
+                               prior = prior,
+                               verbose = TRUE)
+  return(mcmc.mouse.model)
+}
+
+mcmc.mouse.model = runNullMCMCModel(null.formula)
 
 G.mcmc = apply(array(mcmc.mouse.model$VCV[,1:(num.traits*num.traits)], dim = c(1000, num.traits, num.traits)), 2:3, mean)
 R.mcmc = apply(array(mcmc.mouse.model$VCV[,-c(1:(num.traits*num.traits))], dim = c(1000, num.traits, num.traits)), 2:3, mean)
@@ -49,7 +54,7 @@ runSingleLocusMCMCModel <- function(locus, null.formula){
   return(mcmc.mouse.model)
 }
 
-singleLocusRandomModel = function(locus, type = D, null.formula){
+runSingleLocusRandomModel <- function(locus, type, null.formula){
   col = paste0(type, locus)
   mouse.data[[col]] = as.factor(mouse.data[[col]])
   levels = levels(mouse.data[[col]])
