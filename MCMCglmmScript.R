@@ -50,19 +50,26 @@ runSingleLocusMCMCModel <- function(locus, null.formula){
 }
 
 singleLocusRandomModel = function(locus, type = D, null.formula){
-  mouse.data[[paste0(type, locus)]] = as.factor(mouse.data[[paste0(type, locus)]])
+  col = paste0(type, locus)
+  mouse.data[[col]] = as.factor(mouse.data[[col]])
+  levels = levels(mouse.data[[col]])
+  levelWrap = function(level, col) paste0('us(at.level(', col, ", '", level, "'):trait):FAMILY")
+  random.formula = paste("~", paste(aaply(levels, 1, levelWrap, col), collapse = " + "))
   
-  prior = list(R = list(V = diag(num.traits), n = 0.002),
-               G = list(G1 = list(V = diag(num.traits) * 0.02, n = num.traits+1),
-                        G2 = list(V = diag(num.traits) * 0.02, n = num.traits+1)))
+  n.gs = length(levels)
+  g.prior = list(V = diag(num.traits) * 0.02, n = num.traits+1)
+  G = alply(1:n.gs, 1, function(x) g.prior)
+  names(G) = paste0("G", 1:n.gs)
+  
+  prior = list(R = list(V = diag(num.traits), n = 0.002), G = G)
   mcmc.mouse.model = MCMCglmm( as.formula(null.formula),
-                               random = ~us(at.level(D1,"1"):trait):FAMILY+
-                                 us(at.level(D1,"0"):trait):FAMILY,
+                               random = as.formula(random.formula),
                                data = mouse.data,
                                rcov = ~us(trait):units,
                                family = rep("gaussian", num.traits),
                                prior = prior,
                                verbose = TRUE)
+  return(mcmc.mouse.model)
 }
 
 # all.loci.MCMC = alply(1:31, 1, runSingleLocusMCMCModel, null.formula, .progress='text')
