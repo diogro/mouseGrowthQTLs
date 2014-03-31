@@ -8,6 +8,9 @@ source('read.mouse.data.R')
 
 pedigree = select(mouse.data, ID, Dam, Sire)
 
+mouse.data = select(mouse.data, ID, FAMILY, SEX, LSB, LSW, COHORT, grow12:grow78)
+mouse.data = mouse.data[complete.cases(mouse.data),]
+
 num.traits = 7
 
 values = paste("cbind(", 
@@ -15,13 +18,15 @@ values = paste("cbind(",
                            paste(1:num.traits, 2:(num.traits+1), sep = ''), 
                            sep = ''), collapse = ', '),
                ")", sep = '')
-fixed.effects = "trait:SEX - 1"
+
+fixed.effects = "trait:SEX + trait:LSB + trait:LSW + trait:COHORT - 1"
 
 null.formula = paste(values, fixed.effects, sep = ' ~ ')
 
 runNullMCMCModel <- function(null.formula){
   prior = list(R = list(V = diag(num.traits), n = 0.002),
                G = list(G1 = list(V = diag(num.traits) * 0.02, n = num.traits+1)))
+
   mcmc.mouse.model = MCMCglmm( as.formula(null.formula),
                                random = ~us(trait):FAMILY,
                                data = mouse.data,
