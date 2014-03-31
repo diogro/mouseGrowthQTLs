@@ -27,7 +27,7 @@ runNullMCMCModel <- function(null.formula) {
     prior = list(R = list(V = diag(num.traits), n = 0.002),
                  G = list(G1 = list(V = diag(num.traits) * 0.02, n = num.traits+1)))
 
-    mcmc.mouse.model = MCMCglmm( as.formula(null.formula),
+    mcmc.mouse.model = MCMCglmm(as.formula(null.formula),
                                 random = ~us(trait):FAMILY,
                                 data = mouse.data,
                                 rcov = ~us(trait):units,
@@ -49,7 +49,7 @@ runSingleLocusMCMCModel <- function(locus, null.formula){
                              sep = ' + ')
     prior = list(R = list(V = diag(7), n = 0.002),
                  G = list(G1 = list(V = diag(7) * 0.02, n = 8)))
-    mcmc.mouse.model = MCMCglmm( as.formula(genotype.formula),
+    mcmc.mouse.model = MCMCglmm(as.formula(genotype.formula),
                                 random = ~us(trait):FAMILY,
                                 data = mouse.data,
                                 rcov = ~us(trait):units,
@@ -72,7 +72,7 @@ runSingleLocusRandomModel <- function(locus, type, null.formula){
     names(G) = paste0("G", 1:n.gs)
 
     prior = list(R = list(V = diag(num.traits), n = 0.002), G = G)
-    mcmc.mouse.model = MCMCglmm( as.formula(null.formula),
+    mcmc.mouse.model = MCMCglmm(as.formula(null.formula),
                                 random = as.formula(random.formula),
                                 data = mouse.data,
                                 rcov = ~us(trait):units,
