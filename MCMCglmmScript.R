@@ -83,6 +83,6 @@ runSingleLocusRandomModel <- function(locus, type, null.formula){
 }
 
 #all.loci.MCMC = alply(1:31, 1, runSingleLocusMCMCModel, null.formula, .progress='text')
-#save(all.loci.MCMC, file= 'mouse.cromossome1.MCMC.Rdata')
-load("./mouse.cromossome1.MCMC.Rdata")
+#save(all.loci.MCMC, file= './Rdatas/mouse.cromossome1.MCMC.Rdata')
+load("./Rdatas/mouse.cromossome1.MCMC.Rdata")
 test = runSingleLocusRandomModel(1, "D", null.formula)

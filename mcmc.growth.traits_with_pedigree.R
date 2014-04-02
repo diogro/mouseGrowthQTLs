@@ -2,7 +2,7 @@ library(MCMCglmm)
 
 source('~/projects/mouse-qtls/read.mouse.data.R')
 
-ped<-data.frame(read.csv(file="~/projects/mouse-qtls/F3_pedigree.csv", header=TRUE))
+ped<-data.frame(read.csv(file="~/projects/mouse-qtls/data/F3_pedigree.csv", header=TRUE))
 
 names(data) <- gsub('SexAN', 'SEX', names(data))
 

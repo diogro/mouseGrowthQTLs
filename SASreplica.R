@@ -35,6 +35,6 @@ runSingleLocusModel <- function(locus, null.formula){
 }
 
 all.loci = alply(1:31, 1, runSingleLocusModel, null.formula)
-save(all.loci, file= 'mouse.cromossome1.Rdata')
-load("./mouse.cromossome1.Rdata")
+save(all.loci, file= './Rdatas/mouse.cromossome1.Rdata')
+load("./Rdatas/mouse.cromossome1.Rdata")
 significant = laply(all.loci, function(x) x$p.value < 0.05/31)
