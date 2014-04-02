@@ -1,4 +1,5 @@
 library(plyr)
+library(dplyr)
 library(reshape2)
 library(lme4)
 library(ggplot2)

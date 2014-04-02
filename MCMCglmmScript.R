@@ -13,7 +13,7 @@ mouse.data = mouse.data[complete.cases(mouse.data),]
 
 num.traits = 7
 
-values = paste("cbind(",
+value = paste("cbind(",
                paste(paste("grow",
                            paste(1:num.traits, 2:(num.traits+1), sep = ''),
                            sep = ''), collapse = ', '),
@@ -21,7 +21,7 @@ values = paste("cbind(",
 
 fixed.effects = "trait:SEX + trait:LSB + trait:LSW + trait:COHORT - 1"
 
-null.formula = paste(values, fixed.effects, sep = ' ~ ')
+null.formula = paste(value, fixed.effects, sep = ' ~ ')
 
 runNullMCMCModel <- function(null.formula) {
     prior = list(R = list(V = diag(num.traits), n = 0.002),
@@ -82,6 +82,7 @@ runSingleLocusRandomModel <- function(locus, type, null.formula){
     return(mcmc.mouse.model)
 }
 
-all.loci.MCMC = alply(1:31, 1, runSingleLocusMCMCModel, null.formula, .progress='text')
-save(all.loci.MCMC, file= 'mouse.cromossome1.MCMC.Rdata')
+#all.loci.MCMC = alply(1:31, 1, runSingleLocusMCMCModel, null.formula, .progress='text')
+#save(all.loci.MCMC, file= 'mouse.cromossome1.MCMC.Rdata')
 load("./mouse.cromossome1.MCMC.Rdata")
+test = runSingleLocusRandomModel(1, "D", null.formula)
