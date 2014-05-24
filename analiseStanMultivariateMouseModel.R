@@ -40,22 +40,27 @@ Gs_stan = mmv$Sigma_FAMILY
 G_stan = aaply(Gs_stan, 2:3, mean)
 dimnames(G_stan) = list(traits, traits)
 
-additive_list = vector("list", num_traits)
-for(mmv in stan_samples){
-    replicates = dim(mmv$beta_addi)[1]
-    n_loci = dim(mmv$beta_addi)[2]
-    addi_CI = apply(mmv$beta_addi, 2:3, find_CI)
-    significant = !aaply(addi_CI, 2:3, containsZero)
-    additive_matrix = mmv$beta_addi[1,,]
-    for(locus in 1:n_loci){
-        for(trait in 1:num_traits){
-            if(significant[locus, trait])
-                additive_list[[trait]] = c(additive_list[[trait]], additive_matrix[locus, trait])
+additiveVariance = function(current_rep){
+    additive_list = vector("list", num_traits)
+    for(mmv in stan_samples){
+        n_loci = dim(mmv$beta_addi)[2]
+        addi_CI = apply(mmv$beta_addi, 2:3, find_CI)
+        significant = !aaply(addi_CI, 2:3, containsZero)
+        additive_matrix = mmv$beta_addi[current_rep,,]
+        for(locus in 1:n_loci){
+            for(trait in 1:num_traits){
+                if(significant[locus, trait])
+                    additive_list[[trait]] = c(additive_list[[trait]], additive_matrix[locus, trait])
+            }
         }
     }
+    laply(additive_list, function(x) sum(x*x)/2)
 }
+library(doMC)
+registerDoMC(4)
+aaply(1:1000, 1, additiveVariance, .parallel = TRUE)
 
-additive_effects = adply(1:dim(mmv$beta_addi)[2], 1, function(x) data.frame(1:1000, mmv$beta_addi[,x,], locus = x))
+additive_effects = adply(2:dim(mmv$beta_addi)[2], 1, function(x) data.frame(1:1000, mmv$beta_addi[,x,], locus = x))
 colnames(additive_effects) = c("iterations", traits, "locus")
 additive_effects = melt(additive_effects, id.vars = c('iterations','locus'))
 names(additive_effects) = c('iterations', 'locus', 'trait', 'value')
