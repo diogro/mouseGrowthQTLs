@@ -46,22 +46,23 @@ calcAdditiveVariance = function(current_rep){
         n_loci = dim(mmv$beta_addi)[2]
         addi_CI = apply(mmv$beta_addi, 2:3, find_CI)
         significant = !aaply(addi_CI, 2:3, containsZero)
-        additive_matrix = mmv$beta_addi[current_rep,,]
         for(locus in 1:n_loci){
             for(trait in 1:num_traits){
                 if(significant[locus, trait])
-                    additive_list[[trait]] = c(additive_list[[trait]], additive_matrix[locus, trait])
+                    additive_list[[trait]] = c(additive_list[[trait]], mmv$beta_addi[current_rep,locus,trait])
             }
         }
     }
-    additive_list = laply(additive_list, sum)
-    outer(additive_list, additive_list)/2
+    additive_values = laply(additive_list, sum)
+    outer(additive_values, additive_values)/2
 }
 library(doMC)
 registerDoMC(4)
-additive_variance = aaply(1:4, 1, calcAdditiveVariance, .parallel = TRUE)
-dimnames(additive_variance) = list(1:4, traits, traits)
-apply(additive_variance, 2:3, find_CI)
+additive_variance = aaply(1:1000, 1, calcAdditiveVariance, .parallel = TRUE)
+G_add = apply(additive_variance, 2:3, mean)
+dimnames(G_add) = list(traits, traits)
+cov2cor(G_add)
+MatrixCompare(G_stan, G_add)
 
 additive_effects = adply(2:dim(mmv$beta_addi)[2], 1, function(x) data.frame(1:1000, mmv$beta_addi[,x,], locus = x))
 colnames(additive_effects) = c("iterations", traits, "locus")
@@ -69,7 +70,3 @@ additive_effects = melt(additive_effects, id.vars = c('iterations','locus'))
 names(additive_effects) = c('iterations', 'locus', 'trait', 'value')
 ggplot(additive_effects, aes(locus, value, group = locus)) + geom_boxplot() + facet_wrap(~trait)
 
-Gs_add = llply(stan_samples, function(mmv) aaply(mmv$beta_addi, 1, function(x) Reduce("+", alply(x, 1, function(rows) outer(rows, rows)))))
-Gs = Reduce("+", Gs_add)
-G_add = apply(Gs, 2:3, mean)
-MatrixCompare(G_stan, G_add)
