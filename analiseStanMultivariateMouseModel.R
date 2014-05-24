@@ -40,7 +40,7 @@ Gs_stan = mmv$Sigma_FAMILY
 G_stan = aaply(Gs_stan, 2:3, mean)
 dimnames(G_stan) = list(traits, traits)
 
-additiveVariance = function(current_rep){
+calcAdditiveVariance = function(current_rep){
     additive_list = vector("list", num_traits)
     for(mmv in stan_samples){
         n_loci = dim(mmv$beta_addi)[2]
@@ -54,11 +54,14 @@ additiveVariance = function(current_rep){
             }
         }
     }
-    laply(additive_list, function(x) sum(x*x)/2)
+    additive_list = laply(additive_list, sum)
+    outer(additive_list, additive_list)/2
 }
 library(doMC)
 registerDoMC(4)
-aaply(1:1000, 1, additiveVariance, .parallel = TRUE)
+additive_variance = aaply(1:4, 1, calcAdditiveVariance, .parallel = TRUE)
+dimnames(additive_variance) = list(1:4, traits, traits)
+apply(additive_variance, 2:3, find_CI)
 
 additive_effects = adply(2:dim(mmv$beta_addi)[2], 1, function(x) data.frame(1:1000, mmv$beta_addi[,x,], locus = x))
 colnames(additive_effects) = c("iterations", traits, "locus")
