@@ -23,7 +23,7 @@ fixed.effects = "trait:SEX + trait:LSB + trait:LSW + trait:COHORT - 1"
 
 null.formula = paste(value, fixed.effects, sep = ' ~ ')
 
-runNullMCMCModel <- function(null.formula) {
+runNullMCMCModel <- function(null.formula, pl = FALSE) {
     prior = list(R = list(V = diag(num.traits), n = 0.002),
                  G = list(G1 = list(V = diag(num.traits) * 0.02, n = num.traits+1)))
 
@@ -33,16 +33,13 @@ runNullMCMCModel <- function(null.formula) {
                                 rcov = ~us(trait):units,
                                 family = rep("gaussian", num.traits),
                                 prior = prior,
+                                pl = pl,
                                 verbose = TRUE)
     return(mcmc.mouse.model)
 }
 
-mcmc.mouse.model = runNullMCMCModel(null.formula)
 
-G.mcmc = apply(array(mcmc.mouse.model$VCV[,1:(num.traits*num.traits)], dim = c(1000, num.traits, num.traits)), 2:3, mean)
-R.mcmc = apply(array(mcmc.mouse.model$VCV[,-c(1:(num.traits*num.traits))], dim = c(1000, num.traits, num.traits)), 2:3, mean)
-
-runSingleLocusMCMCModel <- function(locus, null.formula){
+runSingleLocusMCMCModel <- function(locus, null.formula, start = NULL){
     genotype.formula = paste(null.formula,
                              paste(paste('trait:', c('A', 'D', 'I'),
                                          locus, sep = ''), collapse = ' + '),
@@ -54,6 +51,7 @@ runSingleLocusMCMCModel <- function(locus, null.formula){
                                 data = mouse.data,
                                 rcov = ~us(trait):units,
                                 family = rep("gaussian", 7),
+                                start = start,
                                 prior = prior,
                                 verbose = FALSE)
     return(mcmc.mouse.model)
@@ -82,7 +80,13 @@ runSingleLocusRandomModel <- function(locus, type, null.formula){
     return(mcmc.mouse.model)
 }
 
-#all.loci.MCMC = alply(1:31, 1, runSingleLocusMCMCModel, null.formula, .progress='text')
+mcmc.mouse.model = runNullMCMCModel(null.formula)
+
+G.mcmc = apply(array(mcmc.mouse.model$VCV[,1:(num.traits*num.traits)], dim = c(1000, num.traits, num.traits)), 2:3, mean)
+R.mcmc = apply(array(mcmc.mouse.model$VCV[,-c(1:(num.traits*num.traits))], dim = c(1000, num.traits, num.traits)), 2:3, mean)
+
+start <- list(R = list(V = R.mcmc), G = list(G1 = G.mcmc), liab = matrix(mcmc.mouse.model$Liab[1,], ncol = num.traits))
+
+#all.loci.MCMC = alply(1:31, 1, runSingleLocusMCMCModel, null.formula, start, .progress='text')
 #save(all.loci.MCMC, file= './Rdatas/mouse.cromossome1.MCMC.Rdata')
 load("./Rdatas/mouse.cromossome1.MCMC.Rdata")
-test = runSingleLocusRandomModel(1, "D", null.formula)

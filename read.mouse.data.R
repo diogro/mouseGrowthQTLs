@@ -25,6 +25,8 @@ mouse_phen = data.frame(arrange(raw.mouse_meta, ID), arrange(raw.mouse_phen, ID)
 raw.mouse_gen = llply(paste0("./data/genotypes/chrom", 1:19, ".csv"), read.csv, as.is = TRUE)
 names(raw.mouse_gen) = paste0("chrom", 1:19)
 mouse_gen = llply(raw.mouse_gen, function(x) x[x$ID %in% mouse_phen$ID,])
+mouse_gen = llply(mouse_gen, function(x) arrange(x, ID))
 mouse_phen = mouse_phen[mouse_phen$ID %in% mouse_gen[[1]]$ID,]
+mouse_phen = arrange(mouse_phen, ID)
 
 rm(list = ls(pattern='raw'))
