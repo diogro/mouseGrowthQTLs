@@ -18,19 +18,50 @@ dimnames(G_lme4) = list(traits, traits)
 # Multivariate model
 ######################
 
+containsZero = function(x) ifelse(0 > x[1] & 0 < x[2], TRUE, FALSE)
+find_CI = function(x, prob = 0.95){
+    n = length(x)
+    xs = sort(x)
+    nint = floor(prob*n)
+    lowest_int = abs(xs[n] - xs[1])
+    for(i in 1:(n-nint)){
+        current_int = abs(xs[i] - xs[i+nint])
+        if(current_int <= lowest_int){
+            lowest_int = current_int
+            pos = i
+        }
+    }
+    return(c(xs[pos], xs[pos+nint]))
+}
+
+mmv = stan_samples[[3]]
+
 Gs_stan = mmv$Sigma_FAMILY
 G_stan = aaply(Gs_stan, 2:3, mean)
 dimnames(G_stan) = list(traits, traits)
-apply(mmv$beta_addi, 2:3, quantile, c(0.025, 0.975))
-#additive_effects = adply(mmv$beta_addi, 2:3, function(x) data.frame(x, locus = 10) )
-additive_effects = data.frame(1:1000, mmv$beta_addi[,1,], locus = 10)
-colnames(additive_effects) = c("iterations", paste0("trait", 1:7), "locus")
+
+additive_list = vector("list", num_traits)
+for(mmv in stan_samples){
+    replicates = dim(mmv$beta_addi)[1]
+    n_loci = dim(mmv$beta_addi)[2]
+    addi_CI = apply(mmv$beta_addi, 2:3, find_CI)
+    significant = !aaply(addi_CI, 2:3, containsZero)
+    additive_matrix = mmv$beta_addi[1,,]
+    for(locus in 1:n_loci){
+        for(trait in 1:num_traits){
+            if(significant[locus, trait])
+                additive_list[[trait]] = c(additive_list[[trait]], additive_matrix[locus, trait])
+        }
+    }
+}
+
+additive_effects = adply(1:dim(mmv$beta_addi)[2], 1, function(x) data.frame(1:1000, mmv$beta_addi[,x,], locus = x))
+colnames(additive_effects) = c("iterations", traits, "locus")
 additive_effects = melt(additive_effects, id.vars = c('iterations','locus'))
 names(additive_effects) = c('iterations', 'locus', 'trait', 'value')
-corrmat = apply(aaply(mmv$beta_addi, 1, function(x) cor(t(x))), 2:3, mean)
-color2D.matplot(abs(corrmat))
+ggplot(additive_effects, aes(locus, value, group = locus)) + geom_boxplot() + facet_wrap(~trait)
 
-ggplot(additive_effects, aes(trait, value, group = trait)) + geom_boxplot()# + facet_wrap(~trait)
-
-mean_additive = aaply(mmv$beta_addi, 2:3, mean)
-add_2 = outer(mean_additive, mean_additive)/2
+Gs_add = llply(stan_samples, function(mmv) aaply(mmv$beta_addi, 1, function(x) Reduce("+", alply(x, 1, function(rows) outer(rows, rows)))))
+Gs = Reduce("+", Gs_add)
+G_add = apply(Gs, 2:3, mean)
+MatrixCompare(G_stan, G_add)
