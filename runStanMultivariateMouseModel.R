@@ -79,23 +79,24 @@ runStanModels = function(chromossome){
 #stan_samples = alply(1:length(mouse_gen), 1, runStanModels, .parallel = TRUE)
 #names(stan_samples) = names(mouse_gen)
 #save(stan_samples, file = "./Rdatas/stan_full_chromossome.Rdata")
-load('./Rdatas/stan_full_chromossome.Rdata')
+#load('./Rdatas/stan_full_chromossome.Rdata')
 
 
-runStanModelsSingleLocus = function(chromossome){
-    locus_model = list()
-    n_locus = (length(mouse_gen[[chromossome]])-1)/3
-    for(i in 1:n_locus){
-        mouse_list = mouseStanInput(chromossome, locus_id = i)
-        mouse_stan_model = stan(file = './mouse_growth_multivariate_multi_locus.stan',
-                                data = mouse_list, chain=1, iter = 2000)
-        locus_model[[i]] = extract(mouse_stan_model, permuted = TRUE)
-    }
-    names(locus_model) = paste0("chrom-", chromossome, "_locus-", 1:n_locus)
-    return(locus_model)
-}
-library(doMC)
-registerDoMC(length(mouse_gen))
-stan_samples_single_locus = alply(1:length(mouse_gen), 1, runStanModels, .parallel = TRUE)
-names(stan_samples_single_locus) = names(mouse_gen)
-save(stan_samples_single_locus, file = "./Rdatas/stan_single_locus_chromossome.Rdata")
+#runStanModelsSingleLocus = function(chromossome){
+    #locus_model = list()
+    #n_locus = (length(mouse_gen[[chromossome]])-1)/3
+    #for(i in 1:n_locus){
+        #mouse_list = mouseStanInput(chromossome, locus_id = i)
+        #mouse_stan_model = stan(file = './mouse_growth_multivariate_multi_locus.stan',
+                                #data = mouse_list, chain=1, iter = 2000)
+        #locus_model[[i]] = extract(mouse_stan_model, permuted = TRUE)
+    #}
+    #names(locus_model) = paste0("chrom-", chromossome, "_locus-", 1:n_locus)
+    #return(locus_model)
+#}
+#library(doMC)
+#registerDoMC(length(mouse_gen))
+#stan_samples_single_locus = alply(1:length(mouse_gen), 1, runStanModelsSingleLocus, .parallel = TRUE)
+#names(stan_samples_single_locus) = names(mouse_gen)
+#save(stan_samples_single_locus, file = "./Rdatas/stan_single_locus_chromossome.Rdata")
+load('./Rdatas/stan_single_locus_chromossome.Rdata')
