@@ -1,4 +1,5 @@
 source('./runStanMultivariateMouseModel.R')
+load('./Rdatas/stan_full_chromossome.Rdata')
 
 ggplot(m.data, aes(variable, value, color = SEX)) + geom_boxplot() + facet_wrap(~SEX)
 
@@ -64,9 +65,13 @@ dimnames(G_add) = list(traits, traits)
 cov2cor(G_add)
 MatrixCompare(G_stan, G_add)
 
-additive_effects = adply(2:dim(mmv$beta_addi)[2], 1, function(x) data.frame(1:1000, mmv$beta_addi[,x,], locus = x))
-colnames(additive_effects) = c("iterations", traits, "locus")
-additive_effects = melt(additive_effects, id.vars = c('iterations','locus'))
-names(additive_effects) = c('iterations', 'locus', 'trait', 'value')
-ggplot(additive_effects, aes(locus, value, group = locus)) + geom_boxplot() + facet_wrap(~trait)
+chromPlot = function(mmv){
+    additive_effects = adply(2:dim(mmv$beta_addi)[2], 1, function(x) data.frame(1:1000, mmv$beta_addi[,x,], locus = x))
+    colnames(additive_effects) = c("iterations", traits, "locus")
+    additive_effects = melt(additive_effects, id.vars = c('iterations','locus'))
+    names(additive_effects) = c('iterations', 'locus', 'trait', 'value')
+    ggplot(additive_effects, aes(locus, value, group = locus)) + geom_boxplot() + facet_wrap(~trait)
+}
+chrom_plots = llply(stan_samples, chromPlot)
+for(chrom in names(chrom_plots)) ggsave(paste0("~/Desktop/full_", chrom, ".png"), chrom_plots[[chrom]], height = 10, width = 15)
 

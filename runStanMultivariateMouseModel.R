@@ -99,4 +99,4 @@ runStanModels = function(chromossome){
 #stan_samples_single_locus = alply(1:length(mouse_gen), 1, runStanModelsSingleLocus, .parallel = TRUE)
 #names(stan_samples_single_locus) = names(mouse_gen)
 #save(stan_samples_single_locus, file = "./Rdatas/stan_single_locus_chromossome.Rdata")
-load('./Rdatas/stan_single_locus_chromossome.Rdata')
+#load('./Rdatas/stan_single_locus_chromossome.Rdata')
