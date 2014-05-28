@@ -74,6 +74,7 @@ runStanModels = function(chromossome){
     return(extract(mouse_stan_model, permuted = TRUE))
 }
 
+
 #library(doMC)
 #registerDoMC(length(mouse_gen))
 #stan_samples = alply(1:length(mouse_gen), 1, runStanModels, .parallel = TRUE)
