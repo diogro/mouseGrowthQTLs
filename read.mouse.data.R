@@ -3,6 +3,7 @@ if(!require(plyr)) {install.packages("plyr"); library(plyr)}
 if(!require(dplyr)) {install.packages("dplyr"); library(dplyr)}
 if(!require(reshape2)) {install.packages("reshape2"); library(reshape2)}
 if(!require(readr)) {install.packages("readr"); library(readr)}
+if(!require(lme4)) {install.packages("lme4"); library(lme4)}
 
 raw.mouse_phen = read_csv("./data/F3phenotypes_uncorrected.csv")
 raw.mouse_phen = tbl_df(select(raw.mouse_phen, c(ID, FATPAD:LIVER, WEEK1:WEEK10)))
@@ -51,3 +52,14 @@ cast_formula = paste(paste(names(m.data.std[,-exclude]), collapse = " + "),
                      'variable',
                      sep = " ~ ")
 mouse_phen_std = tbl_df(dcast(m.data.std, as.formula(cast_formula)))
+
+null.formula = "value ~ 1 + variable * SEX + variable * LSB + variable * LSW + variable * COHORT + (0 + variable|FAMILY)"
+mouse_no_fixed = lmer(as.formula(null.formula), data = m.data)
+m.data.std_mixed = m.data
+m.data.std_mixed$value = residuals(mouse_no_fixed)
+
+exclude = c(dim(m.data.std_mixed)[2]-1, dim(m.data.std_mixed)[2])
+cast_formula = paste(paste(names(m.data.std[,-exclude]), collapse = " + "),
+                     'variable',
+                     sep = " ~ ")
+mouse_phen_std_mixed = tbl_df(dcast(m.data.std_mixed, as.formula(cast_formula)))
