@@ -1,3 +1,23 @@
+plotMatrix <- function (corMat, file = NULL) {
+  diag(corMat) <- NA
+  n_traits = nrow(corMat) 
+  myPalette <- colorRampPalette(c("blue", "white", "red"))(n = 50)
+  m.rs = melt(corMat) 
+  m.rs$Var1 <- factor(m.rs$Var1, levels = m.rs$Var1[n_traits:1])
+  m.rs.position = m.rs
+  m.rs.position$Var1 <- as.numeric(m.rs.position$Var1)
+  m.rs.position$Var2 <- as.numeric(m.rs.position$Var2)
+  m.rs.position$value= round(m.rs.position$value, 3)
+  m.rs.position$value[is.na(m.rs.position$value)] <- levels(m.rs$Var1)[n_traits:1]
+  p <- 
+    ggplot (m.rs) +
+    geom_tile(aes(x = Var2, y = Var1, fill = value)) +
+    scale_fill_gradientn(name = '', colours = myPalette) +
+    labs(x = NULL, y = NULL) + theme_nothing()
+  if(!is.null(file)) cowplot::save_plot(plot = p, file)
+  return(p)
+}
+
 Rotate2MidlineMatrix <- function (X, midline)
   {
     ## returns the rotation matrix that aligns a specimen saggital line

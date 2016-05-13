@@ -9,6 +9,7 @@ library(expm)
 library(numDeriv)
 library(ggplot2)
 library(RColorBrewer)
+library(cowplot)
 library(ggrepel)
 library(doMC)
 registerDoMC(4)
@@ -19,6 +20,8 @@ source("./localShapeScripts/splines.R")
 raw_landmarks = read_csv("./data/Mandibles/F2F3 raw landmark positions.csv")
 n_ind = dim(raw_landmarks)[1]
 n_land = 15
+n_reps = table(raw_landmarks$ID)
+
 landmarks = array(NA, dim = c(n_land, 2, n_ind))
 for(i in seq(n_ind)){
   for(j in seq(n_land))
@@ -47,8 +50,6 @@ for(ind in 1:length(names(n_reps))){
   landmarks_noreps[,,ind] = gpagen(landmarks[,,which(names(n_reps)[ind] == dimnames(landmarks)[[3]])])$consensus
 }
 dimnames(landmarks_noreps) <- list(1:15, c("x", "y"), names(n_reps))
-
-table(raw_landmarks$ID)
 
 gpa = gpagen(landmarks_noreps)
 gpa$coords
@@ -99,7 +100,13 @@ wireframe = matrix(
     11, 12), ncol = 2, byrow = TRUE)
 
 
-shape = mshape
+
+#shape_variables = wrapMarquez(landmarks_noreps, tesselation)
+#save(shape_variables, file = "./data/Rdatas/mandibleShape.Rdata")
+load("./data/Rdatas/mandibleShape.Rdata")
+
 colors = rnorm(15)
-ggshape_2d(mshape, wireframe, colors)
-wrapMarquez(landmarks_noreps, tesselation)
+ggshape_2d(shape_variables$reference, wireframe, colors)
+
+shape_cor = cor(shape_variables$local)
+plotMatrix(shape_cor)
