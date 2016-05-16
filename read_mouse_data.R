@@ -1,5 +1,5 @@
 if(!require(install.load)) {install.packages("install.load"); library(install.load)}
-install_load("plyr", "dplyr", "tidyr", "readr", "lme4")
+install_load("plyr", "dplyr", "tidyr", "readr", "lme4", "ggplot2", "cowplot", "lmerTest")
 
 ## Meta data
 
@@ -11,6 +11,12 @@ mouse_meta = select(raw.mouse_meta, ID:COHORT)
 
 markers = llply(paste0("./data/markers/chrom", 1:19, ".csv"), read_csv)
 names(markers) = paste0("chrom", 1:19)
+for(chrom in names(markers)){
+  names(markers[[chrom]])[-1] = (paste(chrom, names(markers[[chrom]])[-1], sep = "_"))
+}
+
+chroms = seq(markers)
+loci_per_chrom = laply(chroms, function(chrom) ncol(markers[[chrom]][-1])/3)
 
 ##Growth traits
 

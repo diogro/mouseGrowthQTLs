@@ -1,20 +1,8 @@
-library(evolqg)
-library(readr)
-library(plyr)
-library(dplyr)
-library(reshape2)
-library(tidyr)
-library(geomorph)
-library(expm)
-library(numDeriv)
-library(ggplot2)
-library(RColorBrewer)
-library(cowplot)
-library(ggrepel)
-library(doMC)
-registerDoMC(4)
-if(!require(wesanderson)) { install.packages("wesanderson"); library(wesanderson) }
+if(!require(install.load)) {install.packages("install.load"); library(install.load)}
+install_load("plyr", "dplyr", "tidyr", "readr", "lme4", "evolqg", "geomorph", "expm", "numDeriv", 
+             "ggplot2", "reshape2", "RColorBrewer", "cowplot", "ggrepel", "doMC", "wesanderson")
 
+registerDoMC(4)
 
 source("./localShapeScripts/ggshape.R")
 source("./localShapeScripts/splines.R")

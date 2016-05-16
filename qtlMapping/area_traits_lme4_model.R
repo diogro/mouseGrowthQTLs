@@ -1,32 +1,43 @@
 source("./read_mouse_data.R")
 
-null.formula = "value ~ 1 + (0 + variable|FAMILY)"
-mouse.model.no.gen = lmer(as.formula(null.formula),
-                          data = m_area_phen_std,
-                          REML = FALSE)
-G_lme4 = VarCorr(mouse.model.no.gen)[[1]]
-attr(G_lme4,"correlation") = NULL
+install_load("doMC")
+registerDoMC(2)
 
-runSingleLocusModel <- function(locus, null.formula){
-    genotype.formula = paste(null.formula,
-                             paste(paste('variable*', c('A', 'D'),
+
+area_data = inner_join(area_phen_std, 
+                       Reduce(inner_join, area_markers), 
+                       by = "ID") %>%
+  gather(variable, value, area1:area7)
+
+null_formula = "value ~ 1 + (0 + variable|FAMILY)"
+area_null_model = lmer(as.formula(null_formula),
+                          data = area_data,
+                          REML = FALSE)
+G_lme4 = VarCorr(area_null_model)[[1]]
+attr(G_lme4,"correlation") = NULL
+summary(area_null_model)
+
+chrom = 10
+locus = 1
+runSingleLocusModel <- function(locus, chrom, null_formula){
+    genotype_formula = paste(null_formula,
+                             paste(paste('variable*chrom',chrom,"_", c('A', 'D'),
                                          locus, sep = ''), collapse = ' + '),
                              sep = ' + ')
-    mouse.model = lmer(as.formula(genotype.formula),
-                       data = m.data,
+    single_locus_model = lmer(as.formula(genotype_formula),
+                       data = area_data,
                        REML = FALSE)
-    test = anova(mouse.model.no.gen, mouse.model)
-    print(locus)
-    return(list(model = mouse.model,
-                anova = test,
-                G = VarCorr(mouse.model.no.gen)[[1]],
+    test = lmerTest::anova(area_null_model, single_locus_model)
+    return(list(model = single_locus_model,
+                model_summary = summary(single_locus_model),
+                test = test,
+                G = VarCorr(single_locus_model)[[1]],
                 p.value = test$'Pr(>Chisq)'[2]))
 }
-names(m.data)
-all.loci = alply(1:31, 1, runSingleLocusModel, null.formula, .parallel = TRUE)
-save(all.loci, file= './data/Rdatas/mouse.cromossome1.Rdata')
-#load("./data/Rdatas/mouse.cromossome1.Rdata")
-significant = laply(all.loci, function(x) x$p.value < 0.05/31)
-pvalue_plot = ldply(all.loci, function(x) c(x$p.value < 0.05/31, log(x$p.value))) %>%
-    ggplot(aes(X1, V2, fill = V1)) + geom_bar(stat = "identity")
-save_plot("./data/pvalue_test_plot.png", pvalue_plot, base_height = 5)
+x = runSingleLocusModel(1, 10, null_formula)
+x$model_summary
+all_loci = alply(seq(chroms), 1, 
+                 function(chrom) alply(seq(loci_per_chrom[chrom]), 1, 
+                                       runSingleLocusModel, chrom, null_formula), 
+                 .parallel = TRUE)
+names(all_loci) = names(markers)
