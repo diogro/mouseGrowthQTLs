@@ -68,4 +68,4 @@ m_area_phen_std$value = residuals(mouse_no_fixed)
 area_phen_std = spread(m_area_phen_std, variable, value)
 
 rm(list = ls(pattern='raw'))
-
+rm(list = c("null.formula", 'mouse_no_fixed'))
