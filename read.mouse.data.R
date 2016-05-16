@@ -1,14 +1,12 @@
-if(!require(gdata)) {install.packages("gdata"); library(gdata)}
-if(!require(plyr)) {install.packages("plyr"); library(plyr)}
-if(!require(dplyr)) {install.packages("dplyr"); library(dplyr)}
-if(!require(reshape2)) {install.packages("reshape2"); library(reshape2)}
-if(!require(readr)) {install.packages("readr"); library(readr)}
-if(!require(lme4)) {install.packages("lme4"); library(lme4)}
+if(!require(install.load)) {install.packages("install.load"); library(install.load)}
+install_load("plyr", "dplyr", "reshape2", "readr", "lme4")
 
-raw.mouse_phen = read_csv("./data/F3phenotypes_uncorrected.csv")
-raw.mouse_phen = tbl_df(select(raw.mouse_phen, c(ID, FATPAD:LIVER, WEEK1:WEEK10)))
+##Growth traits
 
-raw.mouse_phen = mutate(raw.mouse_phen,
+raw.growth_phen = read_csv("data/growth traits/F3Phenotypes_further corrected family data_corrected litter sizes.csv")
+raw.growth_phen = tbl_df(select(raw.growth_phen, c(ID, FATPAD:LIVER, WEEK1:WEEK10)))
+
+growth_phen = mutate(raw.growth_phen,
                           grow12 = WEEK2 - WEEK1,
                           grow23 = WEEK3 - WEEK2,
                           grow34 = WEEK4 - WEEK3,
@@ -17,30 +15,25 @@ raw.mouse_phen = mutate(raw.mouse_phen,
                           grow67 = WEEK7 - WEEK6,
                           grow78 = WEEK8 - WEEK7)
 
-raw.mouse_meta = read_csv("./data/F3Phenotypes_further corrected family data_corrected litter sizes.csv")
+raw.mouse_meta = read_csv("./data/growth traits/F3Phenotypes_further corrected family data_corrected litter sizes.csv")
 names(raw.mouse_meta) = gsub('SexAN', 'SEX', names(raw.mouse_meta))
-raw.mouse_meta = select(raw.mouse_meta, ID:COHORT)
-mouse_phen = inner_join(raw.mouse_meta, raw.mouse_phen, by = "ID")
+mouse_meta = select(raw.mouse_meta, ID:COHORT)
+growth_phen = inner_join(mouse_meta, growth_phen, by = "ID")
 
-raw.mouse_gen = llply(paste0("./data/genotypes/chrom", 1:19, ".csv"), read_csv)
-names(raw.mouse_gen) = paste0("chrom", 1:19)
-mouse_gen = llply(raw.mouse_gen, function(x) semi_join(x, mouse_phen, by = "ID"))
-mouse_gen = llply(mouse_gen, function(x) arrange(x, ID))
+markers = llply(paste0("./data/markers/chrom", 1:19, ".csv"), read_csv)
+names(markers) = paste0("chrom", 1:19)
 
-mouse_phen = semi_join(mouse_phen, mouse_gen[[1]], by = "ID")
-mouse_phen = arrange(mouse_phen, ID)
+growth_phen = semi_join(growth_phen, markers[[1]], by = "ID")
+growth_phen = arrange(growth_phen, ID)
 
-rm(list = ls(pattern='raw'))
+growth_phen = select(growth_phen, ID, FAMILY, SEX, LSB, LSW, COHORT, grow12:grow78)
+growth_phen = growth_phen[complete.cases(growth_phen),]
+growth_markers = llply(markers, function(x) semi_join(x, growth_phen, by = "ID"))
 
-mouse_phen = select(mouse_phen, ID, FAMILY, SEX, LSB, LSW, COHORT, grow12:grow78)
-complete_rows = complete.cases(mouse_phen)
-mouse_phen = mouse_phen[complete_rows,]
-mouse_gen = llply(mouse_gen, function(x) x[complete_rows,])
-
-num_traits = 7
 traits = c( "grow12", "grow23", "grow34", "grow45", "grow56", "grow67", "grow78")
+num_traits = length(traits)
 
-m.data = melt(mouse_phen, id.vars = names(mouse_phen)[1:6])
+m.data = melt(growth_phen, id.vars = names(growth_phen)[1:6])
 
 null.formula = "value ~ 1 + variable * SEX + variable * LSB + variable * LSW + variable * COHORT"
 mouse_no_fixed = lm(as.formula(null.formula), data = m.data)
@@ -51,7 +44,7 @@ exclude = c(dim(m.data.std)[2]-1, dim(m.data.std)[2])
 cast_formula = paste(paste(names(m.data.std[,-exclude]), collapse = " + "),
                      'variable',
                      sep = " ~ ")
-mouse_phen_std = tbl_df(dcast(m.data.std, as.formula(cast_formula)))
+growth_phen_std = tbl_df(dcast(m.data.std, as.formula(cast_formula)))
 
 null.formula = "value ~ 1 + variable * SEX + variable * LSB + variable * LSW + variable * COHORT + (0 + variable|FAMILY)"
 mouse_no_fixed = lmer(as.formula(null.formula), data = m.data)
@@ -62,4 +55,18 @@ exclude = c(dim(m.data.std_mixed)[2]-1, dim(m.data.std_mixed)[2])
 cast_formula = paste(paste(names(m.data.std[,-exclude]), collapse = " + "),
                      'variable',
                      sep = " ~ ")
-mouse_phen_std_mixed = tbl_df(dcast(m.data.std_mixed, as.formula(cast_formula)))
+growth_phen_std_mixed = tbl_df(dcast(m.data.std_mixed, as.formula(cast_formula)))
+
+#Area traits
+
+raw.area_phen = read_csv("data/area traits/areasF2F3.csv")
+area_phen = inner_join(mouse_meta, raw.area_phen, by = "ID") %>% 
+  semi_join(markers[[1]], by = "ID") %>% 
+  select(ID, FAMILY, SEX, LSB, LSW, COHORT, area1:area7) %>%
+  na.omit %>%
+  arrange(ID)
+
+area_markers = llply(markers, function(x) semi_join(x, area_phen, by = "ID"))
+
+rm(list = ls(pattern='raw'))
+

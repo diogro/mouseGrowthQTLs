@@ -183,3 +183,7 @@ ggshape_2d <- function (shape, wireframe, colors,
     scale_color_gradientn('', colours = spec.pal(10)) +
     scale_fill_gradientn('', colours = spec.pal(10))
 }
+
+theme_shape = function() theme_classic() + theme(axis.line=element_blank(), axis.text.x=element_blank(), axis.text.y=element_blank(),axis.ticks=element_blank(),
+                        axis.title.x=element_blank(),
+                        axis.title.y=element_blank())

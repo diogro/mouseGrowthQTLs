@@ -13,6 +13,8 @@ library(cowplot)
 library(ggrepel)
 library(doMC)
 registerDoMC(4)
+if(!require(wesanderson)) { install.packages("wesanderson"); library(wesanderson) }
+
 
 source("./localShapeScripts/ggshape.R")
 source("./localShapeScripts/splines.R")
@@ -46,10 +48,14 @@ for(ind in names(n_reps)){
 dev.off()
 
 landmarks_noreps = array(NA, dim = c(n_land, 2, length(names(n_reps))))
+size = array(NA, dim = c(length(names(n_reps))))
 for(ind in 1:length(names(n_reps))){
-  landmarks_noreps[,,ind] = gpagen(landmarks[,,which(names(n_reps)[ind] == dimnames(landmarks)[[3]])])$consensus
+  gpa = gpagen(landmarks[,,which(names(n_reps)[ind] == dimnames(landmarks)[[3]])])
+  landmarks_noreps[,,ind] = gpa$consensus
+  size[ind] = mean(gpa$Csize)
 }
 dimnames(landmarks_noreps) <- list(1:15, c("x", "y"), names(n_reps))
+names(size) = names(n_reps)
 
 gpa = gpagen(landmarks_noreps)
 gpa$coords
@@ -62,6 +68,7 @@ tesselation = matrix(
     2, 14, 13, 
     2, 3, 13,
     3, 12, 13,
+    3, 4, 12,
     4, 5, 6,
     4, 6, 12,
     6, 9, 12, 
@@ -104,9 +111,36 @@ wireframe = matrix(
 #shape_variables = wrapMarquez(landmarks_noreps, tesselation)
 #save(shape_variables, file = "./data/Rdatas/mandibleShape.Rdata")
 load("./data/Rdatas/mandibleShape.Rdata")
+shape_variables$cs = size
 
-colors = rnorm(15)
-ggshape_2d(shape_variables$reference, wireframe, colors)
 
 shape_cor = cor(shape_variables$local)
+eigen_1 = eigen(shape_cor)$vectors[,1]
 plotMatrix(shape_cor)
+
+colors = rnorm(15)
+positions = data.frame(
+  mshape[t(tesselation),], 
+  id = rep(1:13, each = 3))
+
+centroids = ddply(positions, .(id), numcolwise(mean)) 
+
+values = data.frame(id = 1:13, eigen_1 = shape_variables$local[16,])
+datapoly <- merge(values, positions, by=c("id"))
+
+min_s = min(shape_variables$local)
+max_s = max(shape_variables$local)
+
+min_size = min(shape_variables$cs)
+max_size = max(shape_variables$cs)
+
+mypalette = colorRampPalette(c("blue", "white", "red"))
+(p <- ggplot(datapoly, aes(x=x, y=y)) + 
+  geom_polygon(color = "black", aes(fill=eigen_1, group=id)) + 
+  geom_text(data = centroids, aes(x, y, label = id)) +
+  scale_fill_gradientn('Shape\nVariables', colours = mypalette(10), limits=c(min_s, max_s)) + 
+  scale_alpha_continuous(guide = FALSE) + 
+  theme_shape())
+save_plot("mandible_loadings.png", p, base_height = 5, base_aspect_ratio = 2)
+
+ggshape_2d(shape_variables$reference, wireframe, colors)
