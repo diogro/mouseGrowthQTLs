@@ -43,7 +43,7 @@ num_growth_traits = length(growth_traits)
 
 m_growth_phen = gather(growth_phen, variable, value, grow12:grow78)
 
-null.formula = "value ~ 1 + variable * SEX + variable * LSB + variable * LSW + variable * COHORT"
+null.formula = "value ~ variable + variable * SEX + variable * LSB + variable * LSW + variable * COHORT"
 mouse_no_fixed = lm(as.formula(null.formula), data = m_growth_phen)
 m_growth_phen_std = m_growth_phen
 m_growth_phen_std$value = residuals(mouse_no_fixed)
@@ -66,7 +66,7 @@ num_area_traits = length(area_traits)
 
 m_area_phen = gather(area_phen, variable, value, area1:area7)
 
-null.formula = "value ~ 1 + variable * SEX + variable * LSB + variable * LSW + variable * COHORT"
+null.formula = "value ~ variable * SEX + variable * LSB + variable * LSW + variable * COHORT"
 mouse_no_fixed = lm(as.formula(null.formula), data = m_area_phen)
 m_area_phen_std = m_area_phen
 m_area_phen_std$value = residuals(mouse_no_fixed)
