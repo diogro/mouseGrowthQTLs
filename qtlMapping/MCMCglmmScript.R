@@ -1,92 +1,60 @@
-library(MCMCglmm)
-library(plyr)
-library(reshape2)
-library(lme4)
-library(ggplot2)
+source('read_mouse_data.R')
 
-source('read.mouse.data.R')
+install_load("MCMCglmm")
 
-pedigree = select(mouse.data, ID, Dam, Sire)
+area_data = inner_join(area_phen_std,
+                       Reduce(inner_join, area_markers),
+                       by = "ID")
 
-mouse.data = select(mouse.data, ID, FAMILY, SEX, LSB, LSW, COHORT, grow12:grow78, A1:I31)
-mouse.data = mouse.data[complete.cases(mouse.data),]
+value = paste("cbind(", paste(area_traits, collapse = ', '), ")", sep = '')
 
-num.traits = 7
+fixed_effects = "trait - 1"
 
-value = paste("cbind(",
-               paste(paste("grow",
-                           paste(1:num.traits, 2:(num.traits+1), sep = ''),
-                           sep = ''), collapse = ', '),
-               ")", sep = '')
+null_formula = paste(value, fixed_effects, sep = ' ~ ')
 
-fixed.effects = "trait:SEX + trait:LSB + trait:LSW + trait:COHORT - 1"
-
-null.formula = paste(value, fixed.effects, sep = ' ~ ')
-
-runNullMCMCModel <- function(null.formula, pl = FALSE) {
-    prior = list(R = list(V = diag(num.traits), n = 0.002),
-                 G = list(G1 = list(V = diag(num.traits) * 0.02, n = num.traits+1)))
-
-    mcmc.mouse.model = MCMCglmm(as.formula(null.formula),
+runNullMCMCModel <- function(null_formula, pl = TRUE) {
+    prior = list(R = list(V = diag(num_area_traits), n = 0.002),
+                 G = list(G1 = list(V = diag(num_area_traits) * 0.02, n = 0.001)))
+    area_MCMC_null_model = MCMCglmm(as.formula(null_formula),
                                 random = ~us(trait):FAMILY,
-                                data = mouse.data,
+                                data = as.data.frame(area_data),
                                 rcov = ~us(trait):units,
-                                family = rep("gaussian", num.traits),
+                                family = rep("gaussian", num_area_traits),
                                 prior = prior,
                                 pl = pl,
                                 verbose = TRUE)
-    return(mcmc.mouse.model)
+    return(area_MCMC_null_model)
 }
 
+area_MCMC_null_model = runNullMCMCModel(null_formula)
+summary(area_MCMC_null_model)
 
-runSingleLocusMCMCModel <- function(locus, null.formula, start = NULL){
-    genotype.formula = paste(null.formula,
-                             paste(paste('trait:', c('A', 'D', 'I'),
-                                         locus, sep = ''), collapse = ' + '),
-                             sep = ' + ')
-    prior = list(R = list(V = diag(7), n = 0.002),
-                 G = list(G1 = list(V = diag(7) * 0.02, n = 8)))
-    mcmc.mouse.model = MCMCglmm(as.formula(genotype.formula),
+G_mcmc = apply(array(area_MCMC_null_model$VCV[,1:(num_area_traits*num_area_traits)], 
+                     dim = c(1000, num_area_traits, num_area_traits)), 2:3, median)
+
+R_mcmc = apply(array(area_MCMC_null_model$VCV[,-c(1:(num_area_traits*num_area_traits))], 
+                     dim = c(1000, num_area_traits, num_area_traits)), 2:3, median)
+
+makeMarkerList = function(pos) paste(paste('trait:chrom', pos[1],"_", c('A', 'D'), pos[2], sep = ''), collapse = ' + ')
+markerMatrix = ldply(1:19, function(x) data.frame(chrom = x, locus = 1:loci_per_chrom[[x]]))
+markerList = alply(markerMatrix, 1, makeMarkerList)
+
+marker_term = markerList[[40]]
+runSingleLocusMCMCModel <- function(marker_term, null_formula, start = NULL){
+    genotype.formula = paste(null_formula, marker_term, sep = ' + ')
+    prior = list(R = list(V = diag(num_area_traits), n = 0.002),
+                 G = list(G1 = list(V = diag(num_area_traits) * 0.02, n = num_area_traits+1)))
+    area_MCMC_singleLocus = MCMCglmm(as.formula(genotype.formula),
                                 random = ~us(trait):FAMILY,
-                                data = mouse.data,
+                                data = as.data.frame(area_data),
                                 rcov = ~us(trait):units,
-                                family = rep("gaussian", 7),
+                                family = rep("gaussian", num_area_traits),
                                 start = start,
                                 prior = prior,
                                 verbose = FALSE)
-    return(mcmc.mouse.model)
+    return(area_MCMC_singleLocus)
 }
 
-runSingleLocusRandomModel <- function(locus, type, null.formula){
-    col = paste0(type, locus)
-    mouse.data[[col]] = as.factor(mouse.data[[col]])
-    levels = levels(mouse.data[[col]])
-    levelWrap = function(level, col) paste0('us(at.level(', col, ", '", level, "'):trait):FAMILY")
-    random.formula = paste("~", paste(aaply(levels, 1, levelWrap, col), collapse = " + "))
+start <- list(R = list(V = R_mcmc), G = list(G1 = G_mcmc), liab = matrix(area_MCMC_null_model$Liab[1,], ncol = num_area_traits))
 
-    n.gs = length(levels)
-    g.prior = list(V = diag(num.traits) * 0.02, n = num.traits+1)
-    G = alply(1:n.gs, 1, function(x) g.prior)
-    names(G) = paste0("G", 1:n.gs)
-
-    prior = list(R = list(V = diag(num.traits), n = 0.002), G = G)
-    mcmc.mouse.model = MCMCglmm(as.formula(null.formula),
-                                random = as.formula(random.formula),
-                                data = mouse.data,
-                                rcov = ~us(trait):units,
-                                family = rep("gaussian", num.traits),
-                                prior = prior,
-                                verbose = TRUE)
-    return(mcmc.mouse.model)
-}
-
-mcmc.mouse.model = runNullMCMCModel(null.formula)
-
-G.mcmc = apply(array(mcmc.mouse.model$VCV[,1:(num.traits*num.traits)], dim = c(1000, num.traits, num.traits)), 2:3, mean)
-R.mcmc = apply(array(mcmc.mouse.model$VCV[,-c(1:(num.traits*num.traits))], dim = c(1000, num.traits, num.traits)), 2:3, mean)
-
-start <- list(R = list(V = R.mcmc), G = list(G1 = G.mcmc), liab = matrix(mcmc.mouse.model$Liab[1,], ncol = num.traits))
-
-#all.loci.MCMC = alply(1:31, 1, runSingleLocusMCMCModel, null.formula, start, .progress='text')
-#save(all.loci.MCMC, file= './Rdatas/mouse.cromossome1.MCMC.Rdata')
-load("./Rdatas/mouse.cromossome1.MCMC.Rdata")
+all_loci_MCMC = llply(markerList, runSingleLocusMCMCModel, null_formula, start, .parallel = TRUE)

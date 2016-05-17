@@ -28,3 +28,8 @@ SAS_G[7,5] = 0.0465501872
 SAS_G[7,6] = 0.0055093826
 SAS_G[7,7] = 0.0337549975
 
+SAS_G[upper.tri(SAS_G)] <- t(SAS_G)[upper.tri(SAS_G)]
+cov2cor(SAS_G) - cov2cor(G_mcmc)
+MatrixCompare(SAS_G, G_mcmc)
+cov2cor(G_lme4)
+cov2cor(G_mcmc)
