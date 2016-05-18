@@ -36,3 +36,8 @@ runSingleLocusModel <- function(marker_term, null_formula){
                 p.value = test$'Pr(>Chisq)'[2]))
 }
 all_loci = llply(markerList, runSingleLocusModel, null_formula, .parallel = TRUE)
+#save(all_loci, file = "./data/Rdatas/all_loci_lme4.Rdata")
+all_effects = ldply(all_loci, function(x) coef(x$model_summary)[8:21,1:2])
+names(all_effects)
+all_effects %>% filter(chrom == 2, locus == 9)
+
