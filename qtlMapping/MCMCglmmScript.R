@@ -28,11 +28,13 @@ runNullMCMCModel <- function(null_formula, pl = TRUE, ...) {
     return(area_MCMC_null_model)
 }
 
-area_MCMC_null_model = runNullMCMCModel(null_formula, nitt=150000, thin=100, burnin=50000)
+#area_MCMC_null_model = runNullMCMCModel(null_formula, nitt=150000, thin=100, burnin=50000)
+#save(area_MCMC_null_model, file = "./data/Rdatas/area_MCMC_null_model.Rdata")
+load("./data/Rdatas/area_MCMC_null_model.Rdata")
 summary(area_MCMC_null_model)
 
-G_mcmc = apply(array(area_MCMC_null_model$VCV[,1:(num_area_traits*num_area_traits)],
-                     dim = c(1000, num_area_traits, num_area_traits)), 2:3, median)
+Gs_mcmc = array(area_MCMC_null_model$VCV[,1:(num_area_traits*num_area_traits)], dim = c(1000, num_area_traits, num_area_traits))
+G_mcmc = apply(array(area_MCMC_null_model$VCV[,1:(num_area_traits*num_area_traits)], dim = c(1000, num_area_traits, num_area_traits)), 2:3, median)
 
 R_mcmc = apply(array(area_MCMC_null_model$VCV[,-c(1:(num_area_traits*num_area_traits))],
                      dim = c(1000, num_area_traits, num_area_traits)), 2:3, median)
@@ -59,20 +61,20 @@ runSingleLocusMCMCModel <- function(marker_term, null_formula, start = NULL, ...
 
 start <- list(R = list(V = R_mcmc), G = list(G1 = G_mcmc), liab = matrix(area_MCMC_null_model$Liab[1,], ncol = num_area_traits))
 
-all_loci_MCMC = llply(markerList, runSingleLocusMCMCModel, null_formula, start, nitt=150000, thin=100, burnin=50000, .parallel = TRUE)
+all_loci_MCMC = llply(markerList, runSingleLocusMCMCModel, null_formula, start, nitt=153000, thin=10, burnin=3000, .parallel = TRUE)
 save(all_loci_MCMC, file = "./data/Rdatas/all_loci_mcmc.Rdata")
+load("./data/Rdatas/all_loci_mcmc.Rdata")
 all_effects_mcmc = ldply(all_loci_MCMC,
       function(x){
            ad = summary(x)$solutions[8:14, ]
            colnames(ad) = paste("ad", colnames(ad), sep = "_")
            dm = summary(x)$solutions[15:21, ]
+           p_am = colSums((x$Sol[,8:14]) > 0)/15000
+           p_dm = colSums((x$Sol[,15:21]) > 0)/15000
            colnames(dm) = paste("dm", colnames(dm), sep = "_")
            pos = na.omit(as.numeric(unlist(strsplit(unlist(as.character(x$Fixed$formula)[3]), "[^0-9]+"))))[2:3]
-           data.frame(chrom = pos[1], marker = pos[2], trait = 1:num_area_traits, ad, dm)
+           data.frame(chrom = pos[1], marker = pos[2], trait = 1:num_area_traits, ad, dm, p_ad, p_dm)
       }, .id = NULL, .parallel = TRUE) %>% tbl_df %>%
       mutate(count = rep(seq(markerList), each = 7)) %>% select(count, everything()) %>% select(-locus)
 write_csv(all_effects_mcmc, "./data/area traits/effects_mcmc.csv")
-
-marker_term = markerList[[339]]
-area_MCMC_singleLocus = runSingleLocusMCMCModel(marker_term, null_formula, start, nitt=20000, thin=100, burnin=10000)
-summary(area_MCMC_singleLocus)
+all_effects_mcmc = read_csv("./data/area traits/effects_mcmc.csv")
