@@ -2,7 +2,7 @@ setwd("/home/diogro/projects/mouse-qtls")
 source('read_mouse_data.R')
 
 install_load("MCMCglmm","doMC")
-registerDoMC(4)
+registerDoMC(90)
 
 area_data = inner_join(area_phen_std,
                        Reduce(inner_join, area_markers),
@@ -42,7 +42,7 @@ markerList = alply(markerMatrix, 1, makeMarkerList)
 markerPositions = cbind(markerMatrix, read_csv("./data/markers/marker_positions.csv")[,3])
 names(markerPositions)[3] = "cM"
 
-flank_dist = 5
+flank_dist = 15
 
 runIntervalMCMCModel <- function(marker_term, null_formula, start = NULL, ...){
     pos = na.omit(as.numeric(unlist(strsplit(unlist(as.character(marker_term)), "[^0-9]+"))))[3:2]
@@ -88,24 +88,26 @@ runIntervalMCMCModel <- function(marker_term, null_formula, start = NULL, ...){
 
 start <- list(R = list(V = R_mcmc), G = list(G1 = G_mcmc), liab = matrix(area_MCMC_null_model$Liab[1,], ncol = num_area_traits))
 
-#intervalMapping_MCMC = llply(markerList, runIntervalMCMCModel, null_formula, start, nitt=13000, thin=10, burnin=3000, .parallel = TRUE)
-#save(intervalMapping_MCMC, file = "./data/Rdatas/intervalMapping_mcmc.Rdata")
-load("./data/Rdatas/intervalMapping_mcmc.Rdata")
-#all_effectsInterval_mcmc = ldply(intervalMapping_MCMC,
-      #function(model_pair){
-           #focal = model_pair$focal
-           #sf = summary(focal)
-           #neff = nrow(sf$solutions)
-           #effects = sf$solutions[(neff-13):neff,]
-           #ad = effects[1:7,]
-           #colnames(ad) = paste("ad", colnames(ad), sep = "_")
-           #dm = effects[8:14,]
-           #colnames(dm) = paste("dm", colnames(dm), sep = "_")
-           #Sol = focal$Sol[,(neff-13):neff]
-           #p_ad = colSums((Sol[,1:7]) > 0)/nrow(Sol)
-           #p_dm = colSums((Sol[,8:14]) > 0)/nrow(Sol)
-           #pos = na.omit(as.numeric(unlist(strsplit(unlist(as.character(focal$Fixed$formula)[3]), "[^0-9]+"))))
-           #pos = pos[(length(pos)-1):length(pos)]
-           #data.frame(chrom = pos[1], marker = pos[2], trait = 1:num_area_traits, ad, dm, p_ad, p_dm)
-      #}, .id = NULL, .parallel = TRUE) %>% tbl_df %>% mutate(count = rep(seq(intervalMapping_MCMC), each = 7)) %>% select(count, everything())
-#write_csv(all_effectsInterval_mcmc, "./data/area traits/effectsInterval_mcmc.csv")
+intervalMapping_MCMC = llply(markerList, runIntervalMCMCModel, null_formula, start, nitt=13000, thin=10, burnin=3000, .parallel = TRUE)
+model_file = paste0("./data/Rdatas/intervalMapping_", flank_dist, "cM_mcmc.Rdata")
+save(intervalMapping_MCMC, file = model_file)
+load(model_file)
+all_effectsInterval_mcmc = ldply(intervalMapping_MCMC,
+      function(model_pair){
+           focal = model_pair$focal
+           sf = summary(focal)
+           neff = nrow(sf$solutions)
+           effects = sf$solutions[(neff-13):neff,]
+           ad = effects[1:7,]
+           colnames(ad) = paste("ad", colnames(ad), sep = "_")
+           dm = effects[8:14,]
+           colnames(dm) = paste("dm", colnames(dm), sep = "_")
+           Sol = focal$Sol[,(neff-13):neff]
+           p_ad = colSums((Sol[,1:7]) > 0)/nrow(Sol)
+           p_dm = colSums((Sol[,8:14]) > 0)/nrow(Sol)
+           pos = na.omit(as.numeric(unlist(strsplit(unlist(as.character(focal$Fixed$formula)[3]), "[^0-9]+"))))
+           pos = pos[(length(pos)-1):length(pos)]
+           data.frame(chrom = pos[1], marker = pos[2], trait = 1:num_area_traits, ad, dm, p_ad, p_dm)
+      }, .id = NULL, .parallel = TRUE) %>% tbl_df %>% mutate(count = rep(seq(intervalMapping_MCMC), each = 7)) %>% select(count, everything())
+effect_file = paste0("./data/area traits/effectsInterval_", flank_dist, "cM_mcmc.csv")
+write_csv(all_effectsInterval_mcmc, effect_file)
