@@ -1,5 +1,5 @@
 if(!require(install.load)) {install.packages("install.load"); library(install.load)}
-install_load("plyr", "dplyr", "tidyr", "readr", "lme4", "ggplot2", "cowplot", "lmerTest")
+install_load("plyr", "dplyr", "tidyr", "readr", "lme4", "ggplot2", "cowplot")
 
 ## Meta data
 
