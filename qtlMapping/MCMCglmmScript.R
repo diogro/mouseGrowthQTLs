@@ -2,7 +2,7 @@ setwd("/home/diogro/projects/mouse-qtls")
 source('read_mouse_data.R')
 
 install_load("MCMCglmm","doMC")
-registerDoMC(100)
+registerDoMC(4)
 
 area_data = inner_join(area_phen_std,
                        Reduce(inner_join, area_markers),
@@ -64,17 +64,19 @@ start <- list(R = list(V = R_mcmc), G = list(G1 = G_mcmc), liab = matrix(area_MC
 all_loci_MCMC = llply(markerList, runSingleLocusMCMCModel, null_formula, start, nitt=153000, thin=10, burnin=3000, .parallel = TRUE)
 save(all_loci_MCMC, file = "./data/Rdatas/all_loci_mcmc.Rdata")
 load("./data/Rdatas/all_loci_mcmc.Rdata")
+x = all_loci_MCMC[[1]]
 all_effects_mcmc = ldply(all_loci_MCMC,
       function(x){
            ad = summary(x)$solutions[8:14, ]
            colnames(ad) = paste("ad", colnames(ad), sep = "_")
            dm = summary(x)$solutions[15:21, ]
-           p_am = colSums((x$Sol[,8:14]) > 0)/15000
-           p_dm = colSums((x$Sol[,15:21]) > 0)/15000
            colnames(dm) = paste("dm", colnames(dm), sep = "_")
+           p_ad = colSums((x$Sol[,8:14]) > 0)/nrow(x$Sol)
+           p_dm = colSums((x$Sol[,15:21]) > 0)/nrow(x$Sol)
            pos = na.omit(as.numeric(unlist(strsplit(unlist(as.character(x$Fixed$formula)[3]), "[^0-9]+"))))[2:3]
            data.frame(chrom = pos[1], marker = pos[2], trait = 1:num_area_traits, ad, dm, p_ad, p_dm)
       }, .id = NULL, .parallel = TRUE) %>% tbl_df %>%
-      mutate(count = rep(seq(markerList), each = 7)) %>% select(count, everything()) %>% select(-locus)
+      dplyr::mutate(count = rep(seq(markerList), each = 7)) %>%
+      dplyr::select(count, everything()) %>% dplyr::select(-locus)
 write_csv(all_effects_mcmc, "./data/area traits/effects_mcmc.csv")
 all_effects_mcmc = read_csv("./data/area traits/effects_mcmc.csv")
