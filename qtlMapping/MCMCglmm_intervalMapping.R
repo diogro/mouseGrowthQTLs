@@ -42,7 +42,7 @@ markerList = alply(markerMatrix, 1, makeMarkerList)
 markerPositions = cbind(markerMatrix, read_csv("./data/markers/marker_positions.csv")[,3])
 names(markerPositions)[3] = "cM"
 
-flank_dist = 15
+flank_dist = 20
 
 runIntervalMCMCModel <- function(marker_term, null_formula, start = NULL, ...){
     pos = na.omit(as.numeric(unlist(strsplit(unlist(as.character(marker_term)), "[^0-9]+"))))[3:2]
