@@ -2,7 +2,7 @@ setwd("/home/diogro/projects/mouse-qtls")
 source('read_mouse_data.R')
 
 install_load("MCMCglmm","doMC")
-registerDoMC(90)
+registerDoMC(4)
 
 area_data = inner_join(area_phen_std,
                        Reduce(inner_join, area_markers),
