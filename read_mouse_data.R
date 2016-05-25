@@ -18,6 +18,17 @@ for(chrom in names(markers)){
 chroms = seq(markers)
 loci_per_chrom = laply(chroms, function(chrom) ncol(markers[[chrom]][-1])/3)
 
+## Simulted Markers
+
+simulated_markers = llply(paste0("./data/Simulated\ independent\ genotypes/data", 1:20, ".csv"), read_csv)
+names(simulated_markers) = paste0("sim_chrom", 1:20)
+for(chrom in names(simulated_markers)){
+  names(simulated_markers[[chrom]])[-1] = (paste(chrom, names(simulated_markers[[chrom]])[-1], sep = "_"))
+}
+
+simulated_chroms = seq(simulated_markers)
+simulated_loci_per_chrom = laply(simulated_chroms, function(chrom) ncol(simulated_markers[[chrom]][-1])/3)
+
 ##Growth traits
 
 raw.growth_phen = read_csv("data/growth traits/F3Phenotypes_further corrected family data_corrected litter sizes.csv")
