@@ -63,9 +63,10 @@ runSingleLocusMCMCModel <- function(marker_term, null_formula, start = NULL, ver
 start <- list(R = list(V = R_mcmc), G = list(G1 = G_mcmc), liab = matrix(area_MCMC_null_model$Liab[1,], ncol = num_area_traits))
 
 ptm = proc.time()
-simulated_MCMC = llply(markerList, runSingleLocusMCMCModel, null_formula, start, nitt=3300, thin=15, burnin=300, .parallel = TRUE)
+simulated_MCMC = llply(markerList, runSingleLocusMCMCModel, null_formula, start,
+                       nitt=10300, thin=10, burnin=300, .parallel = TRUE)
 run_time = proc.time() - ptm
-model_file = paste0("./data/Rdatas/simulated_mcmc_data", sim_chrom_number, ".Rdata")
+model_file = paste0("./data/Rdatas/simulated_mcmc_data", sim_chrom_number, "_long.Rdata")
 save(simulated_MCMC, file = model_file)
 load(model_file)
 x = all_loci_MCMC[[1]]
@@ -82,6 +83,6 @@ simulated_effects = ldply(simulated_MCMC,
       }, .id = NULL, .parallel = TRUE) %>% tbl_df %>%
       dplyr::mutate(count = rep(seq(markerList), each = 7)) %>%
       dplyr::select(count, everything()) %>% dplyr::select(-locus)
-effect_file = paste0("./data/area traits/simulatedEffects_data", sim_chrom_number, "_mcmc.csv")
+effect_file = paste0("./data/area traits/simulatedEffects_data", sim_chrom_number, "_mcmc_long.csv")
 write_csv(simulated_effects, effect_file)
 all_effects_mcmc = read_csv(effect_file)
