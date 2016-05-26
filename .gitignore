@@ -9,3 +9,5 @@ mcmcqtl/*
 data
 .ipynb_checkpoints
 .ipynb_checkpoints/*
+.httr-oauth
+OAuth_lem_server.R
