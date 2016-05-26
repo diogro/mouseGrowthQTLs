@@ -2,7 +2,7 @@ setwd("/home/diogro/projects/mouse-qtls")
 source('read_mouse_data.R')
 
 install_load("MCMCglmm","doMC")
-registerDoMC(4)
+registerDoMC(40)
 
 sim_chrom_number = 2
 
@@ -62,12 +62,14 @@ runSingleLocusMCMCModel <- function(marker_term, null_formula, start = NULL, ver
 
 start <- list(R = list(V = R_mcmc), G = list(G1 = G_mcmc), liab = matrix(area_MCMC_null_model$Liab[1,], ncol = num_area_traits))
 
-all_loci_MCMC = llply(markerList, runSingleLocusMCMCModel, null_formula, start, nitt=3300, thin=15, burnin=300, .parallel = TRUE)
+ptm = proc.time()
+simulated_MCMC = llply(markerList, runSingleLocusMCMCModel, null_formula, start, nitt=3300, thin=15, burnin=300, .parallel = TRUE)
+run_time = proc.time() - ptm
 model_file = paste0("./data/Rdatas/simulated_mcmc_data", sim_chrom_number, ".Rdata")
-save(all_loci_MCMC, file = model_file)
+save(simulated_MCMC, file = model_file)
 load(model_file)
 x = all_loci_MCMC[[1]]
-all_effects_mcmc = ldply(all_loci_MCMC,
+simulated_effects = ldply(simulated_MCMC,
       function(x){
            ad = summary(x)$solutions[8:14, ]
            colnames(ad) = paste("ad", colnames(ad), sep = "_")
@@ -81,5 +83,5 @@ all_effects_mcmc = ldply(all_loci_MCMC,
       dplyr::mutate(count = rep(seq(markerList), each = 7)) %>%
       dplyr::select(count, everything()) %>% dplyr::select(-locus)
 effect_file = paste0("./data/area traits/simulatedEffects_data", sim_chrom_number, "_mcmc.csv")
-write_csv(all_effects_mcmc, effect_file)
+write_csv(simulated_effects, effect_file)
 all_effects_mcmc = read_csv(effect_file)
