@@ -35,7 +35,7 @@ R_mcmc = apply(array(area_MCMC_null_model$VCV[,-c(1:(num_area_traits*num_area_tr
 
 simulated_DIC_array = array(NA, c(1000, 20))
 sim_chrom_number = 2
-for(sim_chrom_number in 1:20){
+for(sim_chrom_number in 2:20){
 
     area_data = inner_join(area_phen_std, simulated_markers[[sim_chrom_number]], by = "ID")
 
@@ -64,3 +64,4 @@ for(sim_chrom_number in 1:20){
     simulated_DIC = laply(markerList, runSingleLocusMCMCModelDIC, null_formula, start, nitt=3300, thin=15, burnin=300, .parallel = TRUE)
     simulated_DIC_array[,sim_chrom_number] = simulated_DIC
 }
+save(simulated_DIC_array, file = "../data/Rdatas/simulatedDICArray.Rdata")
