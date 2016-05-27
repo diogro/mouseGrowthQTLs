@@ -34,13 +34,13 @@ G_mcmc = apply(array(area_MCMC_null_model$VCV[,1:(num_area_traits*num_area_trait
 R_mcmc = apply(array(area_MCMC_null_model$VCV[,-c(1:(num_area_traits*num_area_traits))], dim = c(1000, num_area_traits, num_area_traits)), 2:3, median)
 
 simulated_DIC_array = array(NA, c(1000, 20))
-sim_chrom_number = 2
-for(sim_chrom_number in 2:20){
-
+sim_chrom_number = 1
+for(sim_chrom_number in 3:20){
+    print(sim_chrom_number)
     area_data = inner_join(area_phen_std, simulated_markers[[sim_chrom_number]], by = "ID")
 
     makeMarkerList = function(pos) paste(paste('trait:sim_chrom', pos[1],"_", c('A', 'D'), pos[2], sep = ''), collapse = ' + ')
-    markerMatrix = ldply(2, function(x) data.frame(chrom = x, locus = 1:simulated_loci_per_chrom[[x]]))
+    markerMatrix = ldply(sim_chrom_number, function(x) data.frame(chrom = x, locus = 1:simulated_loci_per_chrom[[x]]))
     markerList = alply(markerMatrix, 1, makeMarkerList)
 
     runSingleLocusMCMCModelDIC <- function(marker_term, null_formula, start = NULL, verbose = FALSE, ...){
@@ -64,4 +64,6 @@ for(sim_chrom_number in 2:20){
     simulated_DIC = laply(markerList, runSingleLocusMCMCModelDIC, null_formula, start, nitt=3300, thin=15, burnin=300, .parallel = TRUE)
     simulated_DIC_array[,sim_chrom_number] = simulated_DIC
 }
-save(simulated_DIC_array, file = "../data/Rdatas/simulatedDICArray.Rdata")
+save(simulated_DIC_array, file = "./data/Rdatas/simulatedDICArray.Rdata")
+source ("./OAuth_lem_server.R")
+taskStatus(TRUE, "diogro", "Done running null models")
