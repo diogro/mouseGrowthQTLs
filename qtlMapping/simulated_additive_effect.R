@@ -92,3 +92,4 @@ for(i in 1:20){
   DIC_list[[i]] = ldply(1:1000, simulateDIC, i, effect_size[i], .parallel = TRUE)
 }
 DIC_power = ldply(DIC_list)
+write_csv(DIC_power, "./data/area traits/power_analysis.csv")
