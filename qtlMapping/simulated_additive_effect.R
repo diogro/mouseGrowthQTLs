@@ -5,11 +5,16 @@ source("~/projects/mouse-qtls/OAuth_lem_server.R")
 install_load("MCMCglmm","doMC")
 registerDoMC(80)
 
+data = rnorm(1000, 1, 10)
+marker = sample(c(-1, 0, 1), 1000, replace = TRUE)
+a = 0
+
 makeSimData = function(data, marker, percent){
   a = findA(data, marker, percent)
   data + marker * a/2
 }
 markerVar = function(a, data, marker){
+    data = mean(data) + residuals(lm(data ~ marker))
     za = data + marker * a/2
     n = length(data)
     V_pa = sum((za - mean(za))^2)/(n - 1)
@@ -34,7 +39,7 @@ findA = function(data, marker, percent){
   }
   return(a + step_size)
 }
- 
+
 # sim_chrom_number = 1
 # locus = 1
 # effect_size = 0.01

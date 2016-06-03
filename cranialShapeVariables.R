@@ -40,22 +40,31 @@ pc.res <- prcomp(two.d.array(skull_gpa$coords))
 pcdata <- pc.res$x
 rotation <- pc.res$rotation
 k <- dim(skull_gpa$coords)[2] ; p <- dim(skull_gpa$coords)[1]
-pcaxis.quatiles <- quantile(pcdata[, 1], seq(0, 1, length.out = 10))
-pc1_loading = pcaxis.quatiles[[1]]
+pcaxis1.quatiles <- quantile(pcdata[, 1], seq(0, 1, length.out = 10))
+pcaxis2.quatiles <- quantile(pcdata[, 2], seq(0, 1, length.out = 10))
 
-pc1_shape <- function(pc1_loading) {
+pc1_loading = pcaxis1.quatiles[[10]]
+pc2_loading = pcaxis2.quatiles[[10]]
+
+pc1_shape <- function(i) {
   pc.vec <- rep(0, dim(pcdata)[2])
-  pc.vec[1] <- pc1_loading
+  pc.vec[1] <- pcaxis1.quatiles[[i]]
+  pc.vec[2] <- pcaxis2.quatiles[[i]]
   target <- arrayspecs(as.matrix(pc.vec %*% (t(rotation))), p,k)[,,1] + ref
   warpRefMesh(raw_mesh, landmarks[,,mean_spec], target)
 }
-pc1_shapes_list = llply(pcaxis.quatiles, pc1_shape, .progress = "text")
+pc1_shapes_list = llply(1:10, pc1_shape, .progress = "text")
+shape = pc1_shapes_list[[1]]
 plot_shape = function(shape){
   open3d()
-  shade3d(rotate3d(shape, pi, 20, -8, 0))
+  shade3d(rotate3d(shape, 8/7*pi, 1, 0, 0))
 }
 
 for(i in 1:10){
 plot_shape(pc1_shapes_list[[i]])
-rgl.postscript(paste0("./animation/pc1_animation_", i, ".pdf"), fmt="pdf")
+rgl.postscript(paste0("./animation/pc1_animation_", i, ".eps"), fmt="eps")
+snapshot3d(paste0("./animation/pc1_animation_", i, ".png"))
 }
+
+covm = cov(two.d.array(skull_gpa$coords))
+MeanMatrixStatistics(covm)
