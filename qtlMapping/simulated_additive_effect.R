@@ -23,37 +23,37 @@ findA = function(data, marker, percent){
   step_size = (percent * V_p)
   marker_var = 0
   a = 0
-  while(marker_var <= percent){ 
+  while(marker_var <= percent){
     a = a + step_size
     marker_var = markerVar(a, data, marker)
   }
   step_size = abs(marker_var - percent)/10
-  while(marker_var >= percent){ 
+  while(marker_var >= percent){
     a = a - step_size
     marker_var = markerVar(a, data, marker)
   }
   return(a + step_size)
 }
- 
+
 # sim_chrom_number = 1
 # locus = 1
 # effect_size = 0.01
 
 simulateDIC = function(locus, sim_chrom_number, effect_size){
   area_data = inner_join(area_phen_std, simulated_markers[[sim_chrom_number]], by = "ID")
-  
+
   marker_column_A = data.frame(select(area_data, matches(paste0("_A", locus, "$"))))[,1]
   marker_column_D = data.frame(select(area_data, matches(paste0("_D", locus, "$"))))[,1]
-  sim_data = tbl_df(as.data.frame(llply(select(area_data, area1:area7), 
+  sim_data = tbl_df(as.data.frame(llply(select(area_data, area1:area7),
                                         makeSimData, marker_column_A, effect_size))) %>%
     mutate(A = marker_column_A, D = marker_column_D, FAMILY = area_phen_std$FAMILY)
-  
+
   value = paste("cbind(", paste(area_traits, collapse = ', '), ")", sep = '')
-  
+
   fixed_effects = "trait - 1"
-  
+
   null_formula = paste(value, fixed_effects, sep = ' ~ ')
-  
+
   prior = list(R = list(V = diag(num_area_traits), n = 0.002),
                G = list(G1 = list(V = diag(num_area_traits) * 0.02, n = 0.001)))
   null_model = MCMCglmm(as.formula(null_formula),
@@ -69,7 +69,7 @@ simulateDIC = function(locus, sim_chrom_number, effect_size){
   G_mcmc = apply(array(null_model$VCV[,1:(num_area_traits*num_area_traits)], dim = c(n_mc, num_area_traits, num_area_traits)), 2:3, median)
   R_mcmc = apply(array(null_model$VCV[,-c(1:(num_area_traits*num_area_traits))], dim = c(n_mc, num_area_traits, num_area_traits)), 2:3, median)
   start <- list(R = list(V = R_mcmc), G = list(G1 = G_mcmc), liab = matrix(null_model$Liab[1,], ncol = num_area_traits))
-  
+
   genotype.formula = paste(null_formula, "trait:A + trait:D", sep = ' + ')
   prior = list(R = list(V = diag(num_area_traits), n = 0.002),
                G = list(G1 = list(V = diag(num_area_traits) * 0.02, n = num_area_traits+1)))
@@ -89,7 +89,11 @@ effect_size = seq(0.005, 0.04, length.out = 20)
 DIC_list = vector("list", 20)
 names(DIC_list) = effect_size
 for(i in 1:20){
-  DIC_list[[i]] = ldply(1:1000, simulateDIC, i, effect_size[i], .parallel = TRUE)
+    ptm <- proc.time()
+    DIC_list[[i]] = ldply(1:1000, simulateDIC, i, effect_size[i], .parallel = TRUE)
+    time = proc.time() - ptm
+    dmSend(paste("Finished simulated chromossome", i, "in", round(time[3]/60, 2), "minutes." ), "diogro")
 }
 DIC_power = ldply(DIC_list)
 write_csv(DIC_power, "./data/area traits/power_analysis.csv")
+dmSend("Finished power analysis", "diogro")
