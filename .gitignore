@@ -11,3 +11,5 @@ data
 .ipynb_checkpoints/*
 .httr-oauth
 OAuth_lem_server.R
+animation
+animation/*
