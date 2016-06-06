@@ -3,11 +3,7 @@ source("~/projects/mouse-qtls/read_mouse_data.R")
 source("~/projects/mouse-qtls/OAuth_lem_server.R")
 
 install_load("MCMCglmm","doMC")
-registerDoMC(80)
-
-data = rnorm(1000, 1, 10)
-marker = sample(c(-1, 0, 1), 1000, replace = TRUE)
-a = 0
+registerDoMC(40)
 
 makeSimData = function(data, marker, percent){
   a = findA(data, marker, percent)
@@ -40,9 +36,9 @@ findA = function(data, marker, percent){
   return(a + step_size)
 }
 
-# sim_chrom_number = 1
-# locus = 1
-# effect_size = 0.01
+ #sim_chrom_number = 1
+ #locus = 1
+ #effect_size = 0.01
 
 simulateDIC = function(locus, sim_chrom_number, effect_size){
   area_data = inner_join(area_phen_std, simulated_markers[[sim_chrom_number]], by = "ID")
@@ -52,6 +48,7 @@ simulateDIC = function(locus, sim_chrom_number, effect_size){
   sim_data = tbl_df(as.data.frame(llply(select(area_data, area1:area7),
                                         makeSimData, marker_column_A, effect_size))) %>%
     mutate(A = marker_column_A, D = marker_column_D, FAMILY = area_phen_std$FAMILY)
+  print(paste(sim_chrom_number, locus))
 
   value = paste("cbind(", paste(area_traits, collapse = ', '), ")", sep = '')
 
@@ -67,7 +64,7 @@ simulateDIC = function(locus, sim_chrom_number, effect_size){
                         rcov = ~us(trait):units,
                         family = rep("gaussian", num_area_traits),
                         prior = prior,
-                        nitt=8000, thin=20, burnin=3000,
+                        nitt=4000, thin=5, burnin=3000,
                         pl = TRUE,
                         verbose = FALSE)
   n_mc = dim(null_model$Sol)[1]
@@ -95,7 +92,7 @@ DIC_list = vector("list", 20)
 names(DIC_list) = effect_size
 for(i in 1:20){
     ptm <- proc.time()
-    DIC_list[[i]] = ldply(1:1000, simulateDIC, i, effect_size[i], .parallel = TRUE)
+    DIC_list[[i]] = ldply(1:40, simulateDIC, i, effect_size[i], .parallel = TRUE)
     time = proc.time() - ptm
     dmSend(paste("Finished simulated chromossome", i, "in", round(time[3]/60, 2), "minutes." ), "diogro")
 }
