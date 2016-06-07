@@ -42,7 +42,7 @@ markerList = alply(markerMatrix, 1, makeMarkerList)
 markerPositions = cbind(markerMatrix, read_csv("./data/markers/marker_positions.csv")[,3])
 names(markerPositions)[3] = "cM"
 
-flank_dist = 20
+flank_dist = 5
 
 runIntervalMCMCModel <- function(marker_term, null_formula, start = NULL, ...){
     pos = na.omit(as.numeric(unlist(strsplit(unlist(as.character(marker_term)), "[^0-9]+"))))[3:2]
@@ -89,7 +89,7 @@ runIntervalMCMCModel <- function(marker_term, null_formula, start = NULL, ...){
 start <- list(R = list(V = R_mcmc), G = list(G1 = G_mcmc), liab = matrix(area_MCMC_null_model$Liab[1,], ncol = num_area_traits))
 
 intervalMapping_MCMC = llply(markerList, runIntervalMCMCModel, null_formula, start, nitt=13000, thin=10, burnin=3000, .parallel = TRUE)
-model_file = paste0("./data/Rdatas/intervalMapping_", flank_dist, "cM_mcmc.Rdata")
+model_file = paste0("./data/Rdatas/area_intervalMapping_", flank_dist, "cM_mcmc.Rdata")
 save(intervalMapping_MCMC, file = model_file)
 load(model_file)
 all_effectsInterval_mcmc = ldply(intervalMapping_MCMC,
@@ -98,16 +98,16 @@ all_effectsInterval_mcmc = ldply(intervalMapping_MCMC,
            sf = summary(focal)
            neff = nrow(sf$solutions)
            effects = sf$solutions[(neff-13):neff,]
-           ad = effects[1:7,]
+           ad = effects[1:num_area_traits,]
            colnames(ad) = paste("ad", colnames(ad), sep = "_")
-           dm = effects[8:14,]
+           dm = effects[(num_area_traits+1):(num_area_traits+num_area_traits),]
            colnames(dm) = paste("dm", colnames(dm), sep = "_")
            Sol = focal$Sol[,(neff-13):neff]
-           p_ad = colSums((Sol[,1:7]) > 0)/nrow(Sol)
-           p_dm = colSums((Sol[,8:14]) > 0)/nrow(Sol)
+           p_ad = colSums((Sol[, 1:num_area_traits]) > 0)/nrow(Sol)
+           p_dm = colSums((Sol[,(num_area_traits+1):(num_area_traits+num_area_traits)]) > 0)/nrow(Sol)
            pos = na.omit(as.numeric(unlist(strsplit(unlist(as.character(focal$Fixed$formula)[3]), "[^0-9]+"))))
            pos = pos[(length(pos)-1):length(pos)]
            data.frame(chrom = pos[1], marker = pos[2], trait = 1:num_area_traits, ad, dm, p_ad, p_dm)
-      }, .id = NULL, .parallel = TRUE) %>% tbl_df %>% mutate(count = rep(seq(intervalMapping_MCMC), each = 7)) %>% select(count, everything())
-effect_file = paste0("./data/area traits/effectsInterval_", flank_dist, "cM_mcmc.csv")
+      }, .id = NULL, .parallel = TRUE) %>% tbl_df %>% mutate(count = rep(seq(intervalMapping_MCMC), each = num_area_traits)) %>% select(count, everything())
+effect_file = paste0("./data/area traits/area_effectsInterval_", flank_dist, "cM_mcmc.csv")
 write_csv(all_effectsInterval_mcmc, effect_file)
