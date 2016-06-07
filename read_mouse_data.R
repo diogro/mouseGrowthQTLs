@@ -42,7 +42,9 @@ growth_phen = inner_join(mouse_meta, raw.growth_phen, by = "ID") %>%
          grow45 = WEEK5 - WEEK4,
          grow56 = WEEK6 - WEEK5,
          grow67 = WEEK7 - WEEK6,
-         grow78 = WEEK8 - WEEK7) %>%
+         grow78 = WEEK8 - WEEK7,
+         grow89 = WEEK9 - WEEK8,
+         grow910= WEEK10 - WEEK9) %>%
   select(ID, FAMILY, SEX, LSB, LSW, COHORT, grow12:grow78) %>%
   na.omit %>%
   arrange(ID)
