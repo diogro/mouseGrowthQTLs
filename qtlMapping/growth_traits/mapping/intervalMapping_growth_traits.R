@@ -1,5 +1,7 @@
 setwd("/home/diogro/projects/mouse-qtls")
 source('read_mouse_data.R')
+source('OAuth_lem_server.R')
+1
 
 install_load("MCMCglmm","doMC")
 registerDoMC(40)
@@ -111,3 +113,4 @@ all_effectsInterval_mcmc = ldply(intervalMapping_MCMC,
       }, .id = NULL, .parallel = TRUE) %>% tbl_df %>% mutate(count = rep(seq(intervalMapping_MCMC), each = num_growth_traits)) %>% select(count, everything())
 effect_file = paste0("./data/growth traits/growth_effectsInterval_", flank_dist, "cM_mcmc.csv")
 write_csv(all_effectsInterval_mcmc, effect_file)
+dmSend(paste("Finished growth interval mapping with flanking", flank_dist, "cM"), "diogro")

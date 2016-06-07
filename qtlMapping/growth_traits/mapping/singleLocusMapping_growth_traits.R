@@ -82,3 +82,4 @@ all_effects_mcmc = ldply(all_loci_MCMC,
       dplyr::select(count, everything()) %>% dplyr::select(-locus)
 write_csv(all_effects_mcmc, "./data/growth traits/effectsSingleLocus.csv")
 all_effects_mcmc = read_csv("./data/growth traits/effectsSingleLocus.csv")
+dmSend("Finished growth single locus mapping", "diogro")
