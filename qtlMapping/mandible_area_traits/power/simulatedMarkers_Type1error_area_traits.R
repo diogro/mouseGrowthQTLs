@@ -4,7 +4,6 @@ source('read_mouse_data.R')
 install_load("MCMCglmm","doMC")
 registerDoMC(40)
 
-
 value = paste("cbind(", paste(area_traits, collapse = ', '), ")", sep = '')
 
 fixed_effects = "trait - 1"
