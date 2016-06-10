@@ -25,8 +25,8 @@ runNullMCMCModel <- function(null_formula, pl = TRUE, ...) {
 }
 
 #area_MCMC_null_model = runNullMCMCModel(null_formula, nitt=150000, thin=100, burnin=50000)
-#save(area_MCMC_null_model, file = "./data/Rdatas/area_MCMC_null_model.Rdata")
-load("./data/Rdatas/area_MCMC_null_model.Rdata")
+#save(area_MCMC_null_model, file = paste0(Rdatas_folder, "area_MCMC_null_model.Rdata"))
+load(paste0(Rdatas_folder, "area_MCMC_null_model.Rdata"))
 summary(area_MCMC_null_model)
 
 G_mcmc = apply(array(area_MCMC_null_model$VCV[,1:(num_area_traits*num_area_traits)], dim = c(1000, num_area_traits, num_area_traits)), 2:3, median)
@@ -63,6 +63,7 @@ for(sim_chrom_number in 3:20){
     simulated_DIC = laply(markerList, runSingleLocusMCMCModelDIC, null_formula, start, nitt=3300, thin=15, burnin=300, .parallel = TRUE)
     simulated_DIC_array[,sim_chrom_number] = simulated_DIC
 }
-save(simulated_DIC_array, file = "./data/Rdatas/simulatedDICArray.Rdata")
-source ("./OAuth_lem_server.R")
-taskStatus(TRUE, "diogro", "Done running null models")
+
+area_nullDIC = area_MCMC_null_model$DIC - simulated_DIC_array
+saveRDS(area_nullDIC, file = "./data/area traits/nullDIC.rds")
+

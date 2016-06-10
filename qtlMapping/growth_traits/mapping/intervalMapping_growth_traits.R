@@ -3,6 +3,9 @@ source('read_mouse_data.R')
 source('OAuth_lem_server.R')
 1
 
+Rdatas_folder = "~/gdrive/LGSM_project_Rdatas/"
+#Rdatas_folder = "./data/Rdatas/"
+
 install_load("MCMCglmm","doMC")
 registerDoMC(40)
 
@@ -31,8 +34,8 @@ runNullMCMCModel <- function(null_formula, pl = TRUE, ...) {
 }
 
 #growth_MCMC_null_model = runNullMCMCModel(null_formula, nitt=150000, thin=100, burnin=50000)
-#save(growth_MCMC_null_model, file = "./data/Rdatas/growth_MCMC_null_model.Rdata")
-load("./data/Rdatas/growth_MCMC_null_model.Rdata")
+#save(growth_MCMC_null_model, file = Rdatas_folder, "growth_MCMC_null_model.Rdata")
+load(Rdatas_folder, "growth_MCMC_null_model.Rdata")
 summary(growth_MCMC_null_model)
 
 G_mcmc = apply(array(growth_MCMC_null_model$VCV[,1:(num_growth_traits*num_growth_traits)], dim = c(1000, num_growth_traits, num_growth_traits)), 2:3, median)
@@ -91,7 +94,7 @@ runIntervalMCMCModel <- function(marker_term, null_formula, start = NULL, ...){
 start <- list(R = list(V = R_mcmc), G = list(G1 = G_mcmc), liab = matrix(growth_MCMC_null_model$Liab[1,], ncol = num_growth_traits))
 
 intervalMapping_MCMC = llply(markerList, runIntervalMCMCModel, null_formula, start, nitt=13000, thin=10, burnin=3000, .parallel = TRUE)
-model_file = paste0("./data/Rdatas/growth_intervalMapping_", flank_dist, "cM_mcmc.Rdata")
+model_file = paste0(Rdatas_folder, "growth_intervalMapping_", flank_dist, "cM_mcmc.Rdata")
 save(intervalMapping_MCMC, file = model_file)
 load(model_file)
 all_effectsInterval_mcmc = ldply(intervalMapping_MCMC,
@@ -114,3 +117,52 @@ all_effectsInterval_mcmc = ldply(intervalMapping_MCMC,
 effect_file = paste0("./data/growth traits/growth_effectsInterval_", flank_dist, "cM_mcmc.csv")
 write_csv(all_effectsInterval_mcmc, effect_file)
 dmSend(paste("Finished growth interval mapping with flanking", flank_dist, "cM"), "diogro")
+
+
+flank_dist = 5
+model_file = paste0(Rdatas_folder, "growth_intervalMapping_", flank_dist, "cM_mcmc.Rdata")
+load(model_file)
+
+intervalMapping_DIC_df <- 
+  ldply(intervalMapping_MCMC, function(x) c(flankDIC_5cM = x[[1]]$DIC, 
+                                            focalDIC_5cM = x[[2]]$DIC)) %>% 
+  mutate(DICDiff_5cM = flankDIC_5cM - focalDIC_5cM) %>% tbl_df
+rm(intervalMapping_MCMC); gc()
+
+flank_dist = 10
+model_file = paste0(Rdatas_folder, "growth_intervalMapping_", flank_dist, "cM_mcmc.Rdata")
+load(model_file)
+
+intervalMapping_DIC_df <- 
+  ldply(intervalMapping_MCMC, function(x) c(flankDIC_10cM = x[[1]]$DIC, 
+                                            focalDIC_10cM = x[[2]]$DIC)) %>% 
+  mutate(DICDiff_10cM = flankDIC_10cM - focalDIC_10cM) %>% tbl_df %>% 
+  inner_join(intervalMapping_DIC_df, by = c("chrom", "marker")) 
+
+rm(intervalMapping_MCMC); gc()
+
+flank_dist = 15
+model_file = paste0(Rdatas_folder, "growth_intervalMapping_", flank_dist, "cM_mcmc.Rdata")
+load(model_file)
+
+intervalMapping_DIC_df <- 
+  ldply(intervalMapping_MCMC, function(x) c(flankDIC_15cM = x[[1]]$DIC, 
+                                            focalDIC_15cM = x[[2]]$DIC)) %>% 
+  mutate(DICDiff_15cM = flankDIC_15cM - focalDIC_15cM) %>% tbl_df %>% 
+  inner_join(intervalMapping_DIC_df, by = c("chrom", "marker")) 
+
+rm(intervalMapping_MCMC); gc()
+
+flank_dist = 20
+model_file = paste0(Rdatas_folder, "growth_intervalMapping_", flank_dist, "cM_mcmc.Rdata")
+load(model_file)
+
+intervalMapping_DIC_df <- 
+  ldply(intervalMapping_MCMC, function(x) c(flankDIC_20cM = x[[1]]$DIC, 
+                                            focalDIC_20cM = x[[2]]$DIC)) %>% 
+  mutate(DICDiff_20cM = flankDIC_20cM - focalDIC_20cM) %>% tbl_df %>% 
+  inner_join(intervalMapping_DIC_df, by = c("chrom", "marker")) 
+
+rm(intervalMapping_MCMC); gc()
+
+write_csv(intervalMapping_DIC_df, "./data/growth traits/intervalMappingDIC.csv")

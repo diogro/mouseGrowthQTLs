@@ -3,6 +3,9 @@ source('read_mouse_data.R')
 source('OAuth_lem_server.R')
 1
 
+Rdatas_folder = "~/gdrive/LGSM_project_Rdatas/"
+#Rdatas_folder = "./data/Rdatas/"
+
 install_load("MCMCglmm","doMC")
 registerDoMC(40)
 
@@ -31,8 +34,8 @@ runNullMCMCModel <- function(null_formula, pl = TRUE, ...) {
 }
 
 #growth_MCMC_null_model = runNullMCMCModel(null_formula, nitt=150000, thin=100, burnin=50000)
-#save(growth_MCMC_null_model, file = "./data/Rdatas/growth_MCMC_null_model.Rdata")
-load("./data/Rdatas/growth_MCMC_null_model.Rdata")
+#save(growth_MCMC_null_model, file = paste0(Rdatas_folder, "growth_MCMC_null_model.Rdata"))
+load(paste0(Rdatas_folder, "growth_MCMC_null_model.Rdata"))
 summary(growth_MCMC_null_model)
 
 Gs_mcmc = array(growth_MCMC_null_model$VCV[,1:(num_growth_traits*num_growth_traits)], dim = c(1000, num_growth_traits, num_growth_traits))
@@ -64,8 +67,8 @@ runSingleLocusMCMCModel <- function(marker_term, null_formula, start = NULL, ...
 start <- list(R = list(V = R_mcmc), G = list(G1 = G_mcmc), liab = matrix(growth_MCMC_null_model$Liab[1,], ncol = num_growth_traits))
 
 all_loci_MCMC = llply(markerList, runSingleLocusMCMCModel, null_formula, start, nitt=153000, thin=10, burnin=3000, .parallel = TRUE)
-save(all_loci_MCMC, file = "./data/Rdatas/growth_singleLocusMapping.Rdata")
-load("./data/Rdatas/growth_singleLocusMapping.Rdata")
+save(all_loci_MCMC, file = paste0(Rdatas_folder, "growth_singleLocusMapping.Rdata"))
+load(paste0(Rdatas_folder, "growth_singleLocusMapping.Rdata"))
 x = all_loci_MCMC[[1]]
 all_effects_mcmc = ldply(all_loci_MCMC,
       function(x){
@@ -83,3 +86,9 @@ all_effects_mcmc = ldply(all_loci_MCMC,
 write_csv(all_effects_mcmc, "./data/growth traits/effectsSingleLocus.csv")
 all_effects_mcmc = read_csv("./data/growth traits/effectsSingleLocus.csv")
 dmSend("Finished growth single locus mapping", "diogro")
+
+singleLocus_DIC_df <- 
+  ldply(all_loci_MCMC, `[[`, "DIC") %>% 
+  mutate(singleLocus_DICDiff = growth_MCMC_null_model$DIC - V1) %>% 
+  rename(singleLocus_DIC = V1) %>% tbl_df
+write_csv(singleLocus_DIC_df, "./data/growth traits/singleLocusDIC.csv")

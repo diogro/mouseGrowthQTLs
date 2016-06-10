@@ -1,6 +1,10 @@
 setwd("/home/diogro/projects/mouse-qtls")
 source('read_mouse_data.R')
 
+Rdatas_folder = "~/gdrive/LGSM_project_Rdatas/"
+#Rdatas_folder = "./data/Rdatas/"
+
+
 install_load("MCMCglmm","doMC")
 registerDoMC(4)
 
@@ -29,8 +33,8 @@ runNullMCMCModel <- function(null_formula, pl = TRUE, ...) {
 }
 
 #area_MCMC_null_model = runNullMCMCModel(null_formula, nitt=150000, thin=100, burnin=50000)
-#save(area_MCMC_null_model, file = "./data/Rdatas/area_MCMC_null_model.Rdata")
-load("./data/Rdatas/area_MCMC_null_model.Rdata")
+#save(area_MCMC_null_model, file = paste0(Rdatas_folder, "area_MCMC_null_model.Rdata"))
+load(paste0(Rdatas_folder, "area_MCMC_null_model.Rdata"))
 summary(area_MCMC_null_model)
 
 Gs_mcmc = array(area_MCMC_null_model$VCV[,1:(num_area_traits*num_area_traits)], dim = c(1000, num_area_traits, num_area_traits))
@@ -62,8 +66,9 @@ runSingleLocusMCMCModel <- function(marker_term, null_formula, start = NULL, ...
 start <- list(R = list(V = R_mcmc), G = list(G1 = G_mcmc), liab = matrix(area_MCMC_null_model$Liab[1,], ncol = num_area_traits))
 
 all_loci_MCMC = llply(markerList, runSingleLocusMCMCModel, null_formula, start, nitt=153000, thin=10, burnin=3000, .parallel = TRUE)
-save(all_loci_MCMC, file = "./data/Rdatas/area_singleLocusMapping.Rdata")
-load("./data/Rdatas/area_singleLocusMapping.Rdata")
+#save(all_loci_MCMC, file = Rdatas_folder, "area_singleLocusMapping.Rdata")
+load(paste0(Rdatas_folder, "area_singleLocusMapping.Rdata"))
+
 x = all_loci_MCMC[[1]]
 all_effects_mcmc = ldply(all_loci_MCMC,
       function(x){
@@ -80,3 +85,10 @@ all_effects_mcmc = ldply(all_loci_MCMC,
       dplyr::select(count, everything()) %>% dplyr::select(-locus)
 write_csv(all_effects_mcmc, "./data/area traits/effectsSingleLocus.csv")
 all_effects_mcmc = read_csv("./data/area traits/effectsSingleLocus.csv")
+
+singleLocus_DIC_df <- 
+  ldply(all_loci_MCMC, `[[`, "DIC") %>% 
+  mutate(singleLocus_DICDiff = area_MCMC_null_model$DIC - V1) %>% 
+  rename(singleLocus_DIC = V1) %>% tbl_df
+write_csv(singleLocus_DIC_df, "./data/area traits/singleLocusDIC.csv")
+rm(all_loci_MCMC); gc()
