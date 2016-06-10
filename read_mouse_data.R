@@ -29,7 +29,7 @@ for(chrom in names(simulated_markers)){
 simulated_chroms = seq(simulated_markers)
 simulated_loci_per_chrom = laply(simulated_chroms, function(chrom) ncol(simulated_markers[[chrom]][-1])/3)
 
-##Growth traits
+##growth traits
 
 raw.growth_phen = read_csv("data/growth traits/F3Phenotypes_further corrected family data_corrected litter sizes.csv")
 raw.growth_phen = tbl_df(select(raw.growth_phen, c(ID, WEEK1:WEEK10)))
@@ -88,3 +88,28 @@ area_phen_std = spread(m_area_phen_std, variable, value)
 
 rm(list = ls(pattern='raw'))
 rm(list = c("null.formula", 'mouse_no_fixed'))
+
+##necropsy traits
+
+raw.necropsy_phen = read_csv("data/growth traits/F3Phenotypes_further corrected family data_corrected litter sizes.csv")
+raw.necropsy_phen = tbl_df(select(raw.necropsy_phen, c(ID, FATPAD, HEART:LIVER)))
+
+necropsy_phen = inner_join(mouse_meta, raw.necropsy_phen, by = "ID") %>% 
+  semi_join(markers[[1]], by = "ID") %>%
+  select(ID, FAMILY, SEX, LSB, LSW, COHORT, FATPAD:LIVER) %>%
+  na.omit %>%
+  arrange(ID)
+
+necropsy_markers = llply(markers, function(x) semi_join(x, necropsy_phen, by = "ID"))
+
+necropsy_traits = c("FATPAD", "HEART", "KIDNEY", "SPLEEN", "LIVER")
+num_necropsy_traits = length(necropsy_traits)
+
+m_necropsy_phen = gather(necropsy_phen, variable, value, FATPAD:LIVER)
+
+null.formula = "value ~ variable + variable * SEX + variable * LSB + variable * LSW + variable * COHORT"
+mouse_no_fixed = lm(as.formula(null.formula), data = m_necropsy_phen)
+m_necropsy_phen_std = m_necropsy_phen
+m_necropsy_phen_std$value = residuals(mouse_no_fixed)
+
+necropsy_phen_std = spread(m_necropsy_phen_std, variable, value)
