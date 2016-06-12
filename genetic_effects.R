@@ -8,7 +8,7 @@ area_int_15cM_eff = read_csv("./data/area traits/effectsInterval_15cM_mcmc.csv")
 area_int_20cM_eff = read_csv("./data/area traits/effectsInterval_20cM_mcmc.csv")
 area_singleDIC = read_csv("./data/area traits/singleLocusDIC.csv") 
 area_intDIC = read_csv("./data/area traits/intervalMappingDIC.csv") 
-area_nullDIC = readRDS(area_nullDIC, file = "./data/area traits/nullDIC.rds")
+area_nullDIC = readRDS(file = "./data/area traits/nullDIC.rds")
 
 growth_single_eff  = read_csv("./data/growth traits/effectsSingleLocus.csv")
 growth_int_5cM_eff = read_csv("./data/growth traits/growth_effectsInterval_5cM_mcmc.csv")
@@ -17,8 +17,10 @@ growth_int_15cM_eff = read_csv("./data/growth traits/growth_effectsInterval_15cM
 growth_int_20cM_eff = read_csv("./data/growth traits/growth_effectsInterval_20cM_mcmc.csv")
 growth_singleDIC = read_csv("./data/growth traits/singleLocusDIC.csv") 
 growth_intDIC = read_csv("./data/growth traits/intervalMappingDIC.csv") 
+growth_nullDIC = readRDS(file = "./data/growth traits/nullDIC.rds")
+max(growth_nullDIC)
 
-growth_int_15cM_eff %>% 
+area_int_10cM_eff %>% 
   select(count, chrom, marker, trait, ad_post.mean, dm_post.mean) %>%
   rename(additive = ad_post.mean, dominance = dm_post.mean) %>%
   gather(type, value, additive:dominance) %>% 
@@ -27,7 +29,7 @@ growth_int_15cM_eff %>%
   geom_hline(yintercept = 0) + 
   geom_line() + facet_grid(trait~type) 
 
-growth_intDIC  %>%
+area_intDIC  %>%
   select(chrom, marker, contains("DICDiff")) %>%
   mutate(count = seq(353)) %>% 
   rename( i5cM = DICDiff_5cM, 

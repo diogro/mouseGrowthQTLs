@@ -35,39 +35,39 @@ findA = function(data, marker, percent){
 # effect_size = 0.01
 
 simulateDIC = function(locus, sim_chrom_number, effect_size){
-  area_data = inner_join(area_phen_std, simulated_markers[[sim_chrom_number]], by = "ID")
-  marker_column_A = data.frame(select(area_data, matches(paste0("_A", locus, "$"))))[,1]
-  marker_column_D = data.frame(select(area_data, matches(paste0("_D", locus, "$"))))[,1]
-  sim_data = tbl_df(as.data.frame(llply(select(area_data, area1:area7),
+  growth_data = inner_join(growth_phen_std, simulated_markers[[sim_chrom_number]], by = "ID")
+  marker_column_A = data.frame(select(growth_data, matches(paste0("_A", locus, "$"))))[,1]
+  marker_column_D = data.frame(select(growth_data, matches(paste0("_D", locus, "$"))))[,1]
+  sim_data = tbl_df(as.data.frame(llply(select(growth_data, growth1:growth7),
                                         makeSimData, marker_column_A, effect_size))) %>%
-    mutate(A = marker_column_A, D = marker_column_D, FAMILY = area_phen_std$FAMILY)
+    mutate(A = marker_column_A, D = marker_column_D, FAMILY = growth_phen_std$FAMILY)
   print(paste(sim_chrom_number, locus))
-  value = paste("cbind(", paste(area_traits, collapse = ', '), ")", sep = '')
+  value = paste("cbind(", paste(growth_traits, collapse = ', '), ")", sep = '')
   fixed_effects = "trait - 1"
   null_formula = paste(value, fixed_effects, sep = ' ~ ')
-  prior = list(R = list(V = diag(num_area_traits), n = 0.002),
-               G = list(G1 = list(V = diag(num_area_traits) * 0.02, n = 0.001)))
+  prior = list(R = list(V = diag(num_growth_traits), n = 0.002),
+               G = list(G1 = list(V = diag(num_growth_traits) * 0.02, n = 0.001)))
   null_model = MCMCglmm(as.formula(null_formula),
                         random = ~us(trait):FAMILY,
                         data = as.data.frame(sim_data),
                         rcov = ~us(trait):units,
-                        family = rep("gaussian", num_area_traits),
+                        family = rep("gaussian", num_growth_traits),
                         prior = prior,
                         nitt=4000, thin=5, burnin=3000,
                         pl = TRUE,
                         verbose = FALSE)
   n_mc = dim(null_model$Sol)[1]
-  G_mcmc = apply(array(null_model$VCV[,1:(num_area_traits*num_area_traits)], dim = c(n_mc, num_area_traits, num_area_traits)), 2:3, median)
-  R_mcmc = apply(array(null_model$VCV[,-c(1:(num_area_traits*num_area_traits))], dim = c(n_mc, num_area_traits, num_area_traits)), 2:3, median)
-  start <- list(R = list(V = R_mcmc), G = list(G1 = G_mcmc), liab = matrix(null_model$Liab[1,], ncol = num_area_traits))
+  G_mcmc = apply(array(null_model$VCV[,1:(num_growth_traits*num_growth_traits)], dim = c(n_mc, num_growth_traits, num_growth_traits)), 2:3, median)
+  R_mcmc = apply(array(null_model$VCV[,-c(1:(num_growth_traits*num_growth_traits))], dim = c(n_mc, num_growth_traits, num_growth_traits)), 2:3, median)
+  start <- list(R = list(V = R_mcmc), G = list(G1 = G_mcmc), liab = matrix(null_model$Liab[1,], ncol = num_growth_traits))
   genotype.formula = paste(null_formula, "trait:A + trait:D", sep = ' + ')
-  prior = list(R = list(V = diag(num_area_traits), n = 0.002),
-               G = list(G1 = list(V = diag(num_area_traits) * 0.02, n = num_area_traits+1)))
+  prior = list(R = list(V = diag(num_growth_traits), n = 0.002),
+               G = list(G1 = list(V = diag(num_growth_traits) * 0.02, n = num_growth_traits+1)))
   marker_model = MCMCglmm(as.formula(genotype.formula),
                           random = ~us(trait):FAMILY,
                           data = as.data.frame(sim_data),
                           rcov = ~us(trait):units,
-                          family = rep("gaussian", num_area_traits),
+                          family = rep("gaussian", num_growth_traits),
                           nitt=1300, thin=5, burnin=300,
                           start = start,
                           prior = prior,
@@ -85,5 +85,5 @@ for(i in 1:20){
     dmSend(paste("Finished simulated chromossome", i, "in", round(time[3]/60, 2), "minutes." ), "diogro")
 }
 DIC_power = ldply(DIC_list)
-write_csv(DIC_power, "./data/area traits/power_analysis.csv")
+write_csv(DIC_power, "./data/growth traits/power_analysis.csv")
 dmSend("Finished power analysis", "diogro")
