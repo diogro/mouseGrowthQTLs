@@ -1,34 +1,3 @@
-value = paste("cbind(", paste(necropsy_traits, collapse = ', '), ")", sep = '')
-
-fixed_effects = "trait - 1"
-
-null_formula = paste(value, fixed_effects, sep = ' ~ ')
-
-runNullMCMCModel <- function(null_formula, pl = TRUE, ...) {
-    prior = list(R = list(V = diag(num_necropsy_traits), n = 0.002),
-                 G = list(G1 = list(V = diag(num_necropsy_traits) * 0.02, n = 0.001)))
-    necropsy_MCMC_null_model = MCMCglmm(as.formula(null_formula),
-                                random = ~us(trait):FAMILY,
-                                data = as.data.frame(necropsy_data),
-                                rcov = ~us(trait):units,
-                                family = rep("gaussian", num_necropsy_traits),
-                                prior = prior,
-                                pl = pl,
-                                verbose = TRUE, ...)
-    return(necropsy_MCMC_null_model)
-}
-
-#necropsy_MCMC_null_model = runNullMCMCModel(null_formula, nitt=150000, thin=100, burnin=50000)
-#save(necropsy_MCMC_null_model, file = paste0(Rdatas_folder, "necropsy_MCMC_null_model.Rdata"))
-load(paste0(Rdatas_folder, "necropsy_MCMC_null_model.Rdata"))
-summary(necropsy_MCMC_null_model)
-
-Gs_mcmc = array(necropsy_MCMC_null_model$VCV[,1:(num_necropsy_traits*num_necropsy_traits)], dim = c(1000, num_necropsy_traits, num_necropsy_traits))
-G_mcmc = apply(array(necropsy_MCMC_null_model$VCV[,1:(num_necropsy_traits*num_necropsy_traits)], dim = c(1000, num_necropsy_traits, num_necropsy_traits)), 2:3, median)
-
-R_mcmc = apply(array(necropsy_MCMC_null_model$VCV[,-c(1:(num_necropsy_traits*num_necropsy_traits))],
-                     dim = c(1000, num_necropsy_traits, num_necropsy_traits)), 2:3, median)
-
 makeMarkerList = function(pos) paste(paste('trait:chrom', pos[1],"_", c('A', 'D'), pos[2], sep = ''), collapse = ' + ')
 markerMatrix = ldply(1:19, function(x) data.frame(chrom = x, locus = 1:loci_per_chrom[[x]]))
 markerList = alply(markerMatrix, 1, makeMarkerList)
