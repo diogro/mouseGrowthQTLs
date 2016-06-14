@@ -48,7 +48,7 @@ runIntervalMCMCModel <- function(marker_term, null_formula, start = NULL, ...){
 
 start <- list(R = list(V = R_mcmc), G = list(G1 = G_mcmc), liab = matrix(necropsy_MCMC_null_model$Liab[1,], ncol = num_necropsy_traits))
 
-intervalMapping_MCMC = llply(markerList, runIntervalMCMCModel, null_formula, start, nitt=13000, thin=10, burnin=3000, .parallel = TRUE)
+intervalMapping_MCMC = llply(markerList, runIntervalMCMCModel, null_formula, start, nitt=20300, thin=10, burnin=300, .parallel = TRUE)
 model_file = paste0(Rdatas_folder, "necropsy_intervalMapping_", flank_dist, "cM_mcmc.Rdata")
 save(intervalMapping_MCMC, file = model_file)
 load(model_file)

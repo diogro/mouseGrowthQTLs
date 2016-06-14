@@ -3,11 +3,11 @@ source('read_mouse_data.R')
 source('OAuth_lem_server.R')
 1
 
-Rdatas_folder = "~/gdrive/LGSM_project_Rdatas/"
-#Rdatas_folder = "./data/Rdatas/"
+#Rdatas_folder = "~/gdrive/LGSM_project_Rdatas/"
+Rdatas_folder = "./data/Rdatas/"
 
 install_load("MCMCglmm","doMC")
-registerDoMC(40)
+registerDoMC(80)
 
 necropsy_data = inner_join(necropsy_phen_std,
                            Reduce(inner_join, necropsy_markers),
@@ -33,14 +33,13 @@ runNullMCMCModel <- function(null_formula, pl = TRUE, ...) {
   return(necropsy_MCMC_null_model)
 }
 
-#necropsy_MCMC_null_model = runNullMCMCModel(null_formula, nitt=150000, thin=100, burnin=50000)
-#save(necropsy_MCMC_null_model, file = Rdatas_folder, "necropsy_MCMC_null_model.Rdata")
-load(Rdatas_folder, "necropsy_MCMC_null_model.Rdata")
+necropsy_MCMC_null_model = runNullMCMCModel(null_formula, nitt=1003000, thin=1000, burnin=3000)
+save(necropsy_MCMC_null_model, file = paste0(Rdatas_folder, "necropsy_MCMC_null_model.Rdata"))
+load(paste0(Rdatas_folder, "necropsy_MCMC_null_model.Rdata"))
 summary(necropsy_MCMC_null_model)
 
 G_mcmc = apply(array(necropsy_MCMC_null_model$VCV[,1:(num_necropsy_traits*num_necropsy_traits)], dim = c(1000, num_necropsy_traits, num_necropsy_traits)), 2:3, median)
 R_mcmc = apply(array(necropsy_MCMC_null_model$VCV[,-c(1:(num_necropsy_traits*num_necropsy_traits))], dim = c(1000, num_necropsy_traits, num_necropsy_traits)), 2:3, median)
-
 
 source("./qtlMapping/necropsy_traits/mapping/singleLocusMapping_necropsy_traits.R")
 

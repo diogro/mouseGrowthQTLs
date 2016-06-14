@@ -20,7 +20,7 @@ runSingleLocusMCMCModel <- function(marker_term, null_formula, start = NULL, ...
 
 start <- list(R = list(V = R_mcmc), G = list(G1 = G_mcmc), liab = matrix(necropsy_MCMC_null_model$Liab[1,], ncol = num_necropsy_traits))
 
-all_loci_MCMC = llply(markerList, runSingleLocusMCMCModel, null_formula, start, nitt=153000, thin=10, burnin=3000, .parallel = TRUE)
+all_loci_MCMC = llply(markerList, runSingleLocusMCMCModel, null_formula, start, nitt=20300, thin=10, burnin=300, .parallel = TRUE)
 save(all_loci_MCMC, file = paste0(Rdatas_folder, "necropsy_singleLocusMapping.Rdata"))
 load(paste0(Rdatas_folder, "necropsy_singleLocusMapping.Rdata"))
 x = all_loci_MCMC[[1]]

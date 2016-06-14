@@ -113,3 +113,4 @@ m_necropsy_phen_std = m_necropsy_phen
 m_necropsy_phen_std$value = residuals(mouse_no_fixed)
 
 necropsy_phen_std = spread(m_necropsy_phen_std, variable, value)
+necropsy_phen_std = necropsy_phen_std %>% mutate_each(funs(scale), FATPAD:SPLEEN)
