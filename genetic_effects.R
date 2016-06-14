@@ -1,36 +1,22 @@
 if(!require(install.load)) {install.packages("install.load"); library(install.load)}
 install_load("plyr", "evolqg", "dplyr", "tidyr", "readr", "ggplot2", "cowplot")
 
-area_single_eff  = read_csv("./data/area traits/effectsSingleLocus.csv")
-area_int_5cM_eff = read_csv("./data/area traits/effectsInterval_5cM_mcmc.csv")
-area_int_10cM_eff = read_csv("./data/area traits/effectsInterval_10cM_mcmc.csv")
-area_int_15cM_eff = read_csv("./data/area traits/effectsInterval_15cM_mcmc.csv")
-area_int_20cM_eff = read_csv("./data/area traits/effectsInterval_20cM_mcmc.csv")
-area_singleDIC = read_csv("./data/area traits/singleLocusDIC.csv") 
-area_intDIC = read_csv("./data/area traits/intervalMappingDIC.csv") 
-area_nullDIC = readRDS(file = "./data/area traits/nullDIC.rds")
+getEffects = function(trait){
+list(
+  single_eff = read_csv(paste0("./data/", trait," traits/effectsSingleLocus.csv")),
+  i5cM_eff   = read_csv(paste0("./data/", trait," traits/", trait,"_effectsInterval_5cM_mcmc.csv")),
+  i10cM_eff  = read_csv(paste0("./data/", trait," traits/", trait,"_effectsInterval_10cM_mcmc.csv")),
+  i15cM_eff  = read_csv(paste0("./data/", trait," traits/", trait,"_effectsInterval_15cM_mcmc.csv")),
+  i20cM_eff  = read_csv(paste0("./data/", trait," traits/", trait,"_effectsInterval_20cM_mcmc.csv")),
+  singleDIC  = read_csv(paste0("./data/", trait," traits/singleLocusDIC.csv")),
+  intDIC     = read_csv(paste0("./data/", trait," traits/intervalMappingDIC.csv")) 
+ # nullDIC    = readRDS(file = paste0("./data/", trait," traits/nullDIC.rds"))
+)}
+trait_sets = c("area", "growth", "necropsy")
+effects_list = llply(trait_sets, getEffects)
+names(effects_list) = trait_sets
 
-growth_single_eff  = read_csv("./data/growth traits/effectsSingleLocus.csv")
-growth_int_5cM_eff = read_csv("./data/growth traits/growth_effectsInterval_5cM_mcmc.csv")
-growth_int_10cM_eff = read_csv("./data/growth traits/growth_effectsInterval_10cM_mcmc.csv")
-growth_int_15cM_eff = read_csv("./data/growth traits/growth_effectsInterval_15cM_mcmc.csv")
-growth_int_20cM_eff = read_csv("./data/growth traits/growth_effectsInterval_20cM_mcmc.csv")
-growth_singleDIC = read_csv("./data/growth traits/singleLocusDIC.csv") 
-growth_intDIC = read_csv("./data/growth traits/intervalMappingDIC.csv") 
-growth_nullDIC = readRDS(file = "./data/growth traits/nullDIC.rds")
-max(growth_nullDIC)
-
-necropsy_single_eff  = read_csv("./data/necropsy traits/effectsSingleLocus.csv")
-necropsy_int_5cM_eff = read_csv("./data/necropsy traits/necropsy_effectsInterval_5cM_mcmc.csv")
-necropsy_int_10cM_eff = read_csv("./data/necropsy traits/necropsy_effectsInterval_10cM_mcmc.csv")
-necropsy_int_15cM_eff = read_csv("./data/necropsy traits/necropsy_effectsInterval_15cM_mcmc.csv")
-necropsy_int_20cM_eff = read_csv("./data/necropsy traits/necropsy_effectsInterval_20cM_mcmc.csv")
-necropsy_singleDIC = read_csv("./data/necropsy traits/singleLocusDIC.csv") 
-necropsy_intDIC = read_csv("./data/necropsy traits/intervalMappingDIC.csv") 
-necropsy_nullDIC = readRDS(file = "./data/necropsy traits/nullDIC.rds")
-max(necropsy_nullDIC)
-
-necropsy_int_10cM_eff %>% 
+effects_list[['necropsy']]$i10cM_eff %>% 
   select(count, chrom, marker, trait, ad_post.mean, dm_post.mean) %>%
   rename(additive = ad_post.mean, dominance = dm_post.mean) %>%
   gather(type, value, additive:dominance) %>% 
@@ -39,7 +25,7 @@ necropsy_int_10cM_eff %>%
   geom_hline(yintercept = 0) + 
   geom_line() + facet_grid(trait~type) 
 
-necropsy_intDIC  %>%
+effects_list[['necropsy']]$intDIC  %>%
   select(chrom, marker, contains("DICDiff")) %>%
   mutate(count = seq(353)) %>% 
   rename( i5cM = DICDiff_5cM, 
@@ -50,4 +36,5 @@ necropsy_intDIC  %>%
   mutate(interval = factor(interval, levels = c("i5cM", "i10cM", "i15cM", "i20cM")),
          chrom = factor(chrom)) %>%
   ggplot(aes(count, value, group = interval, color = chrom)) +
-  geom_line() + geom_hline(yintercept = 20) + geom_hline(yintercept = 0) + facet_wrap(~interval, ncol = 1)
+  geom_line() + geom_hline(yintercept = 20) + geom_hline(yintercept = 0) + 
+  facet_wrap(~interval, ncol = 1, scales = "free")
