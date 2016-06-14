@@ -20,7 +20,17 @@ growth_intDIC = read_csv("./data/growth traits/intervalMappingDIC.csv")
 growth_nullDIC = readRDS(file = "./data/growth traits/nullDIC.rds")
 max(growth_nullDIC)
 
-area_int_10cM_eff %>% 
+necropsy_single_eff  = read_csv("./data/necropsy traits/effectsSingleLocus.csv")
+necropsy_int_5cM_eff = read_csv("./data/necropsy traits/necropsy_effectsInterval_5cM_mcmc.csv")
+necropsy_int_10cM_eff = read_csv("./data/necropsy traits/necropsy_effectsInterval_10cM_mcmc.csv")
+necropsy_int_15cM_eff = read_csv("./data/necropsy traits/necropsy_effectsInterval_15cM_mcmc.csv")
+necropsy_int_20cM_eff = read_csv("./data/necropsy traits/necropsy_effectsInterval_20cM_mcmc.csv")
+necropsy_singleDIC = read_csv("./data/necropsy traits/singleLocusDIC.csv") 
+necropsy_intDIC = read_csv("./data/necropsy traits/intervalMappingDIC.csv") 
+necropsy_nullDIC = readRDS(file = "./data/necropsy traits/nullDIC.rds")
+max(necropsy_nullDIC)
+
+necropsy_int_10cM_eff %>% 
   select(count, chrom, marker, trait, ad_post.mean, dm_post.mean) %>%
   rename(additive = ad_post.mean, dominance = dm_post.mean) %>%
   gather(type, value, additive:dominance) %>% 
@@ -29,7 +39,7 @@ area_int_10cM_eff %>%
   geom_hline(yintercept = 0) + 
   geom_line() + facet_grid(trait~type) 
 
-area_intDIC  %>%
+necropsy_intDIC  %>%
   select(chrom, marker, contains("DICDiff")) %>%
   mutate(count = seq(353)) %>% 
   rename( i5cM = DICDiff_5cM, 
