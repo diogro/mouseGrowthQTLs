@@ -1,25 +1,6 @@
 setwd("/home/diogro/projects/mouse-qtls")
 source('read_mouse_data.R')
-
-makeSimData = function(data, marker, percent){
-  a = findA(data, marker, percent)
-  data + marker * a
-}
-markerVar = function(a, data, marker){
-    data = mean(data) + residuals(lm(data ~ marker))
-    za = data + marker * a
-    n = length(data)
-    V_pa = sum((za - mean(za))^2)/(n - 1)
-    gen_means = tapply(za, marker, mean)
-    gen_n = table(marker) / (n - 3)
-    var_marker = gen_n %*% (gen_means - mean(za))^2
-    (var_marker / V_pa)[1]
-}
-findA = function(data, marker, percent){
-  V_p = var(data)
-  a = sqrt((2*percent*V_p)/(1 - percent))
-  return(a)
-}
+source('utils.R')
 
 Rdatas_folder = "~/gdrive/LGSM_project_Rdatas/"
 #Rdatas_folder = "./data/Rdatas/"
@@ -71,4 +52,26 @@ getStanInput = function(current_chrom){
     return(param_list)
 }
 stan_model = stan(file = './mixedModelGmatrix.stan',
-                  data = getStanInput(4), chain=1, iter = 2000)
+                  data = getStanInput(4), chain=4, iter = 1000)
+
+pairs(stan_model)
+
+getStanEffects = function(stan_model){
+  HC_summary = summary(stan_model)
+  s = loci_per_chrom[current_chrom] * num_area_traits * 2
+  effects = data.frame(HC_summary$summary[1:s, c(1, 4, 7)])
+  colnames(effects) <- c("mean", "lower", "upper")
+  effects$type = rep(c("additive", "dominance"), each = s/2)
+  effects$chrom = current_chrom
+  effects$marker = rep(1:loci_per_chrom[current_chrom], 2*num_area_traits)
+  effects$trait = rep(area_traits, each = loci_per_chrom[current_chrom])
+  tbl_df(effects)
+}
+effects = getStanEffects(stan_model)
+hc_plot = ggplot(effects, aes(marker, mean, group = trait)) +
+  geom_point() + facet_grid(trait~type, scales = "free") +
+  geom_hline(yintercept = 0) +
+  geom_point(size = 0.3) +
+  geom_point(data = true_effects, aes(y = true_effects), color = "red") +
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0, size = 0.3)
+save_plot("data/figures/sim_stan_sparceRegression.png", hc_plot, base_height = 6, base_aspect_ratio = 1.8)

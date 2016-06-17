@@ -33,23 +33,22 @@ model {
     matrix[K,K] L_Sigma_G;
     matrix[K,K] L_Sigma_R;
 
-    L_Sigma_G <- diag_pre_multiply(L_sigma_G, L_Omega_G);
+    to_vector(beta_ad) ~ normal(0, 5);
+    to_vector(beta_dm) ~ normal(0, 5);
+
     L_Omega_G ~ lkj_corr_cholesky(4);
     L_sigma_G ~ cauchy(0, 2.5);
+    L_Sigma_G <- diag_pre_multiply(L_sigma_G, L_Omega_G);
 
     for (j in 1:n_family)
         beta_family[j] ~ multi_normal_cholesky(zeros, L_Sigma_G);
 
-    for (n in 1:N)
-        mu[n] <- beta_ad * ad[n] + beta_dm * dm[n] + beta_family[family[n]];
-
-    L_Sigma_R <- diag_pre_multiply(L_sigma_R, L_Omega_R);
-
-    to_vector(beta_ad) ~ normal(0, 5);
-    to_vector(beta_dm) ~ normal(0, 5);
-
     L_Omega_R ~ lkj_corr_cholesky(4);
     L_sigma_R ~ cauchy(0, 2.5);
+    L_Sigma_R <- diag_pre_multiply(L_sigma_R, L_Omega_R);
+
+    for (n in 1:N)
+        mu[n] <- beta_ad * ad[n] + beta_dm * dm[n] + beta_family[family[n]];
 
     y ~ multi_normal_cholesky(mu, L_Sigma_R);
 }
