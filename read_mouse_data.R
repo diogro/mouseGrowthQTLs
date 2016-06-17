@@ -29,6 +29,22 @@ for(chrom in names(simulated_markers)){
 simulated_chroms = seq(simulated_markers)
 simulated_loci_per_chrom = laply(simulated_chroms, function(chrom) ncol(simulated_markers[[chrom]][-1])/3)
 
+## Simulated Chromossomes
+
+simulated_chroms_Ad = llply(paste0("./data/Simulated\ genomes/", 1:20, "_Ad.txt"), read_csv, col_names = F)
+simulated_chroms_Dm = llply(paste0("./data/Simulated\ genomes/", 1:20, "_Dom.txt"), read_csv, col_names = F)
+ID = read_csv("./data/Simulated genomes/Breed.txt", col_names = F)$X1
+for(genome in 1:20){
+  names(simulated_chroms_Ad[[genome]]) = unlist(Map(paste0, paste0(paste0("chrom", chroms), "_A"), lapply(loci_per_chrom, seq)))
+  simulated_chroms_Ad[[genome]]$ID = ID
+  names(simulated_chroms_Dm[[genome]]) = unlist(Map(paste0, paste0(paste0("chrom", chroms), "_D"), lapply(loci_per_chrom, seq)))
+  simulated_chroms_Dm[[genome]]$ID = ID
+}
+
+simulated_genomes = Map(function(x, y) inner_join(x, y, by = "ID"), 
+                        simulated_chroms_Ad, simulated_chroms_Dm)
+names(simulated_genomes[[19]])
+
 ##growth traits
 
 raw.growth_phen = read_csv("data/growth traits/F3Phenotypes_further corrected family data_corrected litter sizes.csv")
