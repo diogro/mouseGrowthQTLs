@@ -4,6 +4,8 @@ data {
     int<lower=0> N;
     int n_family;
     int family[N];
+    vector[J] ad[N];
+    vector[J] dm[N];
     vector[K] y[N];
 }
 
@@ -14,6 +16,9 @@ transformed data{
 }
 
 parameters {
+    matrix[K,J] beta_ad;
+    matrix[K,J] beta_dm;
+
     vector[K] beta_family[n_family];
 
     cholesky_factor_corr[K] L_Omega_G;
@@ -28,6 +33,9 @@ model {
     matrix[K,K] L_Sigma_G;
     matrix[K,K] L_Sigma_R;
 
+    to_vector(beta_ad) ~ normal(0, 5);
+    to_vector(beta_dm) ~ normal(0, 5);
+
     L_Omega_G ~ lkj_corr_cholesky(4);
     L_sigma_G ~ cauchy(0, 2.5);
     L_Sigma_G <- diag_pre_multiply(L_sigma_G, L_Omega_G);
@@ -40,7 +48,7 @@ model {
     L_Sigma_R <- diag_pre_multiply(L_sigma_R, L_Omega_R);
 
     for (n in 1:N)
-        mu[n] <- beta_family[family[n]];
+        mu[n] <- beta_ad * ad[n] + beta_dm * dm[n] + beta_family[family[n]];
 
     y ~ multi_normal_cholesky(mu, L_Sigma_R);
 }
