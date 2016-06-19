@@ -12,9 +12,9 @@ functions {
 }
 
 data {
-    int<lower=1> K;
-    int<lower=1> J;
-    int<lower=0> N;
+    int<lower=1> K; // traits
+    int<lower=1> J; // loci
+    int<lower=0> N; // individuals
     int n_family;
     int family[N];
     vector[J] ad[N];
@@ -24,8 +24,7 @@ data {
 
 transformed data{
     vector[K] zeros;
-    for ( i in 1:K )
-        zeros[i] <- 0;
+    zeros <- rep_vector(0.0, K);
 }
 
 parameters {
@@ -40,11 +39,11 @@ parameters {
     matrix<lower=0>[K, J] r2_local_dm;
 
     # Effects matrix
-    matrix<lower=-1, upper = 1>[K,J] beta_ad;
-    matrix<lower=-1, upper = 1>[K,J] beta_dm;
+    matrix[K,J] beta_ad;
+    matrix[K,J] beta_dm;
 
     # Family means
-    vector<lower=-3, upper = 3>[K] beta_family[n_family];
+    vector[K] beta_family[n_family];
 
     # G matrix
     cholesky_factor_corr[K] L_Omega_G;
