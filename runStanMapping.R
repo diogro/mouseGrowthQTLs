@@ -10,7 +10,7 @@ rstan_options(auto_write = TRUE)
 options(mc.cores = 80)
 
 area_data = inner_join(area_phen_std,
-                       simulated_genomes[[2]],
+                       simulated_genomes[[4]],
                        by = "ID")
 
 area_data = area_data %>% mutate_each(funs(scale), matches('area'))
