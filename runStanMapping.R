@@ -45,14 +45,14 @@ stan_parameters = getStanInput(6)
 names(stan_parameters)
 
 stan_model_SUR_HC = stan(file = './SUR_horseShoe.stan',
-                         data = stan_parameters, chain=20, iter = 400)
+                         data = stan_parameters, chain=2, iter = 100)
 
 getStanEffects = function(stan_model){
   HC_summary = summary(stan_model, pairs = c("w_ad", "w_dm"))$summary
   s = loci_per_chrom[current_chrom] * num_area_traits * 2
   mask = grepl("w_", rownames(HC_summary))
-  effects = data.frame(HC_summary[mask, c("mean", "2.5%", "97.5%")]) 
-  colnames(effects) <- c("mean", "lower", "upper")
+  effects = data.frame(HC_summary[mask, c("50%", "2.5%", "97.5%")]) 
+  colnames(effects) <- c("median", "lower", "upper")
   effects$type = rep(c("additive", "dominance"), each = s/2)
   effects$chrom = current_chrom
   effects$marker = rep(1:loci_per_chrom[current_chrom], 2*num_area_traits)
@@ -61,8 +61,8 @@ getStanEffects = function(stan_model){
 }
 
 effects = getStanEffects(stan_model_SUR_HC)
-hc_plot = ggplot(effects, aes(marker, mean, group = trait)) +
-  geom_point() + facet_grid(trait~type, scales = "free") +
+hc_plot = ggplot(effects, aes(marker, median, group = trait)) +
+  geom_point() + facet_grid(trait~type) +
   geom_hline(yintercept = 0) +
   geom_point(size = 0.3) +
   geom_errorbar(aes(ymin = lower, ymax = upper), width = 0, size = 0.3)

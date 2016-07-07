@@ -4,7 +4,7 @@ functions {
         matrix[dims(x)[1], dims(x)[2]] res;
         for (n in 1:dims(x)[2]){
             for (m in 1:dims(x)[1]){
-                res[m, n] <- sqrt(x[m, n]);
+                res[m, n] = sqrt(x[m, n]);
             }
         }
         return res;
@@ -24,7 +24,7 @@ data {
 
 transformed data{
     vector[K] zeros;
-    zeros <- rep_vector(0.0, K);
+    zeros = rep_vector(0.0, K);
 }
 
 parameters {
@@ -62,13 +62,13 @@ transformed parameters{
     matrix[K, J] w_ad;
     matrix[K, J] w_dm;
 
-    tau <- r1_global * sqrt(r2_global);
+    tau = r1_global * sqrt(r2_global);
 
-    lambda_ad <- r1_local_ad .* sqrt_vec(r2_local_ad);
-    lambda_dm <- r1_local_dm .* sqrt_vec(r2_local_dm);
+    lambda_ad = r1_local_ad .* sqrt_vec(r2_local_ad);
+    lambda_dm = r1_local_dm .* sqrt_vec(r2_local_dm);
 
-    w_ad <- beta_ad .* lambda_ad * tau;
-    w_dm <- beta_dm .* lambda_dm * tau;
+    w_ad = beta_ad .* lambda_ad * tau;
+    w_dm = beta_dm .* lambda_dm * tau;
 }
 
 model {
@@ -90,17 +90,17 @@ model {
 
     L_Omega_G ~ lkj_corr_cholesky(2);
     L_sigma_G ~ cauchy(0, 2.5);
-    L_Sigma_G <- diag_pre_multiply(L_sigma_G, L_Omega_G);
+    L_Sigma_G = diag_pre_multiply(L_sigma_G, L_Omega_G);
 
     for (j in 1:n_family)
         beta_family[j] ~ multi_normal_cholesky(zeros, L_Sigma_G);
 
     L_Omega_R ~ lkj_corr_cholesky(2);
     L_sigma_R ~ cauchy(0, 2.5);
-    L_Sigma_R <- diag_pre_multiply(L_sigma_R, L_Omega_R);
+    L_Sigma_R = diag_pre_multiply(L_sigma_R, L_Omega_R);
 
     for (n in 1:N)
-        mu[n] <- w_ad * ad[n] + w_dm * dm[n] + beta_family[family[n]];
+        mu[n] = w_ad * ad[n] + w_dm * dm[n] + beta_family[family[n]];
 
     y ~ multi_normal_cholesky(mu, L_Sigma_R);
 }
