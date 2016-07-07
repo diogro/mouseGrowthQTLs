@@ -7,7 +7,7 @@ Rdatas_folder = "./data/Rdatas/"
 
 library(rstan)
 rstan_options(auto_write = TRUE)
-options(mc.cores = 80)
+options(mc.cores = 4)
 
 area_data = inner_join(area_phen_std,
                        simulated_genomes[[8]],
@@ -15,17 +15,17 @@ area_data = inner_join(area_phen_std,
 
 area_data = area_data %>% mutate_each(funs(scale), matches('area'))
 
-ddply(area_data, .(FAMILY), function(x) select(x, matches('area')) %>% colMeans) %>% summary
+ddply(area_data, .(FAMILY), function(x) select(x, matches('area')) %>% colMeans)
 
-true_effects = c(findA(area_data$area1, area_data$chrom4_A10, 0.05),
-                 findA(area_data$area2, area_data$chrom4_A10, 0.05),
-                 findA(area_data$area3, area_data$chrom4_A13, 0.05),
-                 findA(area_data$area4, area_data$chrom4_A14, 0.05),
-                 findA(area_data$area5, area_data$chrom4_A14, 0.05),
-                 findA(area_data$area6, area_data$chrom4_A13, 0.05),
-                 findA(area_data$area7, area_data$chrom4_A14, 0.05))
+true_effects = c(2*findA(area_data$area1, area_data$chrom4_A10, 0.05),
+                 2*findA(area_data$area2, area_data$chrom4_A10, 0.05),
+                 2*findA(area_data$area3, area_data$chrom4_A13, 0.05),
+                 2*findA(area_data$area4, area_data$chrom4_A14, 0.05),
+                 2*findA(area_data$area5, area_data$chrom4_A14, 0.05),
+                 2*findA(area_data$area6, area_data$chrom4_A13, 0.05),
+                 2*findA(area_data$area7, area_data$chrom4_A14, 0.05))
 true_effects = data.frame(true_effects, trait = area_traits, type = "additive",
-                          marker = c(rep(10, 2), 13, rep(14, 2), 13, 14))
+                          marker = c(rep(10, 2), 13, rep(14, 2), 13, 14), chrom = 4)
 
 area_data$area1 = makeSimData(area_data$area1, area_data$chrom4_A10, 0.05)
 area_data$area2 = makeSimData(area_data$area2, area_data$chrom4_A10, 0.05)
@@ -35,15 +35,14 @@ area_data$area5 = makeSimData(area_data$area5, area_data$chrom4_A14, 0.05)
 area_data$area6 = makeSimData(area_data$area6, area_data$chrom4_A13, 0.05)
 area_data$area7 = makeSimData(area_data$area7, area_data$chrom4_A14, 0.05)
 
-current_chrom = 4
-getStanInput = function(current_chrom){
+getStanInput = function(){
     K        = num_area_traits
-    J        = loci_per_chrom[current_chrom]
+    J        = sum(loci_per_chrom)
     N        = dim(area_data)[1]
     n_family = length(unique(area_data$FAMILY))
     family   = as.integer(as.factor(area_data$FAMILY))
-    ad       = as.matrix(select(area_data, matches('chrom4_A')))
-    dm       = as.matrix(select(area_data, matches('chrom4_D')))
+    ad       = as.matrix(select(area_data, matches('_A')))
+    dm       = as.matrix(select(area_data, matches('_D')))
     y        = as.matrix(select(area_data, matches('area')))
     beta_ad  = matrix(0., K, J)
     beta_dm  = matrix(0., K, J)
@@ -59,46 +58,36 @@ getStanInput = function(current_chrom){
                       beta_dm  = beta_dm)
     return(param_list)
 }
-stan_parameters = getStanInput(4)
+stan_parameters = getStanInput()
 names(stan_parameters)
-#stan_model_G = stan(file = './mixedModelGmatrix.stan',
-                    #data = stan_parameters[-c(6,7)], chain=4, iter = 1000)
 
 stan_model_SUR_HC = stan(file = './SUR_horseShoe.stan',
-                         data = stan_parameters, chain=4, iter = 200)
-
-HC_model = stan_model(file = './SUR_horseShoe.stan')
-vb_HC_model = vb(HC_model, data = stan_parameters)
+                         data = stan_parameters, chain=2, iter = 200)
 
 stan_model = stan_model_SUR_HC
-stan_model = vb_HC_model
 getStanEffects = function(stan_model){
   HC_summary = summary(stan_model, pairs = c("w_ad", "w_dm"))$summary
-  s = loci_per_chrom[current_chrom] * num_area_traits * 2
+  s = sum(loci_per_chrom) * num_area_traits * 2
   mask = grepl("w_", rownames(HC_summary))
-  effects = data.frame(HC_summary[mask, c("mean", "2.5%", "97.5%")]) 
-  colnames(effects) <- c("mean", "lower", "upper")
+  effects = data.frame(HC_summary[mask, c("50%", "2.5%", "97.5%")])
+  colnames(effects) <- c("median", "lower", "upper")
   effects$type = rep(c("additive", "dominance"), each = s/2)
-  effects$chrom = current_chrom
-  effects$marker = rep(1:loci_per_chrom[current_chrom], 2*num_area_traits)
-  effects$trait = rep(area_traits, each = loci_per_chrom[current_chrom])
+  effects$chrom = rep(unlist(lapply(seq_along(loci_per_chrom), function(x) rep(x, loci_per_chrom[x]))), 2)
+  effects$marker = rep(unlist(lapply(loci_per_chrom, function(x) 1:x)), 2)
+  effects$trait = rep(area_traits, each = sum(loci_per_chrom))
   tbl_df(effects)
 }
 
-effects = getStanEffects(vb_HC_model)
-hc_plot = ggplot(effects, aes(marker, mean, group = trait)) +
-  geom_point() + facet_grid(trait~type, scales = "free") +
-  geom_hline(yintercept = 0) +
-  geom_point(size = 0.3) +
-  geom_point(data = true_effects, aes(y = true_effects), color = "red") +
-  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0, size = 0.3)
-save_plot("data/figures/sim_stan_SUR_HC_vb.png", hc_plot, base_height = 6, base_aspect_ratio = 1.8)
-
 effects = getStanEffects(stan_model_SUR_HC)
-hc_plot = ggplot(effects, aes(marker, mean, group = trait)) +
-  geom_point() + facet_grid(trait~type, scales = "free") +
-  geom_hline(yintercept = 0) +
-  geom_point(size = 0.3) +
-  geom_point(data = true_effects, aes(y = true_effects), color = "red") +
-  geom_errorbar(aes(ymin = lower, ymax = upper), width = 0, size = 0.3)
-save_plot("data/figures/sim_stan_SUR_HC.png", hc_plot, base_height = 6, base_aspect_ratio = 1.8)
+current_chrom = 2
+plotEffectEstimate = function(current_chrom){
+    hc_plot = ggplot(filter(effects, chrom == current_chrom), aes(marker, median, group = trait)) +
+        geom_point() + facet_grid(trait~type, scales = "free") +
+        geom_hline(yintercept = 0) +
+        geom_point(size = 0.3) +
+        geom_point(data = filter(true_effects, chrom == current_chrom), aes(y = true_effects), color = "red") +
+        geom_errorbar(aes(ymin = lower, ymax = upper), width = 0, size = 0.3)
+    save_plot(paste0("data/figures/sim_stan_SUR_HC_chrom", current_chrom, ".png"), hc_plot, base_height = 6, base_aspect_ratio = 1.8)
+    return(hc_plot)
+}
+llply(seq_along(loci_per_chrom), plotEffectEstimate)
