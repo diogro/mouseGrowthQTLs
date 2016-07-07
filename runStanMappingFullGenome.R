@@ -44,7 +44,7 @@ stan_parameters = getStanInput()
 names(stan_parameters)
 
 stan_model_SUR_HC = stan(file = './SUR_horseShoe.stan',
-                         data = stan_parameters, chain=2, iter = 200)
+                         data = stan_parameters, chain=20, iter = 100)
 
 stan_model = stan_model_SUR_HC
 getStanEffects = function(stan_model){
@@ -64,10 +64,10 @@ effects = getStanEffects(stan_model_SUR_HC)
 current_chrom = 2
 plotEffectEstimate = function(current_chrom){
     hc_plot = ggplot(filter(effects, chrom == current_chrom), aes(marker, median, group = trait)) +
-        geom_point() + facet_grid(trait~type, scales = "free") +
+        geom_point() + facet_grid(trait~type) +
         geom_hline(yintercept = 0) +
         geom_point(size = 0.3) +
-        geom_point(data = filter(true_effects, chrom == current_chrom), aes(y = true_effects), color = "red") +
+        #geom_point(data = filter(true_effects, chrom == current_chrom), aes(y = true_effects), color = "red") +
         geom_errorbar(aes(ymin = lower, ymax = upper), width = 0, size = 0.3)
     save_plot(paste0("data/figures/stan_SUR_HC_chrom", current_chrom, ".png"), hc_plot, base_height = 6, base_aspect_ratio = 1.8)
     return(hc_plot)
