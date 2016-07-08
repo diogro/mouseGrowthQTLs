@@ -51,8 +51,8 @@ getStanEffects = function(stan_model){
   HC_summary = summary(stan_model, pairs = c("w_ad", "w_dm"))$summary
   s = sum(loci_per_chrom) * num_area_traits * 2
   mask = grepl("w_", rownames(HC_summary))
-  effects = data.frame(HC_summary[mask, c("50%", "2.5%", "97.5%")])
-  colnames(effects) <- c("median", "lower", "upper")
+  effects = data.frame(HC_summary[mask, c("mean", "2.5%", "97.5%")])
+  colnames(effects) <- c("mean", "lower", "upper")
   effects$type = rep(c("additive", "dominance"), each = s/2)
   effects$chrom = rep(unlist(lapply(seq_along(loci_per_chrom), function(x) rep(x, loci_per_chrom[x]))), 2)
   effects$marker = rep(unlist(lapply(loci_per_chrom, function(x) 1:x)), 2)
@@ -63,7 +63,7 @@ getStanEffects = function(stan_model){
 effects = getStanEffects(stan_model_SUR_HC)
 current_chrom = 2
 plotEffectEstimate = function(current_chrom){
-    hc_plot = ggplot(filter(effects, chrom == current_chrom), aes(marker, median, group = trait)) +
+    hc_plot = ggplot(filter(effects, chrom == current_chrom), aes(marker, mean, group = trait)) +
         geom_point() + facet_grid(trait~type) +
         geom_hline(yintercept = 0) +
         geom_point(size = 0.3) +
