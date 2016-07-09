@@ -7,7 +7,7 @@ Rdatas_folder = "./data/Rdatas/"
 
 library(rstan)
 rstan_options(auto_write = TRUE)
-options(mc.cores = 4)
+options(mc.cores = 2)
 
 area_data = inner_join(area_phen_std,
                        simulated_genomes[[8]],
@@ -17,23 +17,23 @@ area_data = area_data %>% mutate_each(funs(scale), matches('area'))
 
 ddply(area_data, .(FAMILY), function(x) select(x, matches('area')) %>% colMeans)
 
-true_effects = c(2*findA(area_data$area1, area_data$chrom4_A10, 0.01),
-                 2*findA(area_data$area2, area_data$chrom4_A10, 0.01),
-                 2*findA(area_data$area3, area_data$chrom4_A13, 0.01),
-                 2*findA(area_data$area4, area_data$chrom4_A14, 0.01),
-                 2*findA(area_data$area5, area_data$chrom4_A14, 0.01),
-                 2*findA(area_data$area6, area_data$chrom4_A13, 0.01),
-                 2*findA(area_data$area7, area_data$chrom4_A14, 0.01))
+true_effects = c(findA(area_data$area1, area_data$chrom4_A10, 0.1),
+                 findA(area_data$area2, area_data$chrom4_A10, 0.1),
+                 findA(area_data$area3, area_data$chrom4_A13, 0.1),
+                 findA(area_data$area4, area_data$chrom4_A14, 0.1),
+                 findA(area_data$area5, area_data$chrom4_A14, 0.1),
+                 findA(area_data$area6, area_data$chrom4_A13, 0.1),
+                 findA(area_data$area7, area_data$chrom4_A14, 0.1))
 true_effects = data.frame(true_effects, trait = area_traits, type = "additive",
                           marker = c(rep(10, 2), 13, rep(14, 2), 13, 14), chrom = 4)
 
-area_data$area1 = makeSimData(area_data$area1, area_data$chrom4_A10, 0.01)
-area_data$area2 = makeSimData(area_data$area2, area_data$chrom4_A10, 0.01)
-area_data$area3 = makeSimData(area_data$area3, area_data$chrom4_A13, 0.01)
-area_data$area4 = makeSimData(area_data$area4, area_data$chrom4_A14, 0.01)
-area_data$area5 = makeSimData(area_data$area5, area_data$chrom4_A14, 0.01)
-area_data$area6 = makeSimData(area_data$area6, area_data$chrom4_A13, 0.01)
-area_data$area7 = makeSimData(area_data$area7, area_data$chrom4_A14, 0.01)
+area_data$area1 = makeSimData(area_data$area1, area_data$chrom4_A10, 0.1)
+area_data$area2 = makeSimData(area_data$area2, area_data$chrom4_A10, 0.1)
+area_data$area3 = makeSimData(area_data$area3, area_data$chrom4_A13, 0.1)
+area_data$area4 = makeSimData(area_data$area4, area_data$chrom4_A14, 0.1)
+area_data$area5 = makeSimData(area_data$area5, area_data$chrom4_A14, 0.1)
+area_data$area6 = makeSimData(area_data$area6, area_data$chrom4_A13, 0.1)
+area_data$area7 = makeSimData(area_data$area7, area_data$chrom4_A14, 0.1)
 
 getStanInput = function(){
     K        = num_area_traits
@@ -62,7 +62,10 @@ stan_parameters = getStanInput()
 names(stan_parameters)
 
 stan_model_SUR_HC = stan(file = './SUR_horseShoe.stan',
-                         data = stan_parameters, chain=4, iter = 100)
+                         data = stan_parameters, chain=2, iter = 1000)
+
+plot(stan_model_SUR_HC, pars = "w_ad")
+x = summary(stan_model_SUR_HC, pars = "w_ad")[[1]]
 
 stan_model = stan_model_SUR_HC
 getStanEffects = function(stan_model){
@@ -79,7 +82,7 @@ getStanEffects = function(stan_model){
 }
 
 effects = getStanEffects(stan_model_SUR_HC)
-current_chrom = 2
+current_chrom = 4
 plotEffectEstimate = function(current_chrom){
     hc_plot = ggplot(filter(effects, chrom == current_chrom), aes(marker, mean, group = trait)) +
         geom_point() + facet_grid(trait~type, scales = "free") +

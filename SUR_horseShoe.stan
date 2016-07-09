@@ -79,23 +79,23 @@ model {
     #// half t-priors for lambdas (nu = 1 corresponds to horseshoe)
     to_vector(beta_ad) ~ normal(0, 1);
     to_vector(r1_local_ad) ~ normal(0.0, 1.0);
-    to_vector(r2_local_ad) ~ inv_gamma(0.5*1, 0.5*1);
+    to_vector(r2_local_ad) ~ inv_gamma(0.5*3, 0.5*3);
     to_vector(beta_dm) ~ normal(0, 1);
     to_vector(r1_local_dm) ~ normal(0.0, 1.0);
-    to_vector(r2_local_dm) ~ inv_gamma(0.5*1, 0.5*1);
+    to_vector(r2_local_dm) ~ inv_gamma(0.5*3, 0.5*3);
     // half cauchy for tau
     r1_global ~ normal(0.0, 1.0);
     r2_global ~ inv_gamma(0.5, 0.5);
 
 
-    L_Omega_G ~ lkj_corr_cholesky(2);
+    L_Omega_G ~ lkj_corr_cholesky(4);
     L_sigma_G ~ cauchy(0, 2.5);
     L_Sigma_G = diag_pre_multiply(L_sigma_G, L_Omega_G);
 
     for (j in 1:n_family)
         beta_family[j] ~ multi_normal_cholesky(zeros, L_Sigma_G);
 
-    L_Omega_R ~ lkj_corr_cholesky(2);
+    L_Omega_R ~ lkj_corr_cholesky(4);
     L_sigma_R ~ cauchy(0, 2.5);
     L_Sigma_R = diag_pre_multiply(L_sigma_R, L_Omega_R);
 
