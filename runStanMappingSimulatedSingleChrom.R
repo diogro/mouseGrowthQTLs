@@ -7,7 +7,7 @@ Rdatas_folder = "~/gdrive/LGSM_project_Rdatas/"
 
 library(rstan)
 rstan_options(auto_write = TRUE)
-options(mc.cores = 2)
+options(mc.cores = 10)
 
 area_data = inner_join(area_phen_std,
                        simulated_genomes[[8]],
@@ -67,14 +67,22 @@ stan_parameters = getStanInput(4)
 names(stan_parameters)
 
 stan_model_SUR_HC = stan(file = './SUR_horseShoe.stan',
-                         data = stan_parameters, chain=2, iter = 1000)
+                         data = stan_parameters, chain=10, iter = 200)
 
-plot(stan_model_SUR_HC, pars = "w_ad")
+
+x = diag(summary(stan_model_SUR_HC, pars = "L_sigma_G")[[1]][,1]) %*%
+ matrix(summary(stan_model_SUR_HC, pars = "L_Omega_G")[[1]][,1], 7, 7, T)
+G = x %*% t(x)
+x = diag(summary(stan_model_SUR_HC, pars = "L_sigma_R")[[1]][,1]) %*%
+ matrix(summary(stan_model_SUR_HC, pars = "L_Omega_R")[[1]][,1], 7, 7, T)
+R = x %*% t(x) 
+P = area_data %>% select(matches('area')) %>% cov
+g_p = data.frame(P = P[lower.tri(P, diag = T)], G_R = (G+R)[lower.tri(P, diag = T)])
+gp_plot = ggplot(g_p, aes(P, G_R)) + geom_point() + geom_abline()
+save_plot("./data/figures/gp_plot.png", gp_plot, base_height = 6, base_aspect_ratio = 1.8)
 
 stan_model_SUR_HCPlus = stan(file = './SUR_horseShoePlus.stan',
-                         data = stan_parameters, chain=2, iter = 200)
-
-
+                         data = stan_parameters, chain=10, iter = 200)
 
 getStanEffects = function(stan_model){
   HC_summary = summary(stan_model, pairs = c("w_ad", "w_dm"))$summary
@@ -96,12 +104,12 @@ plotEffectEstimate = function(current_chrom, file = NULL){
         geom_point(size = 0.3) +
         geom_point(data = filter(true_effects, chrom == current_chrom), aes(y = true_effects), color = "red") +
         geom_errorbar(aes(ymin = lower, ymax = upper), width = 0, size = 0.3)
-    #save_plot(file, hc_plot, base_height = 6, base_aspect_ratio = 1.8)
+    save_plot(file, hc_plot, base_height = 6, base_aspect_ratio = 1.8)
     return(hc_plot)
 }
 
 effects = getStanEffects(stan_model_SUR_HC)
-plotEffectEstimate(4)
+plotEffectEstimate(4, file=  "./data/figures/sim_chrom4_StanSUR_3pct.png")
 
 effects = getStanEffects(stan_model_SUR_HCPlus)
-plotEffectEstimate(4)
+plotEffectEstimate(4, file=  "./data/figures/sim_chrom4_StanSURPlus_3pct.png")

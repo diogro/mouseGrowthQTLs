@@ -42,6 +42,9 @@ parameters {
     matrix[K,J] beta_ad;
     matrix[K,J] beta_dm;
 
+    # Intercept
+    vector[K] w0;
+
     # Family means
     vector[K] beta_family[n_family];
 
@@ -76,6 +79,18 @@ model {
     matrix[K,K] L_Sigma_G;
     matrix[K,K] L_Sigma_R;
 
+    L_Sigma_G = diag_pre_multiply(L_sigma_G, L_Omega_G);
+
+    for (j in 1:n_family)
+        beta_family[j] ~ multi_normal_cholesky(zeros, L_Sigma_G);
+
+    L_Sigma_R = diag_pre_multiply(L_sigma_R, L_Omega_R);
+
+    for (n in 1:N)
+        mu[n] = w0 + w_ad * ad[n] + w_dm * dm[n] + beta_family[family[n]];
+
+    y ~ multi_normal_cholesky(mu, L_Sigma_R);
+
     #// half t-priors for lambdas (nu = 1 corresponds to horseshoe)
     to_vector(beta_ad) ~ normal(0, 1);
     to_vector(r1_local_ad) ~ normal(0.0, 1.0);
@@ -87,20 +102,12 @@ model {
     r1_global ~ normal(0.0, 1.0);
     r2_global ~ inv_gamma(0.5, 0.5);
 
+    // weakly informative prior for the intercept 
+    w0 ~ normal(0,5);
 
     L_Omega_G ~ lkj_corr_cholesky(4);
     L_sigma_G ~ cauchy(0, 2.5);
-    L_Sigma_G = diag_pre_multiply(L_sigma_G, L_Omega_G);
-
-    for (j in 1:n_family)
-        beta_family[j] ~ multi_normal_cholesky(zeros, L_Sigma_G);
 
     L_Omega_R ~ lkj_corr_cholesky(4);
     L_sigma_R ~ cauchy(0, 2.5);
-    L_Sigma_R = diag_pre_multiply(L_sigma_R, L_Omega_R);
-
-    for (n in 1:N)
-        mu[n] = w_ad * ad[n] + w_dm * dm[n] + beta_family[family[n]];
-
-    y ~ multi_normal_cholesky(mu, L_Sigma_R);
 }
