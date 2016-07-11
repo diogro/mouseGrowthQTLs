@@ -18,7 +18,6 @@ data {
     int n_family;
     int family[N];
     vector[J] ad[N];
-    vector[J] dm[N];
     vector[K] y[N];
 }
 
@@ -32,15 +31,11 @@ parameters {
     real<lower=0> r1_global;
     real<lower=0> r2_global;
 
-    matrix<lower=0>[K, J] r1_local_ad;
-    matrix<lower=0>[K, J] r2_local_ad;
-
-    matrix<lower=0>[K, J] r1_local_dm;
-    matrix<lower=0>[K, J] r2_local_dm;
+    matrix<lower=0>[K, J] r1_local;
+    matrix<lower=0>[K, J] r2_local;
 
     # Effects matrix
-    matrix[K,J] beta_ad;
-    matrix[K,J] beta_dm;
+    matrix[K,J] beta;
 
     # Intercept
     vector[K] w0;
@@ -60,18 +55,14 @@ parameters {
 transformed parameters{
     // global and local variance parameters, and the input weights
     real<lower=0> tau;
-    matrix<lower=0>[K, J] lambda_ad;
-    matrix<lower=0>[K, J] lambda_dm;
-    matrix[K, J] w_ad;
-    matrix[K, J] w_dm;
+    matrix<lower=0>[K, J] lambda;
+    matrix[K, J] w;
 
     tau = r1_global * sqrt(r2_global);
 
-    lambda_ad = r1_local_ad .* sqrt_vec(r2_local_ad);
-    lambda_dm = r1_local_dm .* sqrt_vec(r2_local_dm);
+    lambda = r1_local .* sqrt_vec(r2_local);
 
-    w_ad = beta_ad .* lambda_ad * tau;
-    w_dm = beta_dm .* lambda_dm * tau;
+    w = beta .* lambda * tau;
 }
 
 model {
@@ -87,17 +78,14 @@ model {
     L_Sigma_R = diag_pre_multiply(L_sigma_R, L_Omega_R);
 
     for (n in 1:N)
-        mu[n] = w0 + w_ad * ad[n] + w_dm * dm[n] + beta_family[family[n]];
+        mu[n] = w0 + w * ad[n] + beta_family[family[n]];
 
     y ~ multi_normal_cholesky(mu, L_Sigma_R);
 
     #// half t-priors for lambdas (nu = 1 corresponds to horseshoe)
-    to_vector(beta_ad) ~ normal(0, 1);
-    to_vector(r1_local_ad) ~ normal(0.0, 1.0);
-    to_vector(r2_local_ad) ~ inv_gamma(0.5*1, 0.5*1);
-    to_vector(beta_dm) ~ normal(0, 1);
-    to_vector(r1_local_dm) ~ normal(0.0, 1.0);
-    to_vector(r2_local_dm) ~ inv_gamma(0.5*1, 0.5*1);
+    to_vector(beta) ~ normal(0, 1);
+    to_vector(r1_local) ~ normal(0.0, 1.0);
+    to_vector(r2_local) ~ inv_gamma(0.5*1, 0.5*1);
     // half cauchy for tau
     r1_global ~ normal(0.0, 1.0);
     r2_global ~ inv_gamma(0.5, 0.5);
@@ -105,9 +93,9 @@ model {
     // weakly informative prior for the intercept 
     w0 ~ normal(0,5);
 
-    L_Omega_G ~ lkj_corr_cholesky(2);
+    L_Omega_G ~ lkj_corr_cholesky(4);
     L_sigma_G ~ cauchy(0, 2.5);
 
-    L_Omega_R ~ lkj_corr_cholesky(2);
+    L_Omega_R ~ lkj_corr_cholesky(4);
     L_sigma_R ~ cauchy(0, 2.5);
 }
