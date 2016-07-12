@@ -46,7 +46,7 @@ stan_parameters = getStanInput()
 names(stan_parameters)
 
 stan_model_SUR_HC = stan(file = './SUR_horseShoe.stan',
-                         data = stan_parameters, chain=20, iter = 100)
+                         data = stan_parameters, chain=20, iter = 800)
 
 stan_model = stan_model_SUR_HC
 getStanEffects = function(stan_model){
