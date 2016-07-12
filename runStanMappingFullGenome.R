@@ -7,7 +7,7 @@ Rdatas_folder = "./data/Rdatas/"
 
 library(rstan)
 rstan_options(auto_write = TRUE)
-options(mc.cores = 20)
+options(mc.cores = 2)
 
 area_data = inner_join(area_phen_std,
                        Reduce(inner_join, area_markers),
@@ -45,17 +45,19 @@ getStanInput = function(){
 stan_parameters = getStanInput()
 names(stan_parameters)
 
-stan_model_SUR_HC = stan(file = './SUR_horseShoe.stan',
-                         data = stan_parameters, chain=20, iter = 100)
+model_file = paste0(Rdatas_folder, 'SUR_horseShoe_area_1000.fit')
+#stan_model_SUR_HC = stan(file = './SUR_horseShoe.stan',
+                         #data = stan_parameters, chain=2, iter = 500)
+#saveRDS(stan_model_SUR_HC, model_file)
+stan_model_SUR_HC = readRDS(model_file)
 
-stan_model = stan_model_SUR_HC
 getStanEffects = function(stan_model){
   HC_summary = summary(stan_model, pairs = c("w_ad", "w_dm"))$summary
   s = sum(loci_per_chrom) * num_area_traits * 2
   mask = grepl("w_", rownames(HC_summary))
   effects = data.frame(HC_summary[mask, c("mean", "2.5%", "97.5%")])
   colnames(effects) <- c("mean", "lower", "upper")
-  effects$type   = rep(c("additive", "dominance"), each = s/2)
+  effects$type   = rep(c("aditive", "dominance"), each = s/2)
   effects$chrom  = rep(unlist(lapply(seq_along(loci_per_chrom), function(x) rep(x, loci_per_chrom[x]))), 2)
   effects$marker = rep(unlist(lapply(loci_per_chrom, function(x) 1:x)), 2)
   effects$trait  = rep(area_traits, each = sum(loci_per_chrom))
@@ -70,7 +72,7 @@ getStanShrinkage = function(stan_model){
   weights = rbind(select(weights_ad, -iterations), select(weights_dm, -iterations))
   s = sum(loci_per_chrom) * num_area_traits * 2
   colnames(weights) <- c("trait", "marker", "mean")
-  weights$type   = rep(c("additive", "dominance"), each = s/2)
+  weights$type   = rep(c("aditive", "dominance"), each = s/2)
   weights$chrom  = rep(unlist(lapply(seq_along(loci_per_chrom), function(x) rep(x, loci_per_chrom[x]))), 2)
   weights$marker = rep(unlist(lapply(loci_per_chrom, function(x) 1:x)), 2)
   weights$trait  = rep(area_traits, each = sum(loci_per_chrom))
@@ -78,6 +80,7 @@ getStanShrinkage = function(stan_model){
 }
 
 effects = getStanEffects(stan_model_SUR_HC)
+weights = getStanShrinkage(stan_model_SUR_HC)
 current_chrom = 2
 plotEffectEstimate = function(current_chrom){
     hc_plot = ggplot(filter(effects, chrom == current_chrom), aes(marker, mean, group = trait)) +
@@ -89,13 +92,16 @@ plotEffectEstimate = function(current_chrom){
     save_plot(paste0("data/figures/stan_effects_SUR_HC_chrom", current_chrom, ".png"), hc_plot, base_height = 6, base_aspect_ratio = 1.8)
     return(hc_plot)
 }
-plotWeights = function(weights, current_chrom){
+plotWeights = function(current_chrom){
     hc_plot = ggplot(filter(weights, chrom == current_chrom), aes(marker, mean, group = trait)) +
-        geom_point() + facet_grid(trait~type, scales = "free") +
+        geom_point() + facet_grid(trait~type) +
         geom_hline(yintercept = 0) +
+        geom_hline(yintercept = 0.5, linetype = "dashed") + 
+        ylim(0, 1) +
         geom_point(size = 0.3)
     save_plot(paste0("data/figures/stan_weights_SUR_HC_chrom", current_chrom, ".png"), hc_plot, base_height = 6, base_aspect_ratio = 1.8)
     return(hc_plot)
 }
 
 llply(seq_along(loci_per_chrom), plotEffectEstimate)
+llply(seq_along(loci_per_chrom), plotWeights)

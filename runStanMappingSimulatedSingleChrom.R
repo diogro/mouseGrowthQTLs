@@ -101,7 +101,7 @@ getStanEffects = function(stan_model){
   mask = grepl("w_", rownames(HC_summary))
   effects = data.frame(HC_summary[mask, c("mean", "2.5%", "97.5%")])
   colnames(effects) <- c("mean", "lower", "upper")
-  effects$type = rep(c("additive", "dominance"), each = s/2)
+  effects$type = rep(c("aditive", "dominance"), each = s/2)
   effects$chrom = current_chrom
   effects$marker = rep(1:loci_per_chrom[current_chrom], 2*num_area_traits)
   effects$trait = rep(area_traits, each = loci_per_chrom[current_chrom])
@@ -116,7 +116,7 @@ getStanShrinkage = function(stan_model){
   weights = rbind(select(weights_ad, -iterations), select(weights_dm, -iterations))
   s = loci_per_chrom[current_chrom] * num_area_traits * 2
   colnames(weights) <- c("trait", "marker", "mean")
-  weights$type = rep(c("additive", "dominance"), each = s/2)
+  weights$type = rep(c("aditive", "dominance"), each = s/2)
   weights$chrom = current_chrom
   weights$marker = rep(1:loci_per_chrom[current_chrom], 2*num_area_traits)
   weights$trait = rep(area_traits, each = loci_per_chrom[current_chrom])
