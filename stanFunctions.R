@@ -1,3 +1,5 @@
+library(rstan)
+rstan_options(auto_write = TRUE)
 getStanInput = function(current_chrom, current_data, trait_vector)
 {
     K        = length(trait_vector)
@@ -77,55 +79,25 @@ plotWeights = function(current_chrom, weights, file = NULL)
                   hc_plot, base_height = 6, base_aspect_ratio = 1.8)
     return(hc_plot)
 }
-runStanModel = function(current_chrom, current_data, trait_vector, chain = 1, iter = 500, ...)
+runStanModel = function(current_chrom, current_data, trait_vector, chain = 1, iter = 500,
+                        model_file = './SUR_horseShoe.stan', ...)
 {
-    stan_model_SUR_HC = stan(file = './SUR_horseShoe.stan',
+    stan_model_SUR_HC = stan(file = model_file,
                              data = getStanInput(current_chrom, current_data, trait_vector),
-                             chain=chain, iter = iter)
+                             chain=chain, iter = iter, ...)
     effects = getStanEffects(current_chrom, stan_model_SUR_HC, trait_vector)
     weights = getStanShrinkage(current_chrom, stan_model_SUR_HC, trait_vector)
     return(list(effects, weights, rstan::extract(stan_model_SUR_HC)))
 }
 
-runStanModelFullGenome = function(current_data, trait_vector, iter = 2000, parallel = TRUE)
+runStanModelFullGenome = function(current_data, trait_vector, iter = 2000, parallel = TRUE, 
+                                  model_file = "./SUR_horseShoe.stan", ...)
 {
     all_chroms = alply(1:19, 1, runStanModel, current_data, trait_vector,
-                       chain = 1, iter = iter, .parallel = parallel, .inform = TRUE)
+                       chain = 1, iter = iter, model_file = model_file, ..., .parallel = parallel, .inform = TRUE)
     effects = Reduce(bind_rows, llply(all_chroms, '[[', 1))
     weights = Reduce(bind_rows, llply(all_chroms, '[[', 2))
     #a_models = lapply(all_chroms, '[[', 3)
     a_models = NULL
     return(list(effects = effects, weights = weights, models = a_models))
 }
-
-setwd("/home/diogro/projects/mouse-qtls")
-source('read_mouse_data.R')
-source('utils.R')
-
-#Rdatas_folder = "~/gdrive/LGSM_project_Rdatas/"
-Rdatas_folder = "./data/Rdatas/"
-
-library(rstan)
-rstan_options(auto_write = TRUE)
-
-area_data = inner_join(area_phen_std,
-                       Reduce(inner_join, area_markers),
-                       by = "ID")
-
-area_data = area_data %>% mutate_each(funs(scale), matches('area'))
-area_data[area_traits] = scale(area_data[area_traits])
-area_data[area_traits] = scale(area_data[area_traits], scale = rep(sqrt(1/20), num_area_traits))
-
-#current_data = area_data
-#trait_vector = area_traits
-#current_chrom = 19
-#stan_model = stan_model_SUR_HC
-#iter = 10
-#chain = 1
-#parallel = TRUE
-
-library(doMC)
-registerDoMC(19)
-area_mapping = runStanModelFullGenome(area_data, area_traits, 2000, TRUE)
-ef_plots = llply(1:19, plotEffectEstimate, area_mapping[[1]], "area_scaled")
-ef_plots = llply(1:19, plotWeights, area_mapping[[2]], "area_scaled")
