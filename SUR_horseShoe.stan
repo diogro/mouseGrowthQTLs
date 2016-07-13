@@ -60,6 +60,8 @@ parameters {
 transformed parameters{
     // global and local variance parameters, and the input weights
     real<lower=0> tau;
+    matrix<lower=0>[K, J] shrink_ad;
+    matrix<lower=0>[K, J] shrink_dm;
     matrix<lower=0>[K, J] lambda_ad;
     matrix<lower=0>[K, J] lambda_dm;
     matrix[K, J] w_ad;
@@ -70,8 +72,11 @@ transformed parameters{
     lambda_ad = r1_local_ad .* sqrt_vec(r2_local_ad);
     lambda_dm = r1_local_dm .* sqrt_vec(r2_local_dm);
 
-    w_ad = beta_ad .* lambda_ad * tau;
-    w_dm = beta_dm .* lambda_dm * tau;
+    shrink_ad = lambda_ad * tau;
+    shrink_dm = lambda_dm * tau;
+
+    w_ad = beta_ad .* shrink_ad;
+    w_dm = beta_dm .* shrink_dm;
 }
 
 model {

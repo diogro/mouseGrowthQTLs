@@ -106,6 +106,8 @@ model {
     to_vector(beta_ad) ~ normal(0, 1);
     to_vector(r1_local_ad) ~ normal(0.0, 1.0);
     to_vector(r2_local_ad) ~ inv_gamma(0.5*3, 0.5*3);
+    to_vector(r1_localPlus_ad) ~ normal(0.0, 1.0);
+    to_vector(r2_localPlus_ad) ~ inv_gamma(0.5*3, 0.5*3);
     to_vector(beta_dm) ~ normal(0, 1);
     to_vector(r1_local_dm) ~ normal(0.0, 1.0);
     to_vector(r2_local_dm) ~ inv_gamma(0.5*3, 0.5*3);
@@ -115,7 +117,7 @@ model {
     r1_global ~ normal(0.0, 1.0);
     r2_global ~ inv_gamma(0.5, 0.5);
 
-    // weakly informative prior for the intercept 
+    // weakly informative prior for the intercept
     w0 ~ normal(0,5);
 
     L_Omega_G ~ lkj_corr_cholesky(2);
@@ -123,4 +125,21 @@ model {
 
     L_Omega_R ~ lkj_corr_cholesky(2);
     L_sigma_R ~ cauchy(0, 2.5);
+}
+generated quantities {
+    matrix[K, K] G;
+    matrix[K, K] R;
+    corr_matrix[K] corrG;
+    corr_matrix[K] corrR;
+    matrix[K, J] shrink_ad;
+    matrix[K, J] shrink_dm;
+
+    G = multiply_lower_tri_self_transpose(diag_pre_multiply(L_sigma_G, L_Omega_G));
+    R = multiply_lower_tri_self_transpose(diag_pre_multiply(L_sigma_R, L_Omega_R));
+
+    corrG = multiply_lower_tri_self_transpose(L_Omega_G);
+    corrR = multiply_lower_tri_self_transpose(L_Omega_R);
+
+    shrink_ad = lambda_ad .* lambdaPlus_ad * tau;
+    shrink_dm = lambda_dm .* lambdaPlus_dm * tau;
 }

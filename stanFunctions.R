@@ -41,9 +41,9 @@ getStanEffects = function(current_chrom, stan_model, trait_vector)
 getStanShrinkage = function(current_chrom, stan_model, trait_vector)
 {
   K = length(trait_vector)
-  shrink = rstan::extract(stan_model, pars = c("lambda_ad", "lambda_dm", "tau"))
-  raw_weights_ad = sweep(shrink[[1]], 1, shrink[[3]], "*")
-  raw_weights_dm = sweep(shrink[[2]], 1, shrink[[3]], "*")
+  shrink = rstan::extract(stan_model, pars = c("shrink_ad", "shrink_dm"))
+  raw_weights_ad = shrink[[1]]
+  raw_weights_dm = shrink[[2]]
   weights_ad = reshape2::melt(raw_weights_ad) %>% ddply(.(Var2, Var3), numcolwise(mean))
   weights_dm = reshape2::melt(raw_weights_dm) %>% ddply(.(Var2, Var3), numcolwise(mean))
   weights = rbind(select(weights_ad, -iterations), select(weights_dm, -iterations))
@@ -55,13 +55,15 @@ getStanShrinkage = function(current_chrom, stan_model, trait_vector)
   weights$trait = rep(trait_vector, each = loci_per_chrom[current_chrom])
   tbl_df(weights)
 }
-plotEffectEstimate = function(current_chrom, effects, file = NULL)
+plotEffectEstimate = function(current_chrom, effects, file = NULL, true_effects = NULL)
 {
     hc_plot = ggplot(filter(effects, chrom == current_chrom), aes(marker, mean, group = trait)) +
         geom_point() + facet_grid(trait~type, scales = "free") +
         geom_hline(yintercept = 0) +
         geom_point(size = 0.3) + ggtitle(paste("Effects chrom", current_chrom)) +
         geom_errorbar(aes(ymin = lower, ymax = upper), width = 0, size = 0.3)
+    if(!is.null(true_effects))
+        hc_plot = hc_plot + geom_point(data = filter(true_effects, chrom == current_chrom), aes(y = true_effects), color = "red")
     if(!is.null(file))
         save_plot(paste0("./data/figures/", file, "_effects_chrom", current_chrom, ".png"),
                   hc_plot, base_height = 6, base_aspect_ratio = 1.8)
@@ -80,7 +82,7 @@ plotWeights = function(current_chrom, weights, file = NULL)
     return(hc_plot)
 }
 runStanModel = function(current_chrom, current_data, trait_vector, chain = 1, iter = 500,
-                        model_file = './SUR_horseShoe.stan', ...)
+                        model_file = './SUR_horseShoePlus.stan', ...)
 {
     stan_model_SUR_HC = stan(file = model_file,
                              data = getStanInput(current_chrom, current_data, trait_vector),
@@ -90,8 +92,8 @@ runStanModel = function(current_chrom, current_data, trait_vector, chain = 1, it
     return(list(effects, weights, rstan::extract(stan_model_SUR_HC)))
 }
 
-runStanModelFullGenome = function(current_data, trait_vector, iter = 2000, parallel = TRUE, 
-                                  model_file = "./SUR_horseShoe.stan", ...)
+runStanModelFullGenome = function(current_data, trait_vector, iter = 2000, parallel = TRUE,
+                                  model_file = "./SUR_horseShoePlus.stan", ...)
 {
     all_chroms = alply(1:19, 1, runStanModel, current_data, trait_vector,
                        chain = 1, iter = iter, model_file = model_file, ..., .parallel = parallel, .inform = TRUE)
