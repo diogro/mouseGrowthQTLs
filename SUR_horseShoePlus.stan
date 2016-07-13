@@ -118,9 +118,9 @@ model {
     // weakly informative prior for the intercept 
     w0 ~ normal(0,5);
 
-    L_Omega_G ~ lkj_corr_cholesky(4);
+    L_Omega_G ~ lkj_corr_cholesky(2);
     L_sigma_G ~ cauchy(0, 2.5);
 
-    L_Omega_R ~ lkj_corr_cholesky(4);
+    L_Omega_R ~ lkj_corr_cholesky(2);
     L_sigma_R ~ cauchy(0, 2.5);
 }
