@@ -1,12 +1,14 @@
 setwd("/home/diogro/projects/mouse-qtls/")
 source("./read_mouse_data.R")
 
-install_load("doMC")
+install_load("doMC", "VCA")
 registerDoMC(4)
 
-area_data = inner_join(area_phen_std,
-                       Reduce(inner_join, area_markers),
-                       by = "ID") %>%
+#area_data = inner_join(area_phen_std,
+                       #area_markers,
+                       #by = "ID") %>%
+  #gather(variable, value, area1:area7)
+area_data = area_phen_std %>%
   gather(variable, value, area1:area7)
 
 null_formula = "value ~ variable + (0 + variable|FAMILY)"
@@ -17,6 +19,11 @@ summary(area_null_model)
 G_ML = VarCorr(area_null_model)[[1]]
 attr(G_ML,"correlation") = NULL
 (null_model_summary = summary(area_null_model))
+
+area_data = mutate(area_data, FAMILY = as.factor(FAMILY), variable = as.factor(variable))
+area_vcf = remlMM(value ~ variable + variable:(FAMILY), as.data.frame(area_data))
+
+
 source("./qtlMapping/check_G.R")
 
 makeMarkerList = function(pos) paste(paste('variable:chrom', pos[1],"_", c('A', 'D'), pos[2], sep = ''), collapse = ' + ')
