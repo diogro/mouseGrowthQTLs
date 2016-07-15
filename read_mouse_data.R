@@ -1,4 +1,5 @@
 if(!require(install.load)) {install.packages("install.load"); library(install.load)}
+library(rstan)
 install_load("plyr", "dplyr", "tidyr", "readr", "lme4", "ggplot2", "cowplot")
 
 ## Meta data
@@ -9,25 +10,27 @@ mouse_meta = select(raw.mouse_meta, ID:COHORT)
 
 ## Markers
 
-markers = llply(paste0("./data/markers/chrom", 1:19, ".csv"), read_csv)
-names(markers) = paste0("chrom", 1:19)
-for(chrom in names(markers)){
-  names(markers[[chrom]])[-1] = (paste(chrom, names(markers[[chrom]])[-1], sep = "_"))
+markers_list = llply(paste0("./data/markers/chrom", 1:19, ".csv"), read_csv)
+names(markers_list) = paste0("chrom", 1:19)
+for(chrom in names(markers_list)){
+  names(markers_list[[chrom]])[-1] = (paste(chrom, names(markers_list[[chrom]])[-1], sep = "_"))
 }
 
-chroms = seq(markers)
-loci_per_chrom = laply(chroms, function(chrom) ncol(markers[[chrom]][-1])/3)
+markers = Reduce(inner_join, markers_list)
+
+chroms = seq(markers_list)
+loci_per_chrom = laply(chroms, function(chrom) ncol(markers_list[[chrom]][-1])/3)
 
 ## Simulted Markers
 
 simulated_markers = llply(paste0("./data/Simulated\ independent\ genotypes/data", 1:20, ".csv"), read_csv)
-names(simulated_markers) = paste0("sim_chrom", 1:20)
+names(simulated_markers) = paste0("chrom", 1:20)
 for(chrom in names(simulated_markers)){
   names(simulated_markers[[chrom]])[-1] = (paste(chrom, names(simulated_markers[[chrom]])[-1], sep = "_"))
 }
 
-simulated_chroms = seq(simulated_markers)
-simulated_loci_per_chrom = laply(simulated_chroms, function(chrom) ncol(simulated_markers[[chrom]][-1])/3)
+simulated_sets = seq(simulated_markers)
+simulated_loci_per_set = laply(simulated_sets, function(chrom) ncol(simulated_markers[[chrom]][-1])/3)
 
 ## Simulated Chromossomes
 
@@ -51,7 +54,7 @@ raw.growth_phen = read_csv("data/growth traits/F3Phenotypes_further corrected fa
 raw.growth_phen = tbl_df(select(raw.growth_phen, c(ID, WEEK1:WEEK10)))
 
 growth_phen = inner_join(mouse_meta, raw.growth_phen, by = "ID") %>% 
-  semi_join(markers[[1]], by = "ID") %>% 
+  semi_join(markers, by = "ID") %>% 
   mutate(grow12 = WEEK2 - WEEK1,
          grow23 = WEEK3 - WEEK2,
          grow34 = WEEK4 - WEEK3,
@@ -65,7 +68,7 @@ growth_phen = inner_join(mouse_meta, raw.growth_phen, by = "ID") %>%
   na.omit %>%
   arrange(ID)
 
-growth_markers = llply(markers, function(x) semi_join(x, growth_phen, by = "ID"))
+growth_markers = semi_join(markers, growth_phen, by = "ID")
 
 growth_traits = c("grow12", "grow23", "grow34", "grow45", "grow56", "grow67", "grow78")
 num_growth_traits = length(growth_traits)
@@ -83,12 +86,12 @@ growth_phen_std = spread(m_growth_phen_std, variable, value)
 
 raw.area_phen = read_csv("data/area traits/areasF2F3.csv")
 area_phen = inner_join(mouse_meta, raw.area_phen, by = "ID") %>% 
-  semi_join(markers[[1]], by = "ID") %>% 
+  semi_join(markers, by = "ID") %>% 
   select(ID, FAMILY, SEX, LSB, LSW, COHORT, area1:area7) %>%
   na.omit %>%
   arrange(ID)
 
-area_markers = llply(markers, function(x) semi_join(x, area_phen, by = "ID"))
+area_markers = semi_join(markers, area_phen, by = "ID")
 
 area_traits = paste0("area", 1:7)
 num_area_traits = length(area_traits)
@@ -111,12 +114,12 @@ raw.necropsy_phen = read_csv("data/growth traits/F3Phenotypes_further corrected 
 raw.necropsy_phen = tbl_df(select(raw.necropsy_phen, c(ID, FATPAD, HEART:LIVER)))
 
 necropsy_phen = inner_join(mouse_meta, raw.necropsy_phen, by = "ID") %>% 
-  semi_join(markers[[1]], by = "ID") %>%
+  semi_join(markers, by = "ID") %>%
   select(ID, FAMILY, SEX, LSB, LSW, COHORT, FATPAD:LIVER) %>%
   na.omit %>%
   arrange(ID)
 
-necropsy_markers = llply(markers, function(x) semi_join(x, necropsy_phen, by = "ID"))
+necropsy_markers = semi_join(markers, necropsy_phen, by = "ID")
 
 necropsy_traits = c("FATPAD", "HEART", "KIDNEY", "SPLEEN", "LIVER")
 num_necropsy_traits = length(necropsy_traits)
