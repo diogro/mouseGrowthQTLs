@@ -82,6 +82,31 @@ m_growth_phen_std$value = residuals(mouse_no_fixed)
 
 growth_phen_std = spread(m_growth_phen_std, variable, value)
 
+# weight traits
+
+raw.weight_phen = read_csv("data/growth traits/F3Phenotypes_further corrected family data_corrected litter sizes.csv")
+raw.weight_phen = tbl_df(select(raw.weight_phen, c(ID, WEEK1:WEEK8)))
+
+weight_phen = inner_join(mouse_meta, raw.weight_phen, by = "ID") %>% 
+  semi_join(markers, by = "ID") %>% 
+  select(ID, FAMILY, SEX, LSB, LSW, COHORT, WEEK1:WEEK8) %>%
+  na.omit %>%
+  arrange(ID)
+
+weight_markers = semi_join(markers, weight_phen, by = "ID")
+
+weight_traits = paste0("WEEK", 1:8)
+num_weight_traits = length(weight_traits)
+
+m_weight_phen = gather(weight_phen, variable, value, WEEK1:WEEK8)
+
+null.formula = "value ~ variable + variable * SEX + variable * LSB + variable * LSW + variable * COHORT"
+mouse_no_fixed = lm(as.formula(null.formula), data = m_weight_phen)
+m_weight_phen_std = m_weight_phen
+m_weight_phen_std$value = residuals(mouse_no_fixed)
+
+weight_phen_std = spread(m_weight_phen_std, variable, value)
+
 #Area traits
 
 raw.area_phen = read_csv("data/area traits/areasF2F3.csv")

@@ -58,7 +58,7 @@ getStanShrinkage = function(current_chrom, stan_model, trait_vector)
 plotEffectEstimate = function(current_chrom, effects, file = NULL, true_effects = NULL)
 {
     hc_plot = ggplot(filter(effects, chrom == current_chrom), aes(marker, mean, group = trait)) +
-        geom_point() + facet_grid(trait~type, scales = "free") +
+        geom_point() + facet_grid(trait~type) +
         geom_hline(yintercept = 0) +
         geom_point(size = 0.3) + ggtitle(paste("Effects chrom", current_chrom)) +
         geom_errorbar(aes(ymin = lower, ymax = upper), width = 0, size = 0.3)
@@ -72,9 +72,9 @@ plotEffectEstimate = function(current_chrom, effects, file = NULL, true_effects 
 plotWeights = function(current_chrom, weights, file = NULL)
 {
     hc_plot = ggplot(filter(weights, chrom == current_chrom), aes(marker, mean, group = trait)) +
-        geom_point() + facet_grid(trait~type) +
+        geom_point() + facet_grid(trait~type, scale = "free") +
         geom_hline(yintercept = 0) +
-        geom_hline(yintercept = 0.5, linetype = "dashed") +
+        #geom_hline(yintercept = 0.5, linetype = "dashed") +
         geom_point(size = 0.3) + ggtitle(paste("Shrinkage weights chrom", current_chrom))
     if(!is.null(file))
         save_plot(paste0("./data/figures/", file, "_weights_chrom", current_chrom, ".png"),

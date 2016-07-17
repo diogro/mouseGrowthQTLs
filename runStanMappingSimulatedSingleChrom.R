@@ -8,38 +8,46 @@ Rdatas_folder = "./data/Rdatas/"
 
 options(mc.cores = 4)
 
-area_data = inner_join(area_phen_std,
+weight_data = inner_join(weight_phen_std,
                        simulated_genomes[[8]],
                        by = "ID")
 
-area_data[area_traits] = scale(area_data[area_traits])
-#area_data[area_traits] = scale(area_data[area_traits], scale = rep(sqrt(1/40), num_area_traits))
+weight_data = inner_join(weight_phen_std,
+                       markers,
+                       by = "ID")
 
-true_effects = c(findA(area_data$area1, area_data$chrom4_A1, 0.03),
-                 findA(area_data$area2, area_data$chrom4_A10, 0.03),
-                 findA(area_data$area3, area_data$chrom4_A13, 0.03),
-                 findA(area_data$area4, area_data$chrom4_A14, 0.03),
-                 findA(area_data$area5, area_data$chrom4_A14, 0.03),
-                 findA(area_data$area6, area_data$chrom4_A13, 0.03),
-                 findA(area_data$area7, area_data$chrom4_A14, 0.03))
-true_effects = data.frame(true_effects, trait = area_traits, type = "aditive",
+weight_data[weight_traits] = scale(weight_data[weight_traits])
+weight_data[weight_traits] = scale(weight_data[weight_traits], scale = rep(sqrt(1/20), num_weight_traits))
+
+true_effects = c(findA(weight_data$WEEK1, weight_data$chrom4_A1, 0.02),
+                 findA(weight_data$WEEK2, weight_data$chrom4_A10, 0.02),
+                 findA(weight_data$WEEK3, weight_data$chrom4_A13, 0.02),
+                 findA(weight_data$WEEK4, weight_data$chrom4_A14, 0.02),
+                 findA(weight_data$WEEK5, weight_data$chrom4_A14, 0.02),
+                 findA(weight_data$WEEK6, weight_data$chrom4_A13, 0.02),
+                 findA(weight_data$WEEK7, weight_data$chrom4_A14, 0.02))
+true_effects = data.frame(true_effects, trait = weight_traits[1:7], type = "aditive",
                           marker = c(1, 10, 13, rep(14, 2), 13, 14), chrom = 4)
 
-area_data$area1 = makeSimData(area_data$area1, area_data$chrom4_A1, 0.03)
-area_data$area2 = makeSimData(area_data$area2, area_data$chrom4_A10, 0.03)
-area_data$area3 = makeSimData(area_data$area3, area_data$chrom4_A13, 0.03)
-area_data$area4 = makeSimData(area_data$area4, area_data$chrom4_A14, 0.03)
-area_data$area5 = makeSimData(area_data$area5, area_data$chrom4_A14, 0.03)
-area_data$area6 = makeSimData(area_data$area6, area_data$chrom4_A13, 0.03)
-area_data$area7 = makeSimData(area_data$area7, area_data$chrom4_A14, 0.03)
+weight_data$WEEK1 = makeSimData(weight_data$WEEK1, weight_data$chrom4_A1, 0.02)
+weight_data$WEEK2 = makeSimData(weight_data$WEEK2, weight_data$chrom4_A10, 0.02)
+weight_data$WEEK3 = makeSimData(weight_data$WEEK3, weight_data$chrom4_A13, 0.02)
+weight_data$WEEK4 = makeSimData(weight_data$WEEK4, weight_data$chrom4_A14, 0.02)
+weight_data$WEEK5 = makeSimData(weight_data$WEEK5, weight_data$chrom4_A14, 0.02)
+weight_data$WEEK6 = makeSimData(weight_data$WEEK6, weight_data$chrom4_A13, 0.02)
+weight_data$WEEK7 = makeSimData(weight_data$WEEK7, weight_data$chrom4_A14, 0.02)
 
-area_data[area_traits] = scale(area_data[area_traits])
-#area_data[area_traits] = scale(area_data[area_traits], scale = rep(sqrt(1/40), num_area_traits))
-apply(as.matrix(area_data[area_traits]), 2, var)
+weight_data[weight_traits] = scale(weight_data[weight_traits])
+#weight_data[weight_traits] = scale(weight_data[weight_traits], scale = rep(sqrt(1/40), num_weight_traits))
+apply(as.matrix(weight_data[weight_traits]), 2, var)
 
-current_chrom = 4
-sim_model = runStanModel(current_chrom, area_data, area_traits, chain = 4, iter = 400, model_file = './SUR_horseShoePlus.stan', 
+current_chrom = 6
+sim_model = runStanModel(current_chrom, weight_data, weight_traits,
+                         chain = 4, iter = 200, model_file = './SUR_horseShoePlus.stan',
                          control = list(adapt_delta = 0.95))
 
-plotEffectEstimate(current_chrom, sim_model[[1]], "simPlus_area_0.2s_3pct", true_effects)
-plotWeights(current_chrom, sim_model[[2]], "simPlus_area_0.2s_3pct")
+plotEffectEstimate(current_chrom, sim_model[[1]], "weight", true_effects)
+plotWeights(current_chrom, sim_model[[2]], "weight")
+
+plotEffectEstimate(current_chrom, sim_model[[1]], "weight_0.2s_2pct", true_effects)
+plotWeights(current_chrom, sim_model[[2]], "simPlus_weight_0.2s_2pct")
