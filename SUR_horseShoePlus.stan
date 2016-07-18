@@ -16,7 +16,7 @@ functions {
             res[m] = sqrt(x[m]);
         }
         return res;
-    } 
+    }
 }
 
 data {

@@ -32,7 +32,7 @@ getStanEffects = function(current_chrom, stan_model, trait_vector)
   mask = grepl("w_", rownames(HC_summary))
   effects = data.frame(HC_summary[mask, c("mean", "2.5%", "97.5%")])
   colnames(effects) <- c("mean", "lower", "upper")
-  effects$type = rep(c("aditive", "dominance"), each = s/2)
+  effects$type = rep(c("additive", "dominance"), each = s/2)
   effects$chrom = current_chrom
   effects$marker = rep(1:loci_per_chrom[current_chrom], 2*K)
   effects$trait = rep(trait_vector, each = loci_per_chrom[current_chrom])
@@ -49,16 +49,16 @@ getStanShrinkage = function(current_chrom, stan_model, trait_vector)
   weights = rbind(select(weights_ad, -iterations), select(weights_dm, -iterations))
   s = loci_per_chrom[current_chrom] * K * 2
   colnames(weights) <- c("trait", "marker", "mean")
-  weights$type = rep(c("aditive", "dominance"), each = s/2)
+  weights$type = rep(c("additive", "dominance"), each = s/2)
   weights$chrom = current_chrom
   weights$marker = rep(1:loci_per_chrom[current_chrom], 2*K)
   weights$trait = rep(trait_vector, each = loci_per_chrom[current_chrom])
   tbl_df(weights)
 }
-plotEffectEstimate = function(current_chrom, effects, file = NULL, true_effects = NULL)
+plotEffectEstimate = function(current_chrom, effects, file = NULL, true_effects = NULL, scale = "fixed")
 {
     hc_plot = ggplot(filter(effects, chrom == current_chrom), aes(marker, mean, group = trait)) +
-        geom_point() + facet_grid(trait~type, scale = "free") +
+        geom_point() + facet_grid(trait~type, scale = scale) +
         geom_hline(yintercept = 0) +
         geom_point(size = 0.3) + ggtitle(paste("Effects chrom", current_chrom)) +
         geom_errorbar(aes(ymin = lower, ymax = upper), width = 0, size = 0.3)

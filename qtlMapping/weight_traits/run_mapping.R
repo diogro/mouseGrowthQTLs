@@ -10,6 +10,7 @@ install_load("MCMCglmm","doMC")
 registerDoMC(80)
 
 weight_data = inner_join(weight_phen_std, weight_markers, by = "ID")
+weight_data[weight_traits] = scale(weight_data[weight_traits])
 
 value = paste("cbind(", paste(weight_traits, collapse = ', '), ")", sep = '')
 
@@ -48,9 +49,9 @@ source("./qtlMapping/weight_traits/mapping/intervalMapping_weight_traits.R")
 model_file = paste0(Rdatas_folder, "weight_intervalMapping_", flank_dist, "cM_mcmc.Rdata")
 load(model_file)
 
-intervalMapping_DIC_df <- 
-  ldply(intervalMapping_MCMC, function(x) c(flankDIC_5cM = x[[1]]$DIC, 
-                                            focalDIC_5cM = x[[2]]$DIC)) %>% 
+intervalMapping_DIC_df <-
+  ldply(intervalMapping_MCMC, function(x) c(flankDIC_5cM = x[[1]]$DIC,
+                                            focalDIC_5cM = x[[2]]$DIC)) %>%
   mutate(DICDiff_5cM = flankDIC_5cM - focalDIC_5cM) %>% tbl_df
 rm(intervalMapping_MCMC); gc()
 
@@ -61,11 +62,11 @@ source("./qtlMapping/weight_traits/mapping/intervalMapping_weight_traits.R")
 model_file = paste0(Rdatas_folder, "weight_intervalMapping_", flank_dist, "cM_mcmc.Rdata")
 load(model_file)
 
-intervalMapping_DIC_df <- 
-  ldply(intervalMapping_MCMC, function(x) c(flankDIC_10cM = x[[1]]$DIC, 
-                                            focalDIC_10cM = x[[2]]$DIC)) %>% 
-  mutate(DICDiff_10cM = flankDIC_10cM - focalDIC_10cM) %>% tbl_df %>% 
-  inner_join(intervalMapping_DIC_df, by = c("chrom", "marker")) 
+intervalMapping_DIC_df <-
+  ldply(intervalMapping_MCMC, function(x) c(flankDIC_10cM = x[[1]]$DIC,
+                                            focalDIC_10cM = x[[2]]$DIC)) %>%
+  mutate(DICDiff_10cM = flankDIC_10cM - focalDIC_10cM) %>% tbl_df %>%
+  inner_join(intervalMapping_DIC_df, by = c("chrom", "marker"))
 
 rm(intervalMapping_MCMC); gc()
 
@@ -76,11 +77,11 @@ source("./qtlMapping/weight_traits/mapping/intervalMapping_weight_traits.R")
 model_file = paste0(Rdatas_folder, "weight_intervalMapping_", flank_dist, "cM_mcmc.Rdata")
 load(model_file)
 
-intervalMapping_DIC_df <- 
-  ldply(intervalMapping_MCMC, function(x) c(flankDIC_15cM = x[[1]]$DIC, 
-                                            focalDIC_15cM = x[[2]]$DIC)) %>% 
-  mutate(DICDiff_15cM = flankDIC_15cM - focalDIC_15cM) %>% tbl_df %>% 
-  inner_join(intervalMapping_DIC_df, by = c("chrom", "marker")) 
+intervalMapping_DIC_df <-
+  ldply(intervalMapping_MCMC, function(x) c(flankDIC_15cM = x[[1]]$DIC,
+                                            focalDIC_15cM = x[[2]]$DIC)) %>%
+  mutate(DICDiff_15cM = flankDIC_15cM - focalDIC_15cM) %>% tbl_df %>%
+  inner_join(intervalMapping_DIC_df, by = c("chrom", "marker"))
 
 rm(intervalMapping_MCMC); gc()
 
@@ -91,11 +92,11 @@ source("./qtlMapping/weight_traits/mapping/intervalMapping_weight_traits.R")
 model_file = paste0(Rdatas_folder, "weight_intervalMapping_", flank_dist, "cM_mcmc.Rdata")
 load(model_file)
 
-intervalMapping_DIC_df <- 
-  ldply(intervalMapping_MCMC, function(x) c(flankDIC_20cM = x[[1]]$DIC, 
-                                            focalDIC_20cM = x[[2]]$DIC)) %>% 
-  mutate(DICDiff_20cM = flankDIC_20cM - focalDIC_20cM) %>% tbl_df %>% 
-  inner_join(intervalMapping_DIC_df, by = c("chrom", "marker")) 
+intervalMapping_DIC_df <-
+  ldply(intervalMapping_MCMC, function(x) c(flankDIC_20cM = x[[1]]$DIC,
+                                            focalDIC_20cM = x[[2]]$DIC)) %>%
+  mutate(DICDiff_20cM = flankDIC_20cM - focalDIC_20cM) %>% tbl_df %>%
+  inner_join(intervalMapping_DIC_df, by = c("chrom", "marker"))
 
 rm(intervalMapping_MCMC); gc()
 
