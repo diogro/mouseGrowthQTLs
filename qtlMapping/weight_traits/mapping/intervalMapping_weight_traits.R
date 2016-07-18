@@ -57,12 +57,12 @@ all_effectsInterval_mcmc = ldply(intervalMapping_MCMC,
            focal = model_pair$focal
            sf = summary(focal)
            neff = nrow(sf$solutions)
-           effects = sf$solutions[(neff-13):neff,]
+           effects = sf$solutions[(neff-15):neff,]
            ad = effects[1:num_weight_traits,]
            colnames(ad) = paste("ad", colnames(ad), sep = "_")
            dm = effects[(num_weight_traits+1):(num_weight_traits+num_weight_traits),]
            colnames(dm) = paste("dm", colnames(dm), sep = "_")
-           Sol = focal$Sol[,(neff-13):neff]
+           Sol = focal$Sol[,(neff-15):neff]
            p_ad = colSums((Sol[, 1:num_weight_traits]) > 0)/nrow(Sol)
            p_dm = colSums((Sol[,(num_weight_traits+1):(num_weight_traits+num_weight_traits)]) > 0)/nrow(Sol)
            pos = na.omit(as.numeric(unlist(strsplit(unlist(as.character(focal$Fixed$formula)[3]), "[^0-9]+"))))

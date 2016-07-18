@@ -1,5 +1,5 @@
 setwd("/home/diogro/projects/mouse-qtls")
-eource('read_mouse_data.R')
+source('read_mouse_data.R')
 source('OAuth_lem_server.R')
 1
 
@@ -10,6 +10,7 @@ install_load("MCMCglmm","doMC")
 registerDoMC(80)
 
 weight_data = inner_join(weight_phen_std, weight_markers, by = "ID")
+weight_data[weight_traits] = scale(weight_data[weight_traits])
 
 value = paste("cbind(", paste(weight_traits, collapse = ', '), ")", sep = '')
 
