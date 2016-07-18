@@ -58,7 +58,7 @@ getStanShrinkage = function(current_chrom, stan_model, trait_vector)
 plotEffectEstimate = function(current_chrom, effects, file = NULL, true_effects = NULL)
 {
     hc_plot = ggplot(filter(effects, chrom == current_chrom), aes(marker, mean, group = trait)) +
-        geom_point() + facet_grid(trait~type) +
+        geom_point() + facet_grid(trait~type, scale = "free") +
         geom_hline(yintercept = 0) +
         geom_point(size = 0.3) + ggtitle(paste("Effects chrom", current_chrom)) +
         geom_errorbar(aes(ymin = lower, ymax = upper), width = 0, size = 0.3)
