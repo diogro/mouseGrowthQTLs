@@ -76,20 +76,24 @@ plotMainEffects = function(x, current_chrom, title = NULL, alpha = TRUE){
                       aes(ymax = dm_upper, ymin = dm_lower), width = 0) +
         geom_hline(yintercept = 0) +
         facet_grid(trait ~ type, scales = "free") +
-        ggtitle(paste(current_trait, "chrom", current_chrom))
+        ggtitle(paste(title))
 }
 plotMainEffects(effects_list[[3]]$single, 3, alpha = FALSE)
 
 plotAllEffects = function(current_trait, prefix = "", ...){
-  effect_types = c("i5cM","i10cM","i15cM","i20cM", "single")
-  llply(effect_types, function(x) save_plot(paste0("data/figures/", prefix, current_trait, "_",x, ".png"),
-                                            plotMainEffects(effects_list[[current_trait]][[x]],
-                                                            paste(current_trait, x), ...),
-                                            base_aspect_ratio = 2, base_height = 8))
+    effect_types = c("i5cM","i10cM","i15cM","i20cM", "single")
+    llply(effect_types, function(x) {
+              for(chrom in 1:19){
+                  save_plot(paste0("data/figures/", prefix, current_trait, "_",x,"_chrom", chrom, ".png"),
+                            plotMainEffects(effects_list[[current_trait]][[x]],
+                                            chrom, paste(current_trait, x, "chrom", chrom), ...),
+                            base_aspect_ratio = 2, base_height = 8)
+              }
+                      })
 }
 
-for(current.trait in trait_sets) plotAllEffects(current.trait, alpha = FALSE)
-for(current.trait in trait_sets) plotAllEffects(current.trait, "alpha_", alpha = TRUE)
+for(current_trait in trait_sets) plotAllEffects(current_trait, alpha = FALSE)
+for(current_trait in trait_sets) plotAllEffects(current_trait, "alpha_", alpha = TRUE)
 
 
 effects_list[['necropsy']]$intDIC  %>%
