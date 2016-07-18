@@ -1,5 +1,5 @@
 setwd("/home/diogro/projects/mouse-qtls")
-eource('read_mouse_data.R')
+source('read_mouse_data.R')
 source('OAuth_lem_server.R')
 1
 
