@@ -171,8 +171,8 @@ generated quantities {
 
     for(j in 1:J){
         for(k in 1:K){
-            shrink_ad[k, j] = 1 - 1/(1 - (sd_theta_ad[k, j]^2));
-            shrink_dm[k, j] = 1 - 1/(1 - (sd_theta_dm[k, j]^2));
+            shrink_ad[k, j] = 1 - 1/(1 + (sd_theta_ad[k, j]^2));
+            shrink_dm[k, j] = 1 - 1/(1 + (sd_theta_dm[k, j]^2));
         }
     }
 }
