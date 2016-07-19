@@ -150,10 +150,10 @@ model {
     w0 ~ normal(0,5);
 
     L_Omega_G ~ lkj_corr_cholesky(2);
-    /*L_sigma_G ~ cauchy(0, 2.5);*/
+    L_sigma_G ~ cauchy(0, 2.5);
 
     L_Omega_R ~ lkj_corr_cholesky(2);
-    /*L_sigma_R ~ cauchy(0, 2.5);*/
+    L_sigma_R ~ cauchy(0, 2.5);
 }
 generated quantities {
     matrix[K, K] G;
