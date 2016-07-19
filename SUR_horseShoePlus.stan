@@ -82,6 +82,8 @@ transformed parameters{
     matrix<lower=0>[K, J] lambda_dm;
     matrix<lower=0>[K, J] lambdaPlus_ad;
     matrix<lower=0>[K, J] lambdaPlus_dm;
+    matrix[K, J] shrink_ad;
+    matrix[K, J] shrink_dm;
     matrix[K, J] w_ad;
     matrix[K, J] w_dm;
 
@@ -94,15 +96,17 @@ transformed parameters{
     lambdaPlus_ad = r1_localPlus_ad .* sqrt_mat(r2_localPlus_ad);
     lambdaPlus_dm = r1_localPlus_dm .* sqrt_mat(r2_localPlus_dm);
 
-    w_ad = beta_ad .* lambda_ad .* lambdaPlus_ad;
-    w_dm = beta_dm .* lambda_dm .* lambdaPlus_dm;
-
+    shrink_ad = lambda_ad .* lambdaPlus_ad;
+    shrink_dm = lambda_dm .* lambdaPlus_dm;
     for(j in 1:J){
         for(k in 1:K){
-            w_ad[k, j] = w_ad[k, j] * tau_ad[k];
-            w_dm[k, j] = w_dm[k, j] * tau_dm[k];
+            shrink_ad[k, j] = shrink_ad[k, j] * tau_ad[k];
+            shrink_dm[k, j] = shrink_dm[k, j] * tau_dm[k];
         }
     }
+
+    w_ad = 0.1 * beta_ad .* shrink_ad;
+    w_dm = 0.1 * beta_dm .* shrink_dm;
 }
 
 model {
@@ -123,14 +127,13 @@ model {
     y ~ multi_normal_cholesky(mu, L_Sigma_R);
 
     #// half t-priors for lambdas (nu = 1 corresponds to horseshoe)
-    to_vector(beta_ad) ~ normal(0, 0.1);
-    to_vector(beta_dm) ~ normal(0, 0.1);
+    to_vector(beta_ad) ~ normal(0, 1);
+    to_vector(beta_dm) ~ normal(0, 1);
 
     to_vector(r1_local_ad) ~ normal(0.0, 1.0);
     to_vector(r2_local_ad) ~ inv_gamma(0.5*3, 0.5*3);
     to_vector(r1_localPlus_ad) ~ normal(0.0, 1.0);
     to_vector(r2_localPlus_ad) ~ inv_gamma(0.5*3, 0.5*3);
-
 
     to_vector(r1_local_dm) ~ normal(0.0, 1.0);
     to_vector(r2_local_dm) ~ inv_gamma(0.5*3, 0.5*3);
@@ -138,10 +141,10 @@ model {
     to_vector(r2_localPlus_dm) ~ inv_gamma(0.5*3, 0.5*3);
     // half cauchy for tau
     r1_global_ad ~ normal(0.0, 1.0);
-    r2_global_ad ~ inv_gamma(0.5, 0.5);
+    r2_global_ad ~ inv_gamma(0.5, 0.5 * sqrt_vec(L_sigma_R));
 
     r1_global_dm ~ normal(0.0, 1.0);
-    r2_global_dm ~ inv_gamma(0.5, 0.5);
+    r2_global_dm ~ inv_gamma(0.5, 0.5 * sqrt_vec(L_sigma_R));
 
     // weakly informative prior for the intercept
     w0 ~ normal(0,5);
@@ -157,21 +160,10 @@ generated quantities {
     matrix[K, K] R;
     corr_matrix[K] corrG;
     corr_matrix[K] corrR;
-    matrix[K, J] shrink_ad;
-    matrix[K, J] shrink_dm;
 
     G = multiply_lower_tri_self_transpose(diag_pre_multiply(L_sigma_G, L_Omega_G));
     R = multiply_lower_tri_self_transpose(diag_pre_multiply(L_sigma_R, L_Omega_R));
 
     corrG = multiply_lower_tri_self_transpose(L_Omega_G);
     corrR = multiply_lower_tri_self_transpose(L_Omega_R);
-
-    shrink_ad = lambda_ad .* lambdaPlus_ad;
-    shrink_dm = lambda_dm .* lambdaPlus_dm;
-    for(j in 1:J){
-        for(k in 1:K){
-            shrink_ad[k, j] = shrink_ad[k, j] * tau_ad[k];
-            shrink_dm[k, j] = shrink_dm[k, j] * tau_dm[k];
-        }
-    }
 }
