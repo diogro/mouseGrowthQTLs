@@ -141,10 +141,10 @@ model {
     to_vector(r2_localPlus_dm) ~ inv_gamma(0.5*3, 0.5*3);
     // half cauchy for tau
     r1_global_ad ~ normal(0.0, 1.0);
-    r2_global_ad ~ inv_gamma(0.5, 0.5 * sqrt_vec(L_sigma_R));
+    r2_global_ad ~ inv_gamma(0.5, 0.5 * L_sigma_R);
 
     r1_global_dm ~ normal(0.0, 1.0);
-    r2_global_dm ~ inv_gamma(0.5, 0.5 * sqrt_vec(L_sigma_R));
+    r2_global_dm ~ inv_gamma(0.5, 0.5 * L_sigma_R);
 
     // weakly informative prior for the intercept
     w0 ~ normal(0,5);
