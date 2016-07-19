@@ -87,8 +87,8 @@ transformed parameters{
     matrix[K, J] w_ad;
     matrix[K, J] w_dm;
 
-    tau_ad = r1_global_ad .* sqrt_vec(r2_global_ad);
-    tau_dm = r1_global_dm .* sqrt_vec(r2_global_dm);
+    tau_ad = r1_global_ad .* sqrt_vec(r2_global_ad) .* sqrt_vec(L_sigma_R);
+    tau_dm = r1_global_dm .* sqrt_vec(r2_global_dm) .* sqrt_vec(L_sigma_R);
 
     lambda_ad = r1_local_ad .* sqrt_mat(r2_local_ad);
     lambda_dm = r1_local_dm .* sqrt_mat(r2_local_dm);
@@ -141,10 +141,10 @@ model {
     to_vector(r2_localPlus_dm) ~ inv_gamma(0.5*3, 0.5*3);
     // half cauchy for tau
     r1_global_ad ~ normal(0.0, 1.0);
-    r2_global_ad ~ inv_gamma(0.5, 0.5 * sqrt_vec(L_sigma_R));
+    r2_global_ad ~ inv_gamma(0.5, 0.5);
 
     r1_global_dm ~ normal(0.0, 1.0);
-    r2_global_dm ~ inv_gamma(0.5, 0.5 * sqrt_vec(L_sigma_R));
+    r2_global_dm ~ inv_gamma(0.5, 0.5);
 
     // weakly informative prior for the intercept
     w0 ~ normal(0,5);
@@ -171,8 +171,8 @@ generated quantities {
 
     for(j in 1:J){
         for(k in 1:K){
-            shrink_ad[k, j] = 1 - 1/(1 - (sd_theta_ad[k, j]^2 * tau_ad[k]^2));
-            shrink_dm[k, j] = 1 - 1/(1 - (sd_theta_dm[k, j]^2 * tau_dm[k]^2));
+            shrink_ad[k, j] = 1 - 1/(1 - (sd_theta_ad[k, j]^2));
+            shrink_dm[k, j] = 1 - 1/(1 - (sd_theta_dm[k, j]^2));
         }
     }
 }
