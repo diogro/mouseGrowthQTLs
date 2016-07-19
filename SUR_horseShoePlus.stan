@@ -87,8 +87,8 @@ transformed parameters{
     matrix[K, J] w_ad;
     matrix[K, J] w_dm;
 
-    tau_ad = r1_global_ad .* sqrt_vec(r2_global_ad) .* sqrt_vec(L_sigma_R);
-    tau_dm = r1_global_dm .* sqrt_vec(r2_global_dm) .* sqrt_vec(L_sigma_R);
+    tau_ad = r1_global_ad .* sqrt_vec(r2_global_ad);
+    tau_dm = r1_global_dm .* sqrt_vec(r2_global_dm);
 
     lambda_ad = r1_local_ad .* sqrt_mat(r2_local_ad);
     lambda_dm = r1_local_dm .* sqrt_mat(r2_local_dm);
@@ -141,19 +141,19 @@ model {
     to_vector(r2_localPlus_dm) ~ inv_gamma(0.5*3, 0.5*3);
     // half cauchy for tau
     r1_global_ad ~ normal(0.0, 1.0);
-    r2_global_ad ~ inv_gamma(0.5, 0.5);
+    r2_global_ad ~ inv_gamma(0.5, 0.5 * sqrt_vec(L_sigma_R));
 
     r1_global_dm ~ normal(0.0, 1.0);
-    r2_global_dm ~ inv_gamma(0.5, 0.5);
+    r2_global_dm ~ inv_gamma(0.5, 0.5 * sqrt_vec(L_sigma_R));
 
     // weakly informative prior for the intercept
     w0 ~ normal(0,5);
 
     L_Omega_G ~ lkj_corr_cholesky(2);
-    L_sigma_G ~ cauchy(0, 2.5);
+    /*L_sigma_G ~ cauchy(0, 2.5);*/
 
     L_Omega_R ~ lkj_corr_cholesky(2);
-    L_sigma_R ~ cauchy(0, 2.5);
+    /*L_sigma_R ~ cauchy(0, 2.5);*/
 }
 generated quantities {
     matrix[K, K] G;
