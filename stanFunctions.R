@@ -69,15 +69,15 @@ plotEffectEstimate = function(current_chrom, effects, file = NULL, true_effects 
                   hc_plot, base_height = 6, base_aspect_ratio = 1.8)
     return(hc_plot)
 }
-plotWeights = function(current_chrom, weights, file = NULL)
+plotShrinkage = function(current_chrom, weights, file = NULL)
 {
     hc_plot = ggplot(filter(weights, chrom == current_chrom), aes(marker, mean, group = trait)) +
         geom_point() + facet_grid(trait~type, scale = "free") +
         geom_hline(yintercept = 0) +
         #geom_hline(yintercept = 0.5, linetype = "dashed") +
-        geom_point(size = 0.3) + ggtitle(paste("Shrinkage weights chrom", current_chrom))
+        geom_point(size = 0.3) + ggtitle(paste("Shrinkage chrom", current_chrom))
     if(!is.null(file))
-        save_plot(paste0("./data/figures/", file, "_weights_chrom", current_chrom, ".png"),
+        save_plot(paste0("./data/figures/", file, "_shrinkage_chrom", current_chrom, ".png"),
                   hc_plot, base_height = 6, base_aspect_ratio = 1.8)
     return(hc_plot)
 }
