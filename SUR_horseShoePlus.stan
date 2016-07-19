@@ -82,8 +82,8 @@ transformed parameters{
     matrix<lower=0>[K, J] lambda_dm;
     matrix<lower=0>[K, J] nu_ad;
     matrix<lower=0>[K, J] nu_dm;
-    matrix[K, J] var_theta_ad;
-    matrix[K, J] var_theta_dm;
+    matrix<lower=0>[K, J] sd_theta_ad;
+    matrix<lower=0>[K, J] sd_theta_dm;
     matrix[K, J] w_ad;
     matrix[K, J] w_dm;
 
@@ -96,17 +96,17 @@ transformed parameters{
     nu_ad = r1_localPlus_ad .* sqrt_mat(r2_localPlus_ad);
     nu_dm = r1_localPlus_dm .* sqrt_mat(r2_localPlus_dm);
 
-    var_theta_ad = lambda_ad .* nu_ad;
-    var_theta_dm = lambda_dm .* nu_dm;
+    sd_theta_ad = lambda_ad .* nu_ad;
+    sd_theta_dm = lambda_dm .* nu_dm;
     for(j in 1:J){
         for(k in 1:K){
-            var_theta_ad[k, j] = var_theta_ad[k, j] * tau_ad[k];
-            var_theta_dm[k, j] = var_theta_dm[k, j] * tau_dm[k];
+            sd_theta_ad[k, j] = sd_theta_ad[k, j] * tau_ad[k];
+            sd_theta_dm[k, j] = sd_theta_dm[k, j] * tau_dm[k];
         }
     }
 
-    w_ad = beta_ad .* var_theta_ad;
-    w_dm = beta_dm .* var_theta_dm;
+    w_ad = beta_ad .* sd_theta_ad;
+    w_dm = beta_dm .* sd_theta_dm;
 }
 
 model {
@@ -160,8 +160,8 @@ generated quantities {
     matrix[K, K] R;
     corr_matrix[K] corrG;
     corr_matrix[K] corrR;
-    matrix<lower=0, upper=1>[K, J] shrink_ad;
-    matrix<lower=0, upper=1>[K, J] shrink_dm;
+    matrix[K, J] shrink_ad;
+    matrix[K, J] shrink_dm;
 
     G = multiply_lower_tri_self_transpose(diag_pre_multiply(L_sigma_G, L_Omega_G));
     R = multiply_lower_tri_self_transpose(diag_pre_multiply(L_sigma_R, L_Omega_R));
@@ -171,8 +171,8 @@ generated quantities {
 
     for(j in 1:J){
         for(k in 1:K){
-            shrink_ad[k, j] = 1 - 1/(1 - var_theta_ad[k, j]);
-            shrink_dm[k, j] = 1 - 1/(1 - var_theta_dm[k, j]);
+            shrink_ad[k, j] = 1 - 1/(1 - (sd_theta_ad[k, j]^2 * tau_ad[k]^2));
+            shrink_dm[k, j] = 1 - 1/(1 - (sd_theta_dm[k, j]^2 * tau_dm[k]^2));
         }
     }
 }
