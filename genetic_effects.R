@@ -43,17 +43,17 @@ getEffects = function(trait){
        #,nullDIC = nullDIC
        )
  }
-trait_sets = c("area", "growth", "necropsy")
+trait_sets = c("area", "growth", "necropsy", "weight")
 effects_list = llply(trait_sets, getEffects)
 names(effects_list) = trait_sets
 
 chrom_limits = inner_join(select(effects_list[['necropsy']]$single, chrom, marker, count),
-           singleDIC %>% group_by(chrom) %>% summarise(marker = max(locus)),
+           effects_list[[1]]$singleDIC %>% group_by(chrom) %>% summarise(marker = max(locus)),
            by = c("chrom", "marker")) %>% mutate(count = as.numeric(count) + 0.5) %>% unique
 
 current_chrom = 6
-x = effects_list[[1]]$i10cM
-current_trait = "growth"
+x = effects_list[[4]]$i10cM
+current_trait = "weight"
 plotMainEffects = function(x, current_chrom, title = NULL, alpha = TRUE){
   plot_data =
     x %>%
@@ -78,7 +78,7 @@ plotMainEffects = function(x, current_chrom, title = NULL, alpha = TRUE){
         facet_grid(trait ~ type, scales = "free") +
         ggtitle(paste(title))
 }
-plotMainEffects(effects_list[[3]]$single, 3, alpha = FALSE)
+plotMainEffects(effects_list[[4]]$single, 3, alpha = FALSE)
 
 plotAllEffects = function(current_trait, prefix = "", ...){
     effect_types = c("i5cM","i10cM","i15cM","i20cM", "single")

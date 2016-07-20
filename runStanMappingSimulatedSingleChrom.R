@@ -39,14 +39,14 @@ simulateData = function(current_chrom, current_data, trait_vector,
     return(list(current_data, true_effects))
 }
 x = simulateData(current_chrom <- 6, weight_data, weight_traits, n_effects = 10)
-weight_data = x[[1]]
+sim_weight_data = x[[1]]
 true_effects = x[[2]]
 
-weight_data[weight_traits] = scale(weight_data[weight_traits])
-apply(as.matrix(weight_data[weight_traits]), 2, var)
+#weight_data[weight_traits] = scale(weight_data[weight_traits])
+apply(as.matrix(sim_weight_data[weight_traits]), 2, var)
 
-sim_model = runStanModel(current_chrom, weight_data, weight_traits,
-                         chain = 4, iter = 400, model_file = './SUR_horseShoePlus.stan')
+sim_model = runStanModel(current_chrom, sim_weight_data, weight_traits,
+                         chain = 3, iter = 200, model_file = './SUR_HAL.stan')
 
 colMeans(sim_model[[3]]$w_ad)
 
@@ -57,5 +57,5 @@ dev.off()
 #plotEffectEstimate(current_chrom, sim_model[[1]], "weight")
 #plotShrinkage(current_chrom, sim_model[[2]], "weight")
 
-plotEffectEstimate(current_chrom, sim_model[[1]], "sim_scaled_weight_0.1s_random_0.1", true_effects, "free")
-plotShrinkage(current_chrom, sim_model[[2]], "sim_scaled_weight_0.1s_random_0.1")
+plotEffectEstimate(current_chrom, sim_model[[1]], "sim_scaled_weight_HAL_random_0.1", true_effects, "free")
+plotShrinkage(current_chrom, sim_model[[2]], "sim_scaled_weight_HAL_random_0.1")
