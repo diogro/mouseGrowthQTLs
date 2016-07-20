@@ -3,11 +3,11 @@ source('stanFunctions.R')
 source('read_mouse_data.R')
 source('utils.R')
 
-Rdatas_folder = "~/gdrive/LGSM_project_Rdatas/"
-#Rdatas_folder = "./data/Rdatas/"
+#Rdatas_folder = "~/gdrive/LGSM_project_Rdatas/"
+Rdatas_folder = "./data/Rdatas/"
 
 rstan_options(auto_write = TRUE)
-options(mc.cores = 4)
+options(mc.cores = 8)
 
 weight_data = inner_join(weight_phen_std, simulated_genomes[[8]], by = "ID")
 
@@ -26,7 +26,7 @@ simulateData = function(current_chrom, current_data, trait_vector,
     for(i in 1:n_effects){
         current_trait = sample(trait_vector, 3)
         current_loci = sample(loci_per_chrom[current_chrom], 1)
-        type = sample(c("A", "D"), 1)
+        type = sample(c("A", "A", "D"), 1)
         locus = paste0("chrom", current_chrom, "_", type, current_loci)
         effect = rnorm(1, 0, eff_sd)
         for(trait in current_trait){
@@ -39,14 +39,15 @@ simulateData = function(current_chrom, current_data, trait_vector,
     return(list(current_data, true_effects))
 }
 x = simulateData(current_chrom <- 6, weight_data, weight_traits, n_effects = 10)
-weight_data = x[[1]]
+sim_weight_data = x[[1]]
 true_effects = x[[2]]
 
-weight_data[weight_traits] = scale(weight_data[weight_traits])
-apply(as.matrix(weight_data[weight_traits]), 2, var)
+#sim_weight_data[weight_traits] = scale(sim_weight_data[weight_traits])
+apply(as.matrix(sim_weight_data[weight_traits]), 2, var)
 
-sim_model = runStanModel(current_chrom, weight_data, weight_traits,
-                         chain = 4, iter = 400, model_file = './SUR_horseShoePlus.stan')
+sim_model = runStanModel(current_chrom, sim_weight_data, weight_traits,
+                         chain = 8, iter = 400, warmup = 300,
+                         model_file = './SUR_horseShoePlus.stan')
 
 colMeans(sim_model[[3]]$w_ad)
 
