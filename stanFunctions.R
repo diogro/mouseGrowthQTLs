@@ -85,22 +85,22 @@ plotShrinkage = function(current_chrom, weights, file = NULL)
                   hc_plot, base_height = 6, base_aspect_ratio = 1.8)
     return(hc_plot)
 }
-runStanModel = function(current_chrom, current_data, trait_vector, chain = 1, iter = 500,
+runStanModel = function(current_chrom, current_data, trait_vector, chain = 4, iter = 650, warmup = 400,
                         model_file = './SUR_horseShoePlus.stan', ...)
 {
     stan_model_SUR_HC = stan(file = model_file,
                              data = getStanInput(current_chrom, current_data, trait_vector),
-                             chain=chain, iter = iter, ...)
+                             chain=chain, iter = iter, warmup = warmup, ...)
     effects = getStanEffects(current_chrom, stan_model_SUR_HC, trait_vector)
     weights = getStanShrinkage(current_chrom, stan_model_SUR_HC, trait_vector)
     return(list(effects, weights, rstan::extract(stan_model_SUR_HC)))
 }
 
-runStanModelFullGenome = function(current_data, trait_vector, iter = 2000, parallel = TRUE,
+runStanModelFullGenome = function(current_data, trait_vector, iter = 650, warmup = 400, parallel = TRUE,
                                   model_file = "./SUR_horseShoePlus.stan", ...)
 {
     all_chroms = alply(1:19, 1, runStanModel, current_data, trait_vector,
-                       chain = 1, iter = iter, model_file = model_file, ..., .parallel = parallel, .inform = TRUE)
+                       chain = 4, iter = iter, model_file = model_file, ..., .parallel = parallel, .inform = TRUE)
     effects = Reduce(bind_rows, llply(all_chroms, '[[', 1))
     weights = Reduce(bind_rows, llply(all_chroms, '[[', 2))
     #a_models = lapply(all_chroms, '[[', 3)

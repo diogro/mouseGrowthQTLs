@@ -14,19 +14,14 @@ weight_data = inner_join(weight_phen_std, simulated_genomes[[8]], by = "ID")
 #weight_data = inner_join(weight_phen_std, markers, by = "ID")
 
 weight_data[weight_traits] = scale(weight_data[weight_traits])
-
-trait_vector = weight_traits
-n_effects = 10
-current_chrom = 6
-current_data = weight_data
-eff_sd = 0.1
 simulateData = function(current_chrom, current_data, trait_vector,
                         n_effects = length(trait_vector), eff_sd = 0.1){
     true_effects = NULL
+    all_loci = sample(loci_per_chrom[current_chrom], n_effects)
     for(i in 1:n_effects){
         current_trait = sample(trait_vector, 3)
-        current_loci = sample(loci_per_chrom[current_chrom], 1)
         type = sample(c("A", "D"), 1)
+        current_loci = all_loci[i]
         locus = paste0("chrom", current_chrom, "_", type, current_loci)
         effect = rnorm(1, 0, eff_sd)
         for(trait in current_trait){

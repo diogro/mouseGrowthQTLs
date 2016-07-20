@@ -71,42 +71,47 @@ parameters {
 
     # R matrix
     cholesky_factor_corr[K] L_Omega_R;
-    vector<lower=0>[K] L_sigma_R;
+    vector<lower=0>[K] r1_sigma_R;
+    vector<lower=0>[K] r2_sigma_R;
 }
 
 transformed parameters{
     // global and local variance parameters, and the input weights
+    vector<lower=0>[K] L_sigma_R;
     vector<lower=0>[K] tau_ad;
     vector<lower=0>[K] tau_dm;
     matrix<lower=0>[K, J] lambda_ad;
     matrix<lower=0>[K, J] lambda_dm;
-    matrix<lower=0>[K, J] nu_ad;
-    matrix<lower=0>[K, J] nu_dm;
+    matrix<lower=0>[K, J] eta_ad;
+    matrix<lower=0>[K, J] eta_dm;
+    matrix<lower=0>[K, J] etaLambda_ad;
+    matrix<lower=0>[K, J] etaLambda_dm;
     matrix<lower=0>[K, J] sd_theta_ad;
     matrix<lower=0>[K, J] sd_theta_dm;
     matrix[K, J] w_ad;
     matrix[K, J] w_dm;
 
-    tau_ad = r1_global_ad .* sqrt_vec(r2_global_ad);
-    tau_dm = r1_global_dm .* sqrt_vec(r2_global_dm);
+    L_sigma_R = 2.5 * r1_sigma_R .* sqrt_vec(r2_sigma_R);
+
+    tau_ad = r1_global_ad .* sqrt_vec(r2_global_ad) .* L_sigma_R;
+    tau_dm = r1_global_dm .* sqrt_vec(r2_global_dm) .* L_sigma_R;
 
     lambda_ad = r1_local_ad .* sqrt_mat(r2_local_ad);
     lambda_dm = r1_local_dm .* sqrt_mat(r2_local_dm);
 
-    nu_ad = r1_localPlus_ad .* sqrt_mat(r2_localPlus_ad);
-    nu_dm = r1_localPlus_dm .* sqrt_mat(r2_localPlus_dm);
+    eta_ad = r1_localPlus_ad .* sqrt_mat(r2_localPlus_ad);
+    eta_dm = r1_localPlus_dm .* sqrt_mat(r2_localPlus_dm);
 
-    sd_theta_ad = lambda_ad .* nu_ad;
-    sd_theta_dm = lambda_dm .* nu_dm;
+    etaLambda_ad = lambda_ad .* eta_ad;
+    etaLambda_dm = lambda_dm .* eta_dm;
     for(j in 1:J){
         for(k in 1:K){
-            sd_theta_ad[k, j] = sd_theta_ad[k, j] * tau_ad[k];
-            sd_theta_dm[k, j] = sd_theta_dm[k, j] * tau_dm[k];
+            sd_theta_ad[k, j] = etaLambda_ad[k, j] * tau_ad[k];
+            sd_theta_dm[k, j] = etaLambda_dm[k, j] * tau_dm[k];
         }
     }
-
-    w_ad = beta_ad .* sd_theta_ad;
-    w_dm = beta_dm .* sd_theta_dm;
+    w_ad = 0.1 * beta_ad .* sd_theta_ad;
+    w_dm = 0.1 * beta_dm .* sd_theta_dm;
 }
 
 model {
@@ -141,10 +146,10 @@ model {
     to_vector(r2_localPlus_dm) ~ inv_gamma(0.5*3, 0.5*3);
     // half cauchy for tau
     r1_global_ad ~ normal(0.0, 1.0);
-    r2_global_ad ~ inv_gamma(0.5, 0.5 * L_sigma_R);
+    r2_global_ad ~ inv_gamma(0.5, 0.5);
 
     r1_global_dm ~ normal(0.0, 1.0);
-    r2_global_dm ~ inv_gamma(0.5, 0.5 * L_sigma_R);
+    r2_global_dm ~ inv_gamma(0.5, 0.5);
 
     // weakly informative prior for the intercept
     w0 ~ normal(0,5);
@@ -153,7 +158,8 @@ model {
     L_sigma_G ~ cauchy(0, 2.5);
 
     L_Omega_R ~ lkj_corr_cholesky(2);
-    L_sigma_R ~ cauchy(0, 2.5);
+    r1_sigma_R ~ normal(0.0, 1.0);
+    r2_sigma_R ~ inv_gamma(0.5, 0.5);
 }
 generated quantities {
     matrix[K, K] G;
@@ -171,8 +177,8 @@ generated quantities {
 
     for(j in 1:J){
         for(k in 1:K){
-            shrink_ad[k, j] = 1 - 1/(1 + (sd_theta_ad[k, j]^2));
-            shrink_dm[k, j] = 1 - 1/(1 + (sd_theta_dm[k, j]^2));
+            shrink_ad[k, j] = 1 - 1/(1 + (etaLambda_ad[k, j]^2));
+            shrink_dm[k, j] = 1 - 1/(1 + (etaLambda_dm[k, j]^2));
         }
     }
 }
