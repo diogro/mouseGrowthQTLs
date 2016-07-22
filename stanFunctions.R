@@ -1,9 +1,9 @@
 library(rstan)
 rstan_options(auto_write = TRUE)
-getStanInput = function(current_chrom, current_data, trait_vector)
+getStanInput = function(current_chrom, current_data, trait_vector,
+                        J = loci_per_chrom[current_chrom])
 {
     K        = length(trait_vector)
-    J        = loci_per_chrom[current_chrom]
     N        = dim(current_data)[1]
     n_family = length(unique(current_data$FAMILY))
     family   = as.integer(as.factor(current_data$FAMILY))
@@ -28,18 +28,20 @@ getStanInput = function(current_chrom, current_data, trait_vector)
                       beta_dm  = beta_dm)
     return(param_list)
 }
-getStanEffects = function(current_chrom, stan_model, trait_vector)
+getStanEffects = function(current_chrom, stan_model, trait_vector,
+                          J = loci_per_chrom[current_chrom],
+                          markers = 1:loci_per_chrom[current_chrom])
 {
   K = length(trait_vector)
   HC_summary = summary(stan_model, pairs = c("w_ad", "w_dm"))$summary
-  s = loci_per_chrom[current_chrom] * K * 2
+  s = J * K * 2
   mask = grepl("w_", rownames(HC_summary))
   effects = data.frame(HC_summary[mask, c("mean", "2.5%", "97.5%")])
   colnames(effects) <- c("mean", "lower", "upper")
   effects$type = rep(c("additive", "dominance"), each = s/2)
   effects$chrom = current_chrom
-  effects$marker = rep(1:loci_per_chrom[current_chrom], 2*K)
-  effects$trait = rep(trait_vector, each = loci_per_chrom[current_chrom])
+  effects$marker = rep(markers, 2*K)
+  effects$trait = rep(trait_vector, each = J)
   tbl_df(effects)
 }
 getStanShrinkage = function(current_chrom, stan_model, trait_vector)
@@ -78,7 +80,7 @@ plotShrinkage = function(current_chrom, weights, file = NULL)
     hc_plot = ggplot(filter(weights, chrom == current_chrom), aes(marker, mean, group = trait)) +
         geom_point() + facet_grid(trait~type, scale = "free") +
         geom_hline(yintercept = 0) +
-        #geom_hline(yintercept = 0.5, linetype = "dashed") +
+        geom_hline(yintercept = 0.5, linetype = "dashed") +
         geom_point(size = 0.3) + ggtitle(paste("Shrinkage chrom", current_chrom))
     if(!is.null(file))
         save_plot(paste0("./data/figures/", file, "_shrinkage_chrom", current_chrom, ".png"),

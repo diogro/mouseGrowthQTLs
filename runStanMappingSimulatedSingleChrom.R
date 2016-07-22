@@ -7,13 +7,13 @@ Rdatas_folder = "~/gdrive/LGSM_project_Rdatas/"
 #Rdatas_folder = "./data/Rdatas/"
 
 rstan_options(auto_write = TRUE)
-options(mc.cores = 4)
+options(mc.cores = 3)
 
-weight_data = inner_join(weight_phen_std, simulated_genomes[[8]], by = "ID")
+growth_data = inner_join(growth_phen_std, simulated_genomes[[8]], by = "ID")
 
-#weight_data = inner_join(weight_phen_std, markers, by = "ID")
+growth_data = inner_join(growth_phen_std, markers, by = "ID")
 
-weight_data[weight_traits] = scale(weight_data[weight_traits])
+growth_data[growth_traits] = scale(growth_data[growth_traits])
 simulateData = function(current_chrom, current_data, trait_vector,
                         n_effects = length(trait_vector), eff_sd = 0.1){
     true_effects = NULL
@@ -33,24 +33,26 @@ simulateData = function(current_chrom, current_data, trait_vector,
     }
     return(list(current_data, true_effects))
 }
-x = simulateData(current_chrom <- 6, weight_data, weight_traits, n_effects = 10)
-sim_weight_data = x[[1]]
+x = simulateData(current_chrom <- 6, growth_data, growth_traits, n_effects = 10)
+sim_growth_data = x[[1]]
 true_effects = x[[2]]
 
-#weight_data[weight_traits] = scale(weight_data[weight_traits])
-apply(as.matrix(sim_weight_data[weight_traits]), 2, var)
+#growth_data[growth_traits] = scale(growth_data[growth_traits])
+apply(as.matrix(sim_growth_data[growth_traits]), 2, var)
 
-sim_model = runStanModel(current_chrom, sim_weight_data, weight_traits,
-                         chain = 3, iter = 200, model_file = './SUR_HAL.stan')
+sim_model = runStanModel(current_chrom, growth_data, growth_traits,
+                         chain = 3, iter = 350, warmup = 200, model_file = './SUR_horseShoePlus.stan')
+chrom6_model = runStanModel(current_chrom, growth_data, growth_traits,
+                         chain = 3, iter = 350, warmup = 200, model_file = './SUR_horseShoePlus.stan')
 
 colMeans(sim_model[[3]]$w_ad)
 
 png("./data/figures/lp.png")
-plot(sim_model[[3]]$'lp__')
+plot(sim_model[[3]]$'tau_ad')
 dev.off()
 
-#plotEffectEstimate(current_chrom, sim_model[[1]], "weight")
-#plotShrinkage(current_chrom, sim_model[[2]], "weight")
+plotEffectEstimate(current_chrom, chrom6_model[[1]], "scaled_growth_0.1a_0.1ds_chrom6_HCp", scale = "free")
+plotShrinkage(current_chrom, chrom6_model[[2]], "scaled_growth_0.1a_0.1ds_chrom6_HCp")
 
-plotEffectEstimate(current_chrom, sim_model[[1]], "sim_scaled_weight_HAL_random_0.1", true_effects, "free")
-plotShrinkage(current_chrom, sim_model[[2]], "sim_scaled_weight_HAL_random_0.1")
+#plotEffectEstimate(current_chrom, sim_model[[1]], "scaled_growth_1s_chrom6_HCp", true_effects, scale = "free")
+#plotShrinkage(current_chrom, sim_model[[2]], "scaled_growth_1s_chrom6_HCp")

@@ -110,8 +110,8 @@ transformed parameters{
             sd_theta_dm[k, j] = etaLambda_dm[k, j] * tau_dm[k];
         }
     }
-    w_ad = 0.1 * beta_ad .* sd_theta_ad;
-    w_dm = 0.1 * beta_dm .* sd_theta_dm;
+    w_ad = beta_ad .* sd_theta_ad;
+    w_dm = beta_dm .* sd_theta_dm;
 }
 
 model {
@@ -182,3 +182,4 @@ generated quantities {
         }
     }
 }
+
