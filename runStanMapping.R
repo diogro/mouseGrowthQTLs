@@ -14,12 +14,12 @@ Rdatas_folder = "./data/Rdatas/"
 #chain = 1
 #parallel = TRUE
 
-library(doMC)
+install_load("doMC")
 registerDoMC(19)
 
 weight_data = inner_join(weight_phen_std, weight_markers, by = "ID")
 weight_data[weight_traits] = scale(weight_data[weight_traits])
-weight_mapping = runStanModelFullGenome(weight_data, weight_traits, 2000, TRUE)
+weight_mapping = runStanModelFullGenome(weight_data, weight_traits, 650, 400, TRUE)
 ef_plots = llply(1:19, plotEffectEstimate, weight_mapping[[1]], "weight")
 ef_plots = llply(1:19, plotShrinkage, weight_mapping[[2]], "weight")
 model_file = paste0(Rdatas_folder, "weight_scaled_HCPlus_stan")
@@ -27,7 +27,7 @@ saveRDS(weight_mapping, model_file)
 
 growth_data = inner_join(growth_phen_std, growth_markers, by = "ID")
 growth_data[growth_traits] = scale(growth_data[growth_traits])
-growth_mapping = runStanModelFullGenome(growth_data, growth_traits, 2000, TRUE)
+growth_mapping = runStanModelFullGenome(growth_data, growth_traits, 650, 400, TRUE)
 ef_plots = llply(1:19, plotEffectEstimate, growth_mapping[[1]], "growth")
 ef_plots = llply(1:19, plotShrinkage, growth_mapping[[2]], "growth")
 saveRDS(growth_mapping, model_file)
@@ -36,7 +36,7 @@ saveRDS(growth_mapping, model_file)
 
 area_data = inner_join(area_phen_std, area_markers, by = "ID")
 area_data[area_traits] = scale(area_data[area_traits])
-area_mapping = runStanModelFullGenome(area_data, area_traits, 2000, TRUE)
+area_mapping = runStanModelFullGenome(area_data, area_traits, 650, 400, TRUE)
 ef_plots = llply(1:19, plotEffectEstimate, area_mapping[[1]], "area")
 ef_plots = llply(1:19, plotShrinkage, area_mapping[[2]], "area")
 saveRDS(area_mapping, model_file)
@@ -45,7 +45,7 @@ saveRDS(area_mapping, model_file)
 
 necropsy_data = inner_join(necropsy_phen_std, necropsy_markers, by = "ID")
 necropsy_data[necropsy_traits] = scale(necropsy_data[necropsy_traits])
-necropsy_mapping = runStanModelFullGenome(necropsy_data, necropsy_traits, 2000, TRUE)
+necropsy_mapping = runStanModelFullGenome(necropsy_data, necropsy_traits, 650, 400, TRUE)
 ef_plots = llply(1:19, plotEffectEstimate, necropsy_mapping[[1]], "necropsy")
 ef_plots = llply(1:19, plotShrinkage, necropsy_mapping[[2]], "necropsy")
 saveRDS(necropsy_mapping, model_file)
