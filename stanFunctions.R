@@ -44,7 +44,9 @@ getStanEffects = function(current_chrom, stan_model, trait_vector,
   effects$trait = rep(trait_vector, each = J)
   tbl_df(effects)
 }
-getStanShrinkage = function(current_chrom, stan_model, trait_vector)
+getStanShrinkage = function(current_chrom, stan_model, trait_vector,
+                            J = loci_per_chrom[current_chrom],
+                            markers = 1:loci_per_chrom[current_chrom])
 {
   K = length(trait_vector)
   shrink = rstan::extract(stan_model, pars = c("shrink_ad", "shrink_dm"))
@@ -53,12 +55,12 @@ getStanShrinkage = function(current_chrom, stan_model, trait_vector)
   weights_ad = reshape2::melt(raw_weights_ad) %>% ddply(.(Var2, Var3), numcolwise(mean))
   weights_dm = reshape2::melt(raw_weights_dm) %>% ddply(.(Var2, Var3), numcolwise(mean))
   weights = rbind(select(weights_ad, -iterations), select(weights_dm, -iterations))
-  s = loci_per_chrom[current_chrom] * K * 2
+  s = J * K * 2
   colnames(weights) <- c("trait", "marker", "mean")
   weights$type = rep(c("additive", "dominance"), each = s/2)
   weights$chrom = current_chrom
-  weights$marker = rep(1:loci_per_chrom[current_chrom], 2*K)
-  weights$trait = rep(trait_vector, each = loci_per_chrom[current_chrom])
+  weights$marker = rep(markers, 2*K)
+  weights$trait = rep(trait_vector, each = J)
   tbl_df(weights)
 }
 plotEffectEstimate = function(current_chrom, effects, file = NULL, true_effects = NULL, scale = "fixed")

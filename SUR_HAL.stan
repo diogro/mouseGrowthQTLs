@@ -90,8 +90,6 @@ model {
     matrix[K,K] L_Sigma_G;
     matrix[K,K] L_Sigma_R;
 
-
-
     L_Sigma_G = diag_pre_multiply(L_sigma_G, L_Omega_G);
 
     for (j in 1:n_family)

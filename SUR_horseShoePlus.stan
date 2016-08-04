@@ -90,8 +90,11 @@ transformed parameters{
     matrix<lower=0>[K, J] sd_theta_dm;
     matrix[K, J] w_ad;
     matrix[K, J] w_dm;
+    matrix[K,K] L_Sigma_R;
+    vector[K] mu[N];
 
     L_sigma_R = 2.5 * r1_sigma_R .* sqrt_vec(r2_sigma_R);
+    L_Sigma_R = diag_pre_multiply(L_sigma_R, L_Omega_R);
 
     tau_ad = r1_global_ad .* sqrt_vec(r2_global_ad) .* L_sigma_R;
     tau_dm = r1_global_dm .* sqrt_vec(r2_global_dm) .* L_sigma_R;
@@ -112,22 +115,19 @@ transformed parameters{
     }
     w_ad = beta_ad .* sd_theta_ad;
     w_dm = beta_dm .* sd_theta_dm;
+
+    for (n in 1:N)
+        mu[n] = w0 + w_ad * ad[n] + w_dm * dm[n] + beta_family[family[n]];
+
 }
 
 model {
-    vector[K] mu[N];
     matrix[K,K] L_Sigma_G;
-    matrix[K,K] L_Sigma_R;
 
     L_Sigma_G = diag_pre_multiply(L_sigma_G, L_Omega_G);
 
     for (j in 1:n_family)
         beta_family[j] ~ multi_normal_cholesky(zeros, L_Sigma_G);
-
-    L_Sigma_R = diag_pre_multiply(L_sigma_R, L_Omega_R);
-
-    for (n in 1:N)
-        mu[n] = w0 + w_ad * ad[n] + w_dm * dm[n] + beta_family[family[n]];
 
     y ~ multi_normal_cholesky(mu, L_Sigma_R);
 
@@ -168,6 +168,7 @@ generated quantities {
     corr_matrix[K] corrR;
     matrix[K, J] shrink_ad;
     matrix[K, J] shrink_dm;
+    vector[N] log_lik;
 
     G = multiply_lower_tri_self_transpose(diag_pre_multiply(L_sigma_G, L_Omega_G));
     R = multiply_lower_tri_self_transpose(diag_pre_multiply(L_sigma_R, L_Omega_R));
@@ -181,5 +182,7 @@ generated quantities {
             shrink_dm[k, j] = 1 - 1/(1 + (etaLambda_dm[k, j]^2));
         }
     }
+    for (n in 1:N)
+        log_lik[n] = multi_normal_cholesky_log(y[n], mu[n], L_Sigma_R);
 }
 
