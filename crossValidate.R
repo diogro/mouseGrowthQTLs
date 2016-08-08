@@ -7,7 +7,8 @@ Rdatas_folder = "~/gdrive/LGSM_project_Rdatas/"
 #Rdatas_folder = "./data/Rdatas/"
 
 rstan_options(auto_write = TRUE)
-options(mc.cores = 3)
+chains = 10
+options(mc.cores = chains)
 
 growth_data = inner_join(growth_phen_std, markers, by = "ID")
 growth_data[growth_traits] = scale(growth_data[growth_traits])
@@ -27,21 +28,20 @@ x = separateData(growth_data)
 train_growth_data = x$train
 test_growth_data = x$test
 
-current_chrom = 7
 fit_SUR_HC = stan(file = './SUR_horseShoe.stan',
-                  data = getStanInput(current_chrom, train_growth_data, growth_traits),
-                  chain=3, iter = 200, warmup = 100)
+                  data = getStanInputFullGenome(train_growth_data, growth_traits),
+                  chain=chains, iter = 200, warmup = 100)
 fit_SUR_HCp = stan(file = './SUR_horseShoePlus.stan',
-                   data = getStanInput(current_chrom, train_growth_data, growth_traits),
-                   chain=3, iter = 200, warmup = 100)
+                   data = getStanInputFullGenome(train_growth_data, growth_traits),
+                   chain=chains, iter = 200, warmup = 100)
 fit_SUR_HAL = stan(file = './SUR_HAL.stan',
-                   data = getStanInput(current_chrom, train_growth_data, growth_traits),
-                   chain=3, iter = 200, warmup = 100)
-fit_SUR = stan(file = './SUR.stan',
-               data = getStanInput(current_chrom, train_growth_data, growth_traits),
-               chain=3, iter = 200, warmup = 100)
+                   data = getStanInputFullGenome(train_growth_data, growth_traits),
+                   chain=chains, iter = 200, warmup = 100)
+fit_SUR     = stan(file = './SUR.stan',
+                   data = getStanInputFullGenome(train_growth_data, growth_traits),
+                   chain=chains, iter = 200, warmup = 100)
 
-test_data = getStanInput(current_chrom, test_growth_data, growth_traits)
+test_data = getStanInputFullGenome(test_growth_data, growth_traits)
 fit = rstan::extract(fit_SUR_HC)
 getMeanSqError = function(fit, test_data){
     getResidual = function(i){
