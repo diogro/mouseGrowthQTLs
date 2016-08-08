@@ -29,26 +29,31 @@ test_growth_data = x$test
 
 current_chrom = 7
 fit_SUR_HC = stan(file = './SUR_horseShoe.stan',
-                         data = getStanInput(current_chrom, train_growth_data, growth_traits),
-                         chain=3, iter = 200, warmup = 100)
+                  data = getStanInput(current_chrom, train_growth_data, growth_traits),
+                  chain=3, iter = 200, warmup = 100)
 fit_SUR_HCp = stan(file = './SUR_horseShoePlus.stan',
-                         data = getStanInput(current_chrom, train_growth_data, growth_traits),
-                         chain=3, iter = 200, warmup = 100)
+                   data = getStanInput(current_chrom, train_growth_data, growth_traits),
+                   chain=3, iter = 200, warmup = 100)
 fit_SUR_HAL = stan(file = './SUR_HAL.stan',
-                         data = getStanInput(current_chrom, train_growth_data, growth_traits),
-                         chain=3, iter = 200, warmup = 100)
+                   data = getStanInput(current_chrom, train_growth_data, growth_traits),
+                   chain=3, iter = 200, warmup = 100)
 fit_SUR = stan(file = './SUR.stan',
-                         data = getStanInput(current_chrom, train_growth_data, growth_traits),
-                         chain=3, iter = 200, warmup = 100)
+               data = getStanInput(current_chrom, train_growth_data, growth_traits),
+               chain=3, iter = 200, warmup = 100)
 
 test_data = getStanInput(current_chrom, test_growth_data, growth_traits)
-getMeanSqError = function(model, test_data){
-    fit = rstan::extract(model)
+fit = rstan::extract(fit_SUR_HC)
+getMeanSqError = function(fit, test_data){
     getResidual = function(i){
         residual = test_data$y -
             (fit$w0[i,] + fit$beta_family[i,test_data$family,] + t(fit$w_ad[i,,] %*% t(test_data$ad)) + t(fit$w_dm[i,,] %*% t(test_data$dm)))
         sum(residual^2)
     }
-    aaply(1:300, 1, getResidual)
+    n = nrow(fit[[1]])
+    aaply(1:n, 1, getResidual)
 }
-getMeanSqError(fit_SUR_HC, test_data)
+fits = list(SUR = rstan::extract(fit_SUR),
+            HC  = rstan::extract(fit_SUR_HC),
+            HCp = rstan::extract(fit_SUR_HCp),
+            HAL = rstan::extract(fit_SUR_HAL))
+ldply(fits, function(fit) quantile(getMeanSqError(fit, test_data), c(0.25, 0.5, 0.975)))
