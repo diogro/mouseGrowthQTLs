@@ -182,7 +182,5 @@ generated quantities {
             shrink_dm[k, j] = 1 - 1/(1 + (etaLambda_dm[k, j]^2));
         }
     }
-    for (n in 1:N)
-        log_lik[n] = multi_normal_cholesky_log(y[n], mu[n], L_Sigma_R);
 }
 
