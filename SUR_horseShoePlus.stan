@@ -168,7 +168,6 @@ generated quantities {
     corr_matrix[K] corrR;
     matrix[K, J] shrink_ad;
     matrix[K, J] shrink_dm;
-    vector[N] log_lik;
 
     G = multiply_lower_tri_self_transpose(diag_pre_multiply(L_sigma_G, L_Omega_G));
     R = multiply_lower_tri_self_transpose(diag_pre_multiply(L_sigma_R, L_Omega_R));

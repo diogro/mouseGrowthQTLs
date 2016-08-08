@@ -19,7 +19,7 @@ separateData = function(current_data, per_family = 1){
               n_ind = nrow(x)
               x$train = 0
               x$train[sample(1:n_ind, per_family)] = 1
-              x }) %>% tbl_df
+              x }) %>%tbl_df
     return(list(test = filter(current_data, train == 1),
                 train = filter(current_data, train == 0)))
 }
@@ -40,3 +40,15 @@ fit_SUR_HAL = stan(file = './SUR_HAL.stan',
 fit_SUR = stan(file = './SUR.stan',
                          data = getStanInput(current_chrom, train_growth_data, growth_traits),
                          chain=3, iter = 200, warmup = 100)
+
+test_data = getStanInput(current_chrom, test_growth_data, growth_traits)
+getMeanSqError = function(model, test_data){
+    fit = rstan::extract(model)
+    getResidual = function(i){
+        residual = test_data$y -
+            (fit$w0[i,] + fit$beta_family[i,test_data$family,] + t(fit$w_ad[i,,] %*% t(test_data$ad)) + t(fit$w_dm[i,,] %*% t(test_data$dm)))
+        sum(residual^2)
+    }
+    aaply(1:300, 1, getResidual)
+}
+getMeanSqError(fit_SUR_HC, test_data)
