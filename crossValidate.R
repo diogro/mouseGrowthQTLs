@@ -81,7 +81,8 @@ crossValidate(necropsy_data, necropsy_traits, iter = 200, warmup = 100)
 CV_msqe = llply(1:10, function(x) crossValidate(necropsy_data, necropsy_traits,
                                                 iter = 200, warmup = 100),
                 .parallel = TRUE)
-write_rds(CV_msqe, paste0(Rdatas_folder, "cross_validation_necropsy.rds"))
+saveRDS(CV_msqe, paste0(Rdatas_folder, "cross_validation_necropsy.rds"))
+CV_msqe = readRDS(paste0(Rdatas_folder, "cross_validation_necropsy.rds"))
 llply(CV_msqe, '[[', 1) %>% laply('[[',"V1") %>% aaply(1, function(x) x - min(x))
 
 

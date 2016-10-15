@@ -129,7 +129,7 @@ runStanModel = function(current_chrom, current_data, trait_vector, chain = 4, it
 runStanModelFullGenome = function(current_data, trait_vector, iter = 200, warmup = 100, parallel = TRUE,
                                   model_file = "./SUR_horseShoePlus.stan", ...)
 {
-    all_chroms = alply(18:19, 1, runStanModel, current_data, trait_vector,
+    all_chroms = alply(1:19, 1, runStanModel, current_data, trait_vector,
                        chain = 1, iter = iter, model_file = model_file, ..., .parallel = parallel, .inform = TRUE)
     effects = Reduce(bind_rows, llply(all_chroms, '[[', 1))
     weights = Reduce(bind_rows, llply(all_chroms, '[[', 2))
