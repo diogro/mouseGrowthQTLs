@@ -47,13 +47,17 @@ trait_sets = c("area", "growth", "necropsy", "weight")
 effects_list = llply(trait_sets, getEffects)
 names(effects_list) = trait_sets
 
-chrom_limits = inner_join(select(effects_list[['necropsy']]$single, chrom, marker, count),
-           effects_list[[1]]$singleDIC %>% group_by(chrom) %>% summarise(marker = max(locus)),
-           by = c("chrom", "marker")) %>% mutate(count = as.numeric(count) + 0.5) %>% unique
+chrom_limits = 
+	inner_join(select(effects_list[['necropsy']]$single, chrom, marker, count),
+			   effects_list[[1]]$singleDIC %>% group_by(chrom) %>% summarise(marker = max(locus)),
+           by = c("chrom", "marker")) %>%
+	mutate(count = as.numeric(count) + 0.5) %>%
+	 unique
+chrom_limits$position = chrom_limits$count - c(31.5, diff(chrom_limits$count))/2
 
 current_chrom = 6
 x = effects_list[[4]]$i10cM
-current_trait = "weight"
+current_trait = "growth"
 plotMainEffects = function(x, current_chrom, title = NULL, alpha = TRUE){
   plot_data =
     x %>%
@@ -78,7 +82,7 @@ plotMainEffects = function(x, current_chrom, title = NULL, alpha = TRUE){
         facet_grid(trait ~ type, scales = "free") +
         ggtitle(paste(title))
 }
-plotMainEffects(effects_list[[4]]$single, 3, alpha = FALSE)
+plotMainEffects(effects_list[[2]]$single, 3, alpha = FALSE)
 
 plotAllEffects = function(current_trait, prefix = "", ...){
     effect_types = c("i5cM","i10cM","i15cM","i20cM", "single")
@@ -95,17 +99,56 @@ plotAllEffects = function(current_trait, prefix = "", ...){
 for(current_trait in trait_sets) plotAllEffects(current_trait, alpha = FALSE)
 for(current_trait in trait_sets) plotAllEffects(current_trait, "alpha_", alpha = TRUE)
 
-
-effects_list[['necropsy']]$intDIC  %>%
-  select(chrom, marker, contains("DICDiff")) %>%
-  mutate(count = seq(353)) %>%
-  rename( i5cM = DICDiff_5cM,
-         i10cM = DICDiff_10cM,
-         i15cM = DICDiff_15cM,
-         i20cM = DICDiff_20cM) %>%
-  gather(interval, value, i20cM:i5cM) %>%
-  mutate(interval = factor(interval, levels = c("i5cM", "i10cM", "i15cM", "i20cM")),
-         chrom = factor(chrom)) %>%
-  ggplot(aes(count, value, group = interval, color = chrom)) +
-  geom_line() + geom_hline(yintercept = 20) + geom_hline(yintercept = 0) +
-  facet_wrap(~interval, ncol = 1, scales = "free")
+interval_map_plots = list(
+necropsy = effects_list[['necropsy']]$intDIC  %>%
+	select(chrom, marker, contains("DICDiff")) %>%
+	mutate(count = seq(353)) %>%
+	rename( i5cM = DICDiff_5cM,
+		   i10cM = DICDiff_10cM,
+		   i15cM = DICDiff_15cM,
+		   i20cM = DICDiff_20cM) %>%
+	gather(interval, value, i20cM:i5cM) %>%
+	mutate(interval = factor(interval, levels = c("i5cM", "i10cM", "i15cM", "i20cM")),
+		   chrom = factor(chrom)) %>%
+	filter(interval == "i10cM") %>%
+	ggplot(aes(count, value)) +
+	geom_line() + geom_hline(yintercept = 20, linetype = "dashed") + geom_hline(yintercept = 0) +
+	geom_vline(data = chrom_limits, linetype = "dotted", aes(xintercept = count)) +
+	geom_text(data = chrom_limits, aes(x = position, y = 40, label = chrom)) + 
+	labs(x = "marker", y = "DIC difference") + ggtitle("necropsy")
+,
+growth = effects_list[['growth']]$intDIC  %>%
+	select(chrom, marker, contains("DICDiff")) %>%
+	mutate(count = seq(353)) %>%
+	rename( i5cM = DICDiff_5cM,
+		   i10cM = DICDiff_10cM,
+		   i15cM = DICDiff_15cM,
+		   i20cM = DICDiff_20cM) %>%
+	gather(interval, value, i20cM:i5cM) %>%
+	mutate(interval = factor(interval, levels = c("i5cM", "i10cM", "i15cM", "i20cM")),
+		   chrom = factor(chrom)) %>%
+	filter(interval == "i10cM") %>%
+	ggplot(aes(count, value)) +
+	geom_line() + geom_hline(yintercept = 20, linetype = "dashed") + geom_hline(yintercept = 0) +
+	geom_vline(data = chrom_limits, linetype = "dotted", aes(xintercept = count)) +
+	labs(x = "marker", y = "DIC difference") + ggtitle("growth")
+,
+area = effects_list[['area']]$intDIC  %>%
+	select(chrom, marker, contains("DICDiff")) %>%
+	mutate(count = seq(353)) %>%
+	rename( i5cM = DICDiff_5cM,
+		   i10cM = DICDiff_10cM,
+		   i15cM = DICDiff_15cM,
+		   i20cM = DICDiff_20cM) %>%
+	gather(interval, value, i20cM:i5cM) %>%
+	mutate(interval = factor(interval, levels = c("i5cM", "i10cM", "i15cM", "i20cM")),
+		   chrom = factor(chrom)) %>%
+	filter(interval == "i10cM") %>%
+	ggplot(aes(count, value)) +
+	geom_line() + geom_hline(yintercept = 20, linetype = "dashed") + geom_hline(yintercept = 0) +
+	geom_vline(data = chrom_limits, linetype = "dotted", aes(xintercept = count)) +
+	labs(x = "marker", y = "DIC difference") + ggtitle("area")
+)
+plot_grid(interval_map_plots[[1]], 
+		  interval_map_plots[[2]], 
+		  interval_map_plots[[3]], ncol = 1)
