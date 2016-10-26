@@ -104,8 +104,8 @@ plotAllEffects = function(current_trait, prefix = "", ...){
                       })
 }
 
-for(current_trait in trait_sets) plotAllEffects(current_trait, alpha = FALSE)
-for(current_trait in trait_sets) plotAllEffects(current_trait, "alpha_", alpha = TRUE)
+# for(current_trait in trait_sets) plotAllEffects(current_trait, alpha = FALSE)
+# for(current_trait in trait_sets) plotAllEffects(current_trait, "alpha_", alpha = TRUE)
 
 interval_map_plots = list(
 necropsy = effects_list[['necropsy']]$intDIC  %>%
@@ -123,7 +123,7 @@ necropsy = effects_list[['necropsy']]$intDIC  %>%
 	geom_line() + geom_hline(yintercept  = 15, linetype = "dashed") + geom_hline(yintercept = 0) +
 	geom_vline(data = chrom_limits, linetype = "dotted", aes(xintercept = count)) +
 	geom_text(data = chrom_limits, aes(x = position, y = 40, label = chrom)) + 
-	labs(x = "marker", y = "DIC difference") + ggtitle("necropsy") + annotate("text", x = 0, y  = 40, label = "Chromossome")
+	labs(x = "marker", y = "DIC difference") + ggtitle("Necropsy organ weights") + annotate("text", x = 0, y  = 50, label = "Chromossome")
 ,
 growth = effects_list[['growth']]$intDIC  %>%
 	select(chrom, marker, contains("DICDiff")) %>%
@@ -139,7 +139,7 @@ growth = effects_list[['growth']]$intDIC  %>%
 	ggplot(aes(count, value)) +
 	geom_line() + geom_hline(yintercept  = 15, linetype = "dashed") + geom_hline(yintercept = 0) +
 	geom_vline(data = chrom_limits, linetype = "dotted", aes(xintercept = count)) +
-	labs(x = "marker", y = "DIC difference") + ggtitle("growth")
+	labs(x = "marker", y = "DIC difference") + ggtitle("Weekly growth")
 ,
 area = effects_list[['area']]$intDIC  %>%
 	select(chrom, marker, contains("DICDiff")) %>%
@@ -155,12 +155,12 @@ area = effects_list[['area']]$intDIC  %>%
 	ggplot(aes(count, value)) +
 	geom_line() + geom_hline(yintercept  = 15, linetype = "dashed") + geom_hline(yintercept = 0) +
 	geom_vline(data = chrom_limits, linetype = "dotted", aes(xintercept = count)) +
-	labs(x = "marker", y = "DIC difference") + ggtitle("area")
+	labs(x = "marker", y = "DIC difference") + ggtitle("Mandible areas")
 )
 interval_DIC = plot_grid(interval_map_plots[[1]], 
 		  interval_map_plots[[2]], 
 		  interval_map_plots[[3]], ncol = 1)
-save_plot("~/Dropbox/labbio/relatorios/fapesp/fapesp-relatorio-2016-10-30-BEPE/images/interval_DIC.png", interval_DIC, nrow = 3, base_height = 2.8, base_aspect_ratio = 5)
+save_plot("~/Dropbox/labbio/relatorios/fapesp/fapesp-relatorio-2016-10-30-BEPE/images/interval_DIC.png", interval_DIC, nrow = 3, base_height = 2.5, base_aspect_ratio = 5)
 
 single_map_plots = list(
 necropsy = effects_list[['necropsy']]$singleDIC  %>%
@@ -172,7 +172,7 @@ necropsy = effects_list[['necropsy']]$singleDIC  %>%
   geom_line() + geom_hline(yintercept  = 15, linetype = "dashed") + geom_hline(yintercept = 0) +
   geom_vline(data = chrom_limits, linetype = "dotted", aes(xintercept = count)) +
   geom_text(data = chrom_limits, aes(x = position, y = 110, label = chrom)) + 
-  labs(x = "marker", y = "DIC difference") + ggtitle("necropsy") + annotate("text", x = 0, y  = 110, label = "Chromossome"),
+  labs(x = "marker", y = "DIC difference") + ggtitle("Necropsy organ weights") + annotate("text", x = 0, y  = 125, label = "Chromossome"),
 growth = effects_list[['growth']]$singleDIC  %>%
   select(chrom, locus, contains("DICDiff")) %>%
   mutate(count = seq(353)) %>%
@@ -182,7 +182,7 @@ growth = effects_list[['growth']]$singleDIC  %>%
   geom_line() + geom_hline(yintercept  = 15, linetype = "dashed") + geom_hline(yintercept = 0) +
   geom_vline(data = chrom_limits, linetype = "dotted", aes(xintercept = count)) +
   geom_text(data = chrom_limits, aes(x = position, y = 110, label = chrom)) + 
-  labs(x = "marker", y = "DIC difference") + ggtitle("growth") + annotate("text", x = 0, y  = 110, label = "Chromossome"),
+  labs(x = "marker", y = "DIC difference") + ggtitle("Weekly growth"),
 area = effects_list[['area']]$singleDIC  %>%
   select(chrom, locus, contains("DICDiff")) %>%
   mutate(count = seq(353)) %>%
@@ -192,14 +192,48 @@ area = effects_list[['area']]$singleDIC  %>%
   geom_line() + geom_hline(yintercept  = 15, linetype = "dashed") + geom_hline(yintercept = 0) +
   geom_vline(data = chrom_limits, linetype = "dotted", aes(xintercept = count)) +
   geom_text(data = chrom_limits, aes(x = position, y = 110, label = chrom)) + 
-  labs(x = "marker", y = "DIC difference") + ggtitle("area") + annotate("text", x = 0, y  = 110, label = "Chromossome")
+  labs(x = "marker", y = "DIC difference") + ggtitle("Mandible areas")
 )
 
 single_DIC = plot_grid(single_map_plots[[1]], 
                          single_map_plots[[2]], 
                          single_map_plots[[3]], ncol = 1)
-save_plot("~/Dropbox/labbio/relatorios/fapesp/fapesp-relatorio-2016-10-30-BEPE/images/regression_DIC.png", single_DIC, nrow = 3, base_height = 2.8, base_aspect_ratio = 5)
+save_plot("~/Dropbox/labbio/relatorios/fapesp/fapesp-relatorio-2016-10-30-BEPE/images/regression_DIC.png", single_DIC, nrow = 3, base_height = 2.5, base_aspect_ratio = 5)
 
-effects_list$necropsy$intDIC %>% filter(DICDiff_10cM > 15) %>% select(chrom, marker)
-effects_list$growth$intDIC %>% filter(DICDiff_10cM > 15) %>% select(chrom, marker)
-effects_list$area$intDIC %>% filter(DICDiff_10cM > 15) %>% select(chrom, marker, DICDiff_15cM)%>% print(n = 23) 
+map_pos = read_csv("./data/markers/marker_positions.csv")[,2:3]
+names(map_pos) <- c("SNP", "Pos")
+detected_snps = 
+  list(
+    necropsy = cbind(map_pos, effects_list$necropsy$intDIC) %>% filter(DICDiff_10cM > 15) %>% select(chrom, marker, DICDiff_10cM, SNP, Pos),
+    growth = cbind(map_pos, effects_list$growth$intDIC) %>% filter(DICDiff_10cM > 15) %>% select(chrom, marker, DICDiff_10cM, SNP, Pos),
+area = cbind(map_pos, effects_list$area$intDIC) %>% filter(DICDiff_10cM > 15) %>% select(chrom, marker, DICDiff_10cM, SNP, Pos))
+
+map_pos = read_csv("./data/markers/marker_positions.csv")[,2:3]
+
+detected_snps$growth[-c(6, 9),]
+predictGrowth <- function(x = detected_snps$growth, filename) {
+  growth_effects = inner_join(effects_list$growth$single, x, by = c("chrom", "marker")) %>% 
+    select(count, chrom, marker, trait, ad_mean) %>% spread(trait, ad_mean)
+  
+  LG = c(3.785,4.435,8.43,7.395,2.995,1.85,2.085)
+  SM = c(3.31 ,2.98,3.82,2.175,0.765,1.165,0.51)
+  F3 = sapply(growth_phen[,growth_traits], mean)
+  
+  SM_e = rowSums(-1 * t(as.matrix(growth_effects[,4:10]))) * sapply(growth_phen[,growth_traits], sd) + sapply(growth_phen[,growth_traits], mean)
+  LG_e = rowSums(t(as.matrix(growth_effects[,4:10]))) * sapply(growth_phen[,growth_traits], sd) + sapply(growth_phen[,growth_traits], mean)
+  
+  growth_m = as.numeric(ddply(growth_phen, .(SEX), numcolwise(mean))[2,growth_traits])
+  growth_f = as.numeric(ddply(growth_phen, .(SEX), numcolwise(mean))[1,growth_traits])
+  
+  growth_prediction = reshape2::melt(data.frame(trait = as.factor(growth_traits), 
+                                                SM_Predicted = SM_e,
+                                                SM_Observed = SM,
+                                                LG_Predicted = LG_e,
+                                                F3_Observed = F3,
+                                                LG_Observed = LG)) %>% separate(variable, c("Line", "Type"))
+  growth_pred_plot = ggplot(growth_prediction, aes(trait, value, group = interaction(Type, Line), color = Line, linetype = Type)) + geom_line(size = 1) + scale_x_discrete(labels = paste("Week", 1:7)) + labs(y = "Weekly growth (g)", x = "Start week")
+  save_plot(paste0("~/Dropbox/labbio/relatorios/fapesp/fapesp-relatorio-2016-10-30-BEPE/images/", filename), growth_pred_plot, base_height = 4, base_aspect_ratio = 1.8)
+  growth_pred_plot
+}
+predictGrowth(detected_snps$growth[-c(6, 9),], "growth_prediction.png")
+predictGrowth(cbind(map_pos, effects_list$growth$intDIC) %>% filter(DICDiff_10cM > 10) %>% select(chrom, marker, DICDiff_10cM, SNP, Pos), "growth_prediction_2.png")
