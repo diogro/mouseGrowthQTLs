@@ -2,6 +2,14 @@ source('./read_mouse_data.R')
 if(!require(install.load)) {install.packages("install.load"); library(install.load)}
 install_load("plyr", "evolqg", "dplyr", "tidyr", "readr", "ggplot2", "cowplot")
 
+nullDIC    = readRDS(file = paste0("./data/area\ traits/nullDIC.rds"))
+nullDIC_df = reshape2::melt(nullDIC)
+names(nullDIC_df)
+quantile(nullDIC_df$value, 0.999)
+nullDIC_plot = ggplot(nullDIC_df, aes(value)) + geom_histogram(binwidth = 0.3) + geom_vline(xintercept = quantile(nullDIC_df$value, 0.999)) + annotate("text", x = 16, y = 300, label = "99.9 percentile", hjust = 0) + labs(x = "DIC difference") + scale_x_continuous(breaks = c(-20, -10, 0, 10, 15, 20))
+save_plot("~/Dropbox/labbio/relatorios/fapesp/fapesp-relatorio-2016-10-30-BEPE/images/null_DIC.png", nullDIC_plot, base_height = 4, base_aspect_ratio = 1.8)
+
+
 getEffects = function(trait){
   single_eff = read_csv(paste0("./data/", trait," traits/effectsSingleLocus.csv"))
   i5cM_eff   = read_csv(paste0("./data/", trait," traits/", trait,"_effectsInterval_5cM_mcmc.csv"))
@@ -112,10 +120,10 @@ necropsy = effects_list[['necropsy']]$intDIC  %>%
 		   chrom = factor(chrom)) %>%
 	filter(interval == "i10cM") %>%
 	ggplot(aes(count, value)) +
-	geom_line() + geom_hline(yintercept = 20, linetype = "dashed") + geom_hline(yintercept = 0) +
+	geom_line() + geom_hline(yintercept  = 15, linetype = "dashed") + geom_hline(yintercept = 0) +
 	geom_vline(data = chrom_limits, linetype = "dotted", aes(xintercept = count)) +
 	geom_text(data = chrom_limits, aes(x = position, y = 40, label = chrom)) + 
-	labs(x = "marker", y = "DIC difference") + ggtitle("necropsy")
+	labs(x = "marker", y = "DIC difference") + ggtitle("necropsy") + annotate("text", x = 0, y  = 40, label = "Chromossome")
 ,
 growth = effects_list[['growth']]$intDIC  %>%
 	select(chrom, marker, contains("DICDiff")) %>%
@@ -129,7 +137,7 @@ growth = effects_list[['growth']]$intDIC  %>%
 		   chrom = factor(chrom)) %>%
 	filter(interval == "i10cM") %>%
 	ggplot(aes(count, value)) +
-	geom_line() + geom_hline(yintercept = 20, linetype = "dashed") + geom_hline(yintercept = 0) +
+	geom_line() + geom_hline(yintercept  = 15, linetype = "dashed") + geom_hline(yintercept = 0) +
 	geom_vline(data = chrom_limits, linetype = "dotted", aes(xintercept = count)) +
 	labs(x = "marker", y = "DIC difference") + ggtitle("growth")
 ,
@@ -145,10 +153,53 @@ area = effects_list[['area']]$intDIC  %>%
 		   chrom = factor(chrom)) %>%
 	filter(interval == "i10cM") %>%
 	ggplot(aes(count, value)) +
-	geom_line() + geom_hline(yintercept = 20, linetype = "dashed") + geom_hline(yintercept = 0) +
+	geom_line() + geom_hline(yintercept  = 15, linetype = "dashed") + geom_hline(yintercept = 0) +
 	geom_vline(data = chrom_limits, linetype = "dotted", aes(xintercept = count)) +
 	labs(x = "marker", y = "DIC difference") + ggtitle("area")
 )
-plot_grid(interval_map_plots[[1]], 
+interval_DIC = plot_grid(interval_map_plots[[1]], 
 		  interval_map_plots[[2]], 
 		  interval_map_plots[[3]], ncol = 1)
+save_plot("~/Dropbox/labbio/relatorios/fapesp/fapesp-relatorio-2016-10-30-BEPE/images/interval_DIC.png", interval_DIC, nrow = 3, base_height = 2.8, base_aspect_ratio = 5)
+
+single_map_plots = list(
+necropsy = effects_list[['necropsy']]$singleDIC  %>%
+  select(chrom, locus, contains("DICDiff")) %>%
+  mutate(count = seq(353)) %>%
+  rename( single = singleLocus_DICDiff) %>%
+  mutate(chrom = factor(chrom)) %>%
+  ggplot(aes(count, single)) +
+  geom_line() + geom_hline(yintercept  = 15, linetype = "dashed") + geom_hline(yintercept = 0) +
+  geom_vline(data = chrom_limits, linetype = "dotted", aes(xintercept = count)) +
+  geom_text(data = chrom_limits, aes(x = position, y = 110, label = chrom)) + 
+  labs(x = "marker", y = "DIC difference") + ggtitle("necropsy") + annotate("text", x = 0, y  = 110, label = "Chromossome"),
+growth = effects_list[['growth']]$singleDIC  %>%
+  select(chrom, locus, contains("DICDiff")) %>%
+  mutate(count = seq(353)) %>%
+  rename( single = singleLocus_DICDiff) %>%
+  mutate(chrom = factor(chrom)) %>%
+  ggplot(aes(count, single)) +
+  geom_line() + geom_hline(yintercept  = 15, linetype = "dashed") + geom_hline(yintercept = 0) +
+  geom_vline(data = chrom_limits, linetype = "dotted", aes(xintercept = count)) +
+  geom_text(data = chrom_limits, aes(x = position, y = 110, label = chrom)) + 
+  labs(x = "marker", y = "DIC difference") + ggtitle("growth") + annotate("text", x = 0, y  = 110, label = "Chromossome"),
+area = effects_list[['area']]$singleDIC  %>%
+  select(chrom, locus, contains("DICDiff")) %>%
+  mutate(count = seq(353)) %>%
+  rename( single = singleLocus_DICDiff) %>%
+  mutate(chrom = factor(chrom)) %>%
+  ggplot(aes(count, single)) +
+  geom_line() + geom_hline(yintercept  = 15, linetype = "dashed") + geom_hline(yintercept = 0) +
+  geom_vline(data = chrom_limits, linetype = "dotted", aes(xintercept = count)) +
+  geom_text(data = chrom_limits, aes(x = position, y = 110, label = chrom)) + 
+  labs(x = "marker", y = "DIC difference") + ggtitle("area") + annotate("text", x = 0, y  = 110, label = "Chromossome")
+)
+
+single_DIC = plot_grid(single_map_plots[[1]], 
+                         single_map_plots[[2]], 
+                         single_map_plots[[3]], ncol = 1)
+save_plot("~/Dropbox/labbio/relatorios/fapesp/fapesp-relatorio-2016-10-30-BEPE/images/regression_DIC.png", single_DIC, nrow = 3, base_height = 2.8, base_aspect_ratio = 5)
+
+effects_list$necropsy$intDIC %>% filter(DICDiff_10cM > 15) %>% select(chrom, marker)
+effects_list$growth$intDIC %>% filter(DICDiff_10cM > 15) %>% select(chrom, marker)
+effects_list$area$intDIC %>% filter(DICDiff_10cM > 15) %>% select(chrom, marker, DICDiff_15cM)%>% print(n = 23) 
