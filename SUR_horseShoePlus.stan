@@ -96,8 +96,8 @@ transformed parameters{
     L_sigma_R = 2.5 * r1_sigma_R .* sqrt_vec(r2_sigma_R);
     L_Sigma_R = diag_pre_multiply(L_sigma_R, L_Omega_R);
 
-    tau_ad = r1_global_ad .* sqrt_vec(r2_global_ad) .* L_sigma_R;
-    tau_dm = r1_global_dm .* sqrt_vec(r2_global_dm) .* L_sigma_R;
+    tau_ad = r1_global_ad .* sqrt_vec(r2_global_ad);
+    tau_dm = r1_global_dm .* sqrt_vec(r2_global_dm);
 
     lambda_ad = r1_local_ad .* sqrt_mat(r2_local_ad);
     lambda_dm = r1_local_dm .* sqrt_mat(r2_local_dm);
