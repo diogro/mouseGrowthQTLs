@@ -208,8 +208,6 @@ detected_snps =
     growth = cbind(map_pos, effects_list$growth$intDIC) %>% filter(DICDiff_10cM > 15) %>% select(chrom, marker, DICDiff_10cM, SNP, Pos),
 area = cbind(map_pos, effects_list$area$intDIC) %>% filter(DICDiff_10cM > 15) %>% select(chrom, marker, DICDiff_10cM, SNP, Pos))
 
-map_pos = read_csv("./data/markers/marker_positions.csv")[,2:3]
-
 detected_snps$growth[-c(6, 9),]
 predictGrowth <- function(x = detected_snps$growth, filename) {
   growth_effects = inner_join(effects_list$growth$single, x, by = c("chrom", "marker")) %>% 
