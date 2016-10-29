@@ -6,32 +6,59 @@ source('utils.R')
 #Rdatas_folder = "~/gdrive/LGSM_project_Rdatas/"
 Rdatas_folder = "./data/Rdatas/"
 
-model_file = paste0(Rdatas_folder, "growth_scaled_HCPlus_stan")
-c_model = readRDS(model_file)
-
 chroms = unlist(sapply(1:19, function(x) rep(x, loci_per_chrom[x])))
+chrom_limits = data.frame(count = cumsum(loci_per_chrom) + 0.5)
+chrom_limits$position = chrom_limits$count - c(31.5, diff(chrom_limits$count))/2
+chrom_limits$chrom = 1:19 
 
-shrink_out = rstan::summary( c_model, pars = c("shrink_ad", "shrink_dm"))
-ggplot(data.frame(y = as.numeric(c_model[[2]][,"mean"][[1]]), 
-                  x = seq(353),
-                  trait = rep(growth_traits, each = 353),
-                  chrom = chroms), aes(x, y)) + 
-  geom_line() + geom_point(size = 1) + 
-  geom_hline(yintercept = 0.5, linetype = "dashed") + facet_wrap(~trait, ncol = 1) 
+model_file = paste0(Rdatas_folder, "necropsy_scaled_allmarkers_HCPlus")
+necropsy_model = readRDS(model_file)
+necropsy_shrink_out = rstan::summary( necropsy_model, pars = c("shrink_ad", "shrink_dm"))
+necropsy_shrink = apply(matrix(necropsy_shrink_out[[1]][,'mean'], 10, 353, byrow = T), 2, max)
 
-current_chrom = 6
-treash = 0.4
-shrink_test = colMeans(c_model[[3]]$shrink_ad) > treash | colMeans(c_model[[3]]$shrink_dm) > treash
-selected_loci = which(apply(shrink_test, 2, any))
+model_file = paste0(Rdatas_folder, "growth_scaled_allmarkers_HCPlus")
+growth_model = readRDS(model_file)
+growth_shrink_out = rstan::summary( growth_model, pars = c("shrink_ad", "shrink_dm"))
+growth_shrink = apply(matrix(growth_shrink_out[[1]][,'mean'], 14, 353, byrow = T), 2, max)
 
-x = filter(c_model[[1]], marker %in% selected_loci)
+model_file = paste0(Rdatas_folder, "area_scaled_allmarkers_HCPlus")
+area_model = readRDS(model_file)
+area_shrink_out = rstan::summary( area_model, pars = c("shrink_ad", "shrink_dm"))
+area_shrink = apply(matrix(area_shrink_out[[1]][,'mean'], 14, 353, byrow = T), 2, max)
 
-plotEffectEstimate(6, x)
+shrink_plots = list(
+necropsy_shrink_plot =
+    ggplot(data.frame(y = necropsy_shrink, 
+                      x = seq(353),
+                      chrom = chroms), aes(x, y)) + 
+          geom_line() + 
+          geom_hline(yintercept = 0.5, linetype = "dashed") + 
+          geom_vline(data = chrom_limits, linetype = "dotted", aes(xintercept = count)) +
+          labs(x = "marker", y = "Shrinkage intensity") +
+          geom_text(data = chrom_limits, aes(x = position, y = 0.9, label = chrom)) + 
+          ggtitle("Necropsy organ weights") + annotate("text", x = 0, y  = 1, label = "Chromossome"),
+growth_shrink_plot =
+    ggplot(data.frame(y = growth_shrink, 
+                      x = seq(353),
+                      chrom = chroms), aes(x, y)) + 
+          geom_line() + 
+          geom_hline(yintercept = 0.5, linetype = "dashed") + 
+          geom_vline(data = chrom_limits, linetype = "dotted", aes(xintercept = count)) +
+          ggtitle("Weekly growth") + labs(x = "marker", y = "Shrinkage intensity"),
+area_shrink_plot =
+    ggplot(data.frame(y = area_shrink, 
+                      x = seq(353),
+                      chrom = chroms), aes(x, y)) + 
+          geom_line() + 
+          geom_hline(yintercept = 0.5, linetype = "dashed") + 
+          geom_vline(data = chrom_limits, linetype = "dotted", aes(xintercept = count)) +
+          ggtitle("Mandible areas") + labs(x = "marker", y = "Shrinkage intensity")
+)      
 
-cols = c(growth_traits,
-"FAMILY",
-paste0("chrom", current_chrom, "_A", selected_loci),
-paste0("chrom", current_chrom, "_D", selected_loci))
 
-getStanInput(current_chrom,  growth_data[cols], growth_traits, length(selected_loci))
+save_plot("~/images/hs_shrink.png", shrink_plot, base_height = 5, base_aspect_ratio = 2)
 
+shrink_plot = plot_grid(shrink_plots[[1]], 
+                        shrink_plots[[2]], 
+                        shrink_plots[[3]], ncol = 1)
+save_plot("~/images/hs_shrink.png", shrink_plot, nrow = 3, base_height = 2.5, base_aspect_ratio = 5)
