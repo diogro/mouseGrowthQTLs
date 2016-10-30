@@ -2,6 +2,9 @@ source('./read_mouse_data.R')
 if(!require(install.load)) {install.packages("install.load"); library(install.load)}
 install_load("plyr", "evolqg", "dplyr", "tidyr", "readr", "ggplot2", "cowplot")
 
+#Rdatas_folder = "~/gdrive/LGSM_project_Rdatas/"
+Rdatas_folder = "./data/Rdatas/"
+
 nullDIC    = readRDS(file = paste0("./data/area\ traits/nullDIC.rds"))
 nullDIC_df = reshape2::melt(nullDIC)
 names(nullDIC_df)
@@ -235,3 +238,19 @@ predictGrowth <- function(x = detected_snps$growth, filename) {
 }
 predictGrowth(detected_snps$growth[-c(6, 9),], "growth_prediction.png")
 predictGrowth(cbind(map_pos, effects_list$growth$intDIC) %>% filter(DICDiff_10cM > 10) %>% select(chrom, marker, DICDiff_10cM, SNP, Pos), "growth_prediction_2.png")
+
+
+# Shrinkage mapping
+
+shrink_list = readRDS(file = paste0(Rdatas_folder, "shrink_mapping"))
+chroms = unlist(sapply(1:19, function(x) rep(x, loci_per_chrom[x])))
+marker =  unlist(sapply(1:19, function(x) seq(loci_per_chrom[x])))
+map_pos = read_csv("./data/markers/marker_positions.csv")[,2:3]
+names(map_pos) <- c("SNP", "Pos")
+shrink_detected_snps = 
+  list(necropsy = mutate(map_pos, chrom = chroms, marker = marker, shrink = shrink_list$necropsy) %>% filter(shrink > 0.5) %>% select(chrom, marker, shrink, SNP, Pos),
+    growth = mutate(map_pos, chrom = chroms, marker = marker, shrink = shrink_list$growth) %>% filter(shrink > 0.5) %>% select(chrom, marker, shrink, SNP, Pos),
+    area = mutate(map_pos, chrom = chroms, marker = marker, shrink = shrink_list$area) %>% filter(shrink > 0.5) %>% select(chrom, marker, shrink, SNP, Pos))
+
+snp_table = ldply(shrink_detected_snps, identity)
+write_csv(snp_table, "~/images/snp_table_shrinkage.csv")
