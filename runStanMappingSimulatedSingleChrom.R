@@ -65,46 +65,29 @@ plotShrinkage(current_chrom, weights)
 # geom_vline(xintercept = 0.2, linetype = "dashed")+
 # geom_vline(xintercept = 0)+
 # scale_x_continuous(lim = c(-0.7, 0.7))
-z = plot( stan_model_SUR_HCp, pars = c("w_ad", "w_dm")) + theme(axis.text.y=element_blank()) +
+z = plot( stan_model_SUR_HCp, pars = c("w_ad", "w_dm")) + theme(axis.text.y=element_blank(),
+                                                                axis.title = element_text(size = 14)) +
 geom_vline(xintercept = 0.2, linetype = "dashed", size = 1) +
-geom_vline(xintercept = 0) + geom_hline(data = true_effects, aes(yintercept = plot_position), color = "blue")
+geom_vline(xintercept = 0) + geom_hline(data = true_effects, aes(yintercept = plot_position), color = "blue") +
+labs(x = "Effect size", y = "Coefficient index")
 # w = plot( stan_model_SUR_HAL, pars = c("w_ad", "w_dm")) + theme(axis.text.y=element_blank()) +
 # geom_vline(xintercept = 0.2, linetype = "dashed")+
 # geom_vline(xintercept = 0)+
 # scale_x_continuous(lim = c(-0.7, 0.7))
-y = plot( stan_model_SUR, pars = c("w_ad", "w_dm")) + theme(axis.text.y=element_blank())+
+y = plot( stan_model_SUR, pars = c("w_ad", "w_dm")) + theme(axis.text.y=element_blank(),
+                                                            axis.title = element_text(size = 14)) +
 geom_vline(xintercept = 0.2, linetype = "dashed", size = 1) +
-geom_vline(xintercept = 0) + geom_hline(data = true_effects, aes(yintercept = plot_position), color = "blue")
+geom_vline(xintercept = 0) + geom_hline(data = true_effects, aes(yintercept = plot_position), color = "blue") +
+labs(x = "Effect size", y = "Coefficient index")
 # plot_grid(y, w, x, z, ncol = 4, labels = c("ML", "HAL", "Horseshoe", "Horseshoe+"))
-save_plot("~/Dropbox/labbio/relatorios/fapesp/fapesp-relatorio-2016-10-30-BEPE/images/normal_prior.png", y, base_height = 5)
+save_plot("~/images/normal_prior.png", y, base_height = 5)
 yz = plot_grid( y, z, ncol = 2, labels = c("Guassian", "Horseshoe+"))
-save_plot("~/Dropbox/labbio/relatorios/fapesp/fapesp-relatorio-2016-10-30-BEPE/images/hs_prior.png", yz, base_height = 5, ncol = 2)
+save_plot("~/images/hs_prior.png", yz, base_height = 5, ncol = 2)
 
 shrink_out = rstan::summary( stan_model_SUR_HCp, pars = c("shrink_ad", "shrink_dm"))
-ggplot(data.frame(y = shrink_out[[1]][,"mean"], x = 1:length(shrink_out[[1]][,"mean"])), aes(x, y)) + 
+shrink_plot = ggplot(data.frame(y = shrink_out[[1]][,"mean"], x = 1:length(shrink_out[[1]][,"mean"])), aes(x, y)) + 
   geom_line() + geom_point(size = 2) + geom_hline(yintercept = 0.5, linetype = "dashed") + 
-  geom_vline(data = true_effects, aes(xintercept = 7 * 31 * 2 - plot_position), color = "blue", linetype = "dotted")
+  geom_vline(data = true_effects, aes(xintercept = 7 * 31 * 2 - plot_position), color = "blue", linetype = "dotted") +
+  labs(x = "Coefficient index", y = "Shrinkage")
 
-# plot( stan_model_SUR_HAL, pars = c("lambda_ad"))
-# plot( stan_model_SUR_HC, pars = c("lambda_ad"))
-# plot( stan_model_SUR_HCp, pars = c("etaLambda_ad"))
-# plot( stan_model_SUR_HAL, pars = c("shrink_ad"))
-# plot( stan_model_SUR_HC, pars = c("shrink_ad"))
-plot( stan_model_SUR_HCp, pars = c("shrink_ad"))
-
-# sim_model = runStanModel(current_chrom, sim_growth_data, growth_traits,
-#                          chain = 3, iter = 450, warmup = 300, model_file = './SUR_horseShoePlus.stan')
-# chrom6_model = runStanModel(current_chrom, growth_data, growth_traits,
-#                          chain = 3, iter = 350, warmup = 200, model_file = './SUR_horseShoePlus.stan')
-
-# colMeans(sim_model[[3]]$w_ad)
-
-# png("./data/figures/lp.png")
-# plot(sim_model[[3]]$'tau_ad')
-# dev.off()
-# 
-# #plotEffectEstimate(current_chrom, chrom6_model[[1]], "scaled_growth_0.1a_0.1ds_chrom6_HCp", scale = "free")
-# #plotShrinkage(current_chrom, chrom6_model[[2]], "scaled_growth_0.1a_0.1ds_chrom6_HCp")
-# 
-# plotEffectEstimate(current_chrom, sim_model[[1]], "ss_growth_1s_chrom6_HCp", true_effects)
-# plotShrinkage(current_chrom, sim_model[[2]], "ss_growth_1s_chrom6_HCp")
+save_plot("~/images/sim_shrinkage.png", shrink_plot, base_height = 5, base_aspect_ratio = 1.8)

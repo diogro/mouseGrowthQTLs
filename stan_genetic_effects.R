@@ -62,3 +62,7 @@ shrink_plot = plot_grid(shrink_plots[[1]],
                         shrink_plots[[2]], 
                         shrink_plots[[3]], ncol = 1)
 save_plot("~/images/hs_shrink.png", shrink_plot, nrow = 3, base_height = 2.5, base_aspect_ratio = 5)
+
+shrink_list = list(necropsy = necropsy_shrink_out[[1]], growth = growth_shrink_out[[1]], area = area_shrink_out[[1]])
+shrink_list = list(necropsy = necropsy_shrink, growth = growth_shrink, area = area_shrink)
+saveRDS(shrink_list, file = paste0(Rdatas_folder, "shrink_mapping"))
