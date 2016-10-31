@@ -3,7 +3,7 @@ if(!require(install.load)) {install.packages("install.load"); library(install.lo
 install_load("plyr", "evolqg", "dplyr", "tidyr", "readr", "ggplot2", "cowplot")
 
 #Rdatas_folder = "~/gdrive/LGSM_project_Rdatas/"
-Rdatas_folder = "./data/Rdatas/"
+Rdatas_folder = "~/media/Rdatas/"
 
 nullDIC    = readRDS(file = paste0("./data/area\ traits/nullDIC.rds"))
 nullDIC_df = reshape2::melt(nullDIC)
@@ -220,8 +220,10 @@ predictGrowth <- function(x = detected_snps$growth, filename) {
   SM = c(3.31 ,2.98,3.82,2.175,0.765,1.165,0.51)
   F3 = sapply(growth_phen[,growth_traits], mean)
   
-  SM_e = rowSums(-1 * t(as.matrix(growth_effects[,4:10]))) * sapply(growth_phen[,growth_traits], sd) + sapply(growth_phen[,growth_traits], mean)
-  LG_e = rowSums(t(as.matrix(growth_effects[,4:10]))) * sapply(growth_phen[,growth_traits], sd) + sapply(growth_phen[,growth_traits], mean)
+  SM_e = rowSums(-1 * t(as.matrix(growth_effects[,4:10]))) * sapply(growth_phen[,growth_traits], sd) + 
+    sapply(growth_phen[,growth_traits], mean)
+  LG_e = rowSums(t(as.matrix(growth_effects[,4:10]))) * sapply(growth_phen[,growth_traits], sd) + 
+    sapply(growth_phen[,growth_traits], mean)
   
   growth_m = as.numeric(ddply(growth_phen, .(SEX), numcolwise(mean))[2,growth_traits])
   growth_f = as.numeric(ddply(growth_phen, .(SEX), numcolwise(mean))[1,growth_traits])
@@ -248,9 +250,41 @@ marker =  unlist(sapply(1:19, function(x) seq(loci_per_chrom[x])))
 map_pos = read_csv("./data/markers/marker_positions.csv")[,2:3]
 names(map_pos) <- c("SNP", "Pos")
 shrink_detected_snps = 
-  list(necropsy = mutate(map_pos, chrom = chroms, marker = marker, shrink = shrink_list$necropsy) %>% filter(shrink > 0.5) %>% select(chrom, marker, shrink, SNP, Pos),
-    growth = mutate(map_pos, chrom = chroms, marker = marker, shrink = shrink_list$growth) %>% filter(shrink > 0.5) %>% select(chrom, marker, shrink, SNP, Pos),
-    area = mutate(map_pos, chrom = chroms, marker = marker, shrink = shrink_list$area) %>% filter(shrink > 0.5) %>% select(chrom, marker, shrink, SNP, Pos))
+  list(necropsy = mutate(map_pos, chrom = chroms, marker = marker, shrink = shrink_list$necropsy) %>% filter(shrink > 0) %>% select(chrom, marker, shrink, SNP, Pos),
+    growth = mutate(map_pos, chrom = chroms, marker = marker, shrink = shrink_list$growth) %>% filter(shrink > 0) %>% select(chrom, marker, shrink, SNP, Pos),
+    area = mutate(map_pos, chrom = chroms, marker = marker, shrink = shrink_list$area) %>% filter(shrink > 0) %>% select(chrom, marker, shrink, SNP, Pos))
 
 snp_table = ldply(shrink_detected_snps, identity)
 write_csv(snp_table, "~/images/snp_table_shrinkage.csv")
+
+hs_effects = readRDS("~/media/Rdatas/hsplus_effects")
+tail(eff)
+tail(inner_join(eff, shrink_detected_snps$growth, by = c("chrom", "marker")))
+predictGrowthHs <- function(x = 0.5, filename = "shrink_predict.png") {
+  eff = hs_effects$growth %>% filter(type == "additive") %>% rename(ad_mean = mean) %>% mutate(count = rep(1:353, 7))
+  growth_effects = inner_join(eff, shrink_detected_snps$growth, by = c("chrom", "marker")) %>% 
+     filter(shrink > x) %>% select(count, chrom, marker, trait, ad_mean) %>% spread(trait, ad_mean)
+  
+  LG = c(3.785,4.435,8.43,7.395,2.995,1.85,2.085)
+  SM = c(3.31 ,2.98,3.82,2.175,0.765,1.165,0.51)
+  F3 = sapply(growth_phen[,growth_traits], mean)
+  
+  SM_e = rowSums(-1 * t(as.matrix(growth_effects[,4:10]))) * sapply(growth_phen[,growth_traits], sd) + 
+    sapply(growth_phen[,growth_traits], mean)
+  LG_e = rowSums(t(as.matrix(growth_effects[,4:10]))) * sapply(growth_phen[,growth_traits], sd) + 
+    sapply(growth_phen[,growth_traits], mean)
+  
+  growth_m = as.numeric(ddply(growth_phen, .(SEX), numcolwise(mean))[2,growth_traits])
+  growth_f = as.numeric(ddply(growth_phen, .(SEX), numcolwise(mean))[1,growth_traits])
+  
+  growth_prediction = reshape2::melt(data.frame(trait = as.factor(growth_traits), 
+                                                SM_Predicted = SM_e,
+                                                SM_Observed = SM,
+                                                LG_Predicted = LG_e,
+                                                F3_Observed = F3,
+                                                LG_Observed = LG)) %>% separate(variable, c("Line", "Type"))
+  growth_pred_plot = ggplot(growth_prediction, aes(trait, value, group = interaction(Type, Line), color = Line, linetype = Type)) + geom_line(size = 1) + scale_x_discrete(labels = paste("Week", 1:7)) + labs(y = "Weekly growth (g)", x = "Start week")
+  save_plot(paste0("~/Dropbox/labbio/relatorios/fapesp/fapesp-relatorio-2016-10-30-BEPE/images/", filename), growth_pred_plot, base_height = 4, base_aspect_ratio = 1.8)
+  growth_pred_plot
+}
+predictGrowthHs(0)
