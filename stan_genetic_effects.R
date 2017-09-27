@@ -66,3 +66,22 @@ save_plot("~/images/hs_shrink.png", shrink_plot, nrow = 3, base_height = 2.5, ba
 shrink_list = list(necropsy = necropsy_shrink_out[[1]], growth = growth_shrink_out[[1]], area = area_shrink_out[[1]])
 shrink_list = list(necropsy = necropsy_shrink, growth = growth_shrink, area = area_shrink)
 saveRDS(shrink_list, file = paste0(Rdatas_folder, "shrink_mapping"))
+
+# Genetic effects
+chroms = unlist(sapply(1:19, function(x) rep(x, loci_per_chrom[x])))
+markers_vector =  unlist(sapply(1:19, function(x) seq(loci_per_chrom[x])))
+
+model_file = paste0(Rdatas_folder, "necropsy_scaled_allmarkers_HCPlus")
+necropsy_model = readRDS(model_file)
+necropsy_effects = getStanEffects(chroms, necropsy_model, necropsy_traits, 353, markers_vector)
+
+model_file = paste0(Rdatas_folder, "growth_scaled_allmarkers_HCPlus")
+growth_model = readRDS(model_file)
+growth_effects = getStanEffects(chroms, growth_model, growth_traits, 353, markers_vector)
+
+model_file = paste0(Rdatas_folder, "area_scaled_allmarkers_HCPlus")
+area_model = readRDS(model_file)
+area_effects = getStanEffects(chroms, area_model, area_traits, 353, markers_vector)
+
+effect_list = list(necropsy = necropsy_effects, growth = growth_effects, area = area_effects)
+saveRDS(effect_list, file = paste0(Rdatas_folder, "hsplus_effects"))
