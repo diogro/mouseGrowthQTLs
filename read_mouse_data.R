@@ -21,32 +21,32 @@ markers = Reduce(inner_join, markers_list)
 chroms = seq(markers_list)
 loci_per_chrom = laply(chroms, function(chrom) ncol(markers_list[[chrom]][-1])/3)
 
-## Simulted Markers
-
-simulated_markers = llply(paste0("./data/Simulated\ independent\ genotypes/data", 1:20, ".csv"), read_csv)
-names(simulated_markers) = paste0("chrom", 1:20)
-for(chrom in names(simulated_markers)){
-  names(simulated_markers[[chrom]])[-1] = (paste(chrom, names(simulated_markers[[chrom]])[-1], sep = "_"))
-}
-
-simulated_sets = seq(simulated_markers)
-simulated_loci_per_set = laply(simulated_sets, function(chrom) ncol(simulated_markers[[chrom]][-1])/3)
-
-## Simulated Chromossomes
-
-simulated_chroms_Ad = llply(paste0("./data/Simulated\ genomes/", 1:20, "_Ad.txt"), read_csv, col_names = F)
-simulated_chroms_Dm = llply(paste0("./data/Simulated\ genomes/", 1:20, "_Dom.txt"), read_csv, col_names = F)
-ID = read_csv("./data/Simulated genomes/Breed.txt", col_names = F)$X1
-for(genome in 1:20){
-  names(simulated_chroms_Ad[[genome]]) = unlist(Map(paste0, paste0(paste0("chrom", chroms), "_A"), lapply(loci_per_chrom, seq)))
-  simulated_chroms_Ad[[genome]]$ID = ID
-  names(simulated_chroms_Dm[[genome]]) = unlist(Map(paste0, paste0(paste0("chrom", chroms), "_D"), lapply(loci_per_chrom, seq)))
-  simulated_chroms_Dm[[genome]]$ID = ID
-}
-
-simulated_genomes = Map(function(x, y) inner_join(x, y, by = "ID"), 
-                        simulated_chroms_Ad, simulated_chroms_Dm)
-names(simulated_genomes[[19]])
+### Simulted Markers
+#
+#simulated_markers = llply(paste0("./data/Simulated\ independent\ genotypes/data", 1:20, ".csv"), read_csv)
+#names(simulated_markers) = paste0("chrom", 1:20)
+#for(chrom in names(simulated_markers)){
+#  names(simulated_markers[[chrom]])[-1] = (paste(chrom, names(simulated_markers[[chrom]])[-1], sep = "_"))
+#}
+#
+#simulated_sets = seq(simulated_markers)
+#simulated_loci_per_set = laply(simulated_sets, function(chrom) ncol(simulated_markers[[chrom]][-1])/3)
+#
+### Simulated Chromossomes
+#
+#simulated_chroms_Ad = llply(paste0("./data/Simulated\ genomes/", 1:20, "_Ad.txt"), read_csv, col_names = F)
+#simulated_chroms_Dm = llply(paste0("./data/Simulated\ genomes/", 1:20, "_Dom.txt"), read_csv, col_names = F)
+#ID = read_csv("./data/Simulated genomes/Breed.txt", col_names = F)$X1
+#for(genome in 1:20){
+#  names(simulated_chroms_Ad[[genome]]) = unlist(Map(paste0, paste0(paste0("chrom", chroms), "_A"), lapply(loci_per_chrom, seq)))
+#  simulated_chroms_Ad[[genome]]$ID = ID
+#  names(simulated_chroms_Dm[[genome]]) = unlist(Map(paste0, paste0(paste0("chrom", chroms), "_D"), lapply(loci_per_chrom, seq)))
+#  simulated_chroms_Dm[[genome]]$ID = ID
+#}
+#
+#simulated_genomes = Map(function(x, y) inner_join(x, y, by = "ID"), 
+#                        simulated_chroms_Ad, simulated_chroms_Dm)
+#names(simulated_genomes[[19]])
 
 ##growth traits
 
@@ -55,25 +55,25 @@ raw.growth_phen = tbl_df(select(raw.growth_phen, c(ID, WEEK1:WEEK10)))
 
 growth_phen = inner_join(mouse_meta, raw.growth_phen, by = "ID") %>% 
   semi_join(markers, by = "ID") %>% 
-  mutate(grow12 = WEEK2 - WEEK1,
-         grow23 = WEEK3 - WEEK2,
-         grow34 = WEEK4 - WEEK3,
-         grow45 = WEEK5 - WEEK4,
-         grow56 = WEEK6 - WEEK5,
-         grow67 = WEEK7 - WEEK6,
-         grow78 = WEEK8 - WEEK7,
-         grow89 = WEEK9 - WEEK8,
-         grow910= WEEK10 - WEEK9) %>%
-  select(ID, FAMILY, SEX, LSB, LSW, COHORT, grow12:grow78) %>%
+  mutate(growth12 = WEEK2 - WEEK1,
+         growth23 = WEEK3 - WEEK2,
+         growth34 = WEEK4 - WEEK3,
+         growth45 = WEEK5 - WEEK4,
+         growth56 = WEEK6 - WEEK5,
+         growth67 = WEEK7 - WEEK6,
+         growth78 = WEEK8 - WEEK7,
+         growth89 = WEEK9 - WEEK8,
+         growth910= WEEK10 - WEEK9) %>%
+  select(ID, FAMILY, SEX, LSB, LSW, COHORT, growth12:growth78) %>%
   na.omit %>%
   arrange(ID)
 
 growth_markers = semi_join(markers, growth_phen, by = "ID")
 
-growth_traits = c("grow12", "grow23", "grow34", "grow45", "grow56", "grow67", "grow78")
+growth_traits = c("growth12", "growth23", "growth34", "growth45", "growth56", "growth67", "growth78")
 num_growth_traits = length(growth_traits)
 
-m_growth_phen = gather(growth_phen, variable, value, grow12:grow78)
+m_growth_phen = gather(growth_phen, variable, value, growth12:growth78)
 
 null.formula = "value ~ variable + variable * SEX + variable * LSB + variable * LSW + variable * COHORT"
 mouse_no_fixed = lm(as.formula(null.formula), data = m_growth_phen)

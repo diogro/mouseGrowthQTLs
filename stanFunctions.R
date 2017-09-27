@@ -6,8 +6,8 @@ getStanInputFullGenome = function(current_data, trait_vector, J = sum(loci_per_c
     N        = dim(current_data)[1]
     n_family = length(unique(current_data$FAMILY))
     family   = as.integer(as.factor(current_data$FAMILY))
-    ad       = as.matrix(select(current_data, matches(paste0('chrom.*_A'))))
-    dm       = as.matrix(select(current_data, matches(paste0('chrom.*_D'))))
+    ad       = as.matrix(select(current_data, matches(paste0('chrom.*_A')))) / 5
+    dm       = as.matrix(select(current_data, matches(paste0('chrom.*_D')))) / 5
     teVec_ad = t(eigen(cov(ad))$vectors)
     teVec_dm = t(eigen(cov(dm))$vectors)
     y        = as.matrix(current_data[trait_vector])

@@ -3,8 +3,8 @@ source('stanFunctions.R')
 source('read_mouse_data.R')
 source('utils.R')
 
-Rdatas_folder = "~/gdrive/LGSM_project_Rdatas/"
-#Rdatas_folder = "./data/Rdatas/"
+#Rdatas_folder = "~/gdrive/LGSM_project_Rdatas/"
+Rdatas_folder = "./data/Rdatas/"
 
 rstan_options(auto_write = TRUE)
 options(mc.cores = 3)
@@ -23,7 +23,7 @@ simulateData = function(current_chrom, current_data, trait_vector,
         type = sample(c("A", "D"), 1)
         current_loci = all_loci[i]
         locus = paste0("chrom", current_chrom, "_", type, current_loci)
-        effect = 0.2#rnorm(1, 0, eff_sd)
+        effect = 0.3#rnorm(1, 0, eff_sd)
         for(trait in current_trait){
             current_data[trait] = current_data[trait] + effect * current_data[locus]
             true_effects = rbind(true_effects, data.frame(chrom = current_chrom, marker = current_loci,
@@ -45,19 +45,23 @@ apply(as.matrix(sim_growth_data[growth_traits]), 2, var)
 # stan_model_SUR_HC = stan(file = './SUR_horseShoe.stan',
 #                          data = getStanInput(current_chrom, sim_growth_data, growth_traits),
 #                          chain=3, iter = 200, warmup = 100)
+stan_input = getStanInput(current_chrom, sim_growth_data, growth_traits)
+stan_input$ad = stan_input$ad / 5
+stan_input$dm = stan_input$dm / 5
 stan_model_SUR_HCp = stan(file = './SUR_horseShoePlus.stan',
-                         data = getStanInput(current_chrom, sim_growth_data, growth_traits),
-                         chain=3, iter = 200, warmup = 100)
+                          data = stan_input,
+                          chain=3, iter = 200, warmup = 100)
 # stan_model_SUR_HAL = stan(file = './SUR_HAL.stan',
-#                          data = getStanInput(current_chrom, sim_growth_data, growth_traits),
-#                          chain=3, iter = 200, warmup = 100)
-stan_model_SUR = stan(file = './SUR.stan',
-                         data = getStanInput(current_chrom, sim_growth_data, growth_traits),
-                         chain=3, iter = 200, warmup = 100)
-# effects = getStanEffects(current_chrom, stan_model_SUR_HAL, growth_traits)
-# weights = getStanShrinkage(current_chrom, stan_model_SUR_HAL, growth_traits)
-# sim_model = (list(effects, weights, rstan::extract(stan_model_SUR_HC)))
+#                           data = getStanInput(current_chrom, sim_growth_data, growth_traits),
+#                           chain=3, iter = 200, warmup = 100)
+# stan_model_SUR = stan(file = './SUR.stan',
+#                       data = getStanInput(current_chrom, sim_growth_data, growth_traits),
+#                       chain=3, iter = 200, warmup = 100)
+effects = getStanEffects(current_chrom, stan_model_SUR_HCp, growth_traits)
+weights = getStanShrinkage(current_chrom, stan_model_SUR_HCp, growth_traits)
+sim_model = (list(effects, weights, rstan::extract(stan_model_SUR_HCp)))
 
+true_effects$true_effects = true_effects$true_effects * 5
 plotEffectEstimate(current_chrom, effects, ,true_effects)
 plotShrinkage(current_chrom, weights)
 
