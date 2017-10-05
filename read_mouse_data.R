@@ -108,6 +108,8 @@ m_weight_phen_std = m_weight_phen
 m_weight_phen_std$value = residuals(mouse_no_fixed)
 
 weight_phen_std = spread(m_weight_phen_std, variable, value)
+weight_phen_sd = sapply(weight_phen_std[weight_traits], sd)
+weight_phen_std[weight_traits] = scale(weight_phen_std[weight_traits])
 
 #Area traits
 
@@ -131,6 +133,8 @@ m_area_phen_std = m_area_phen
 m_area_phen_std$value = residuals(mouse_no_fixed)
 
 area_phen_std = spread(m_area_phen_std, variable, value)
+area_phen_sd = sapply(area_phen_std[area_traits], sd)
+area_phen_std[area_traits] = scale(area_phen_std[area_traits])
 
 rm(list = ls(pattern='raw'))
 rm(list = c("null.formula", 'mouse_no_fixed'))
@@ -159,4 +163,5 @@ m_necropsy_phen_std = m_necropsy_phen
 m_necropsy_phen_std$value = residuals(mouse_no_fixed)
 
 necropsy_phen_std = spread(m_necropsy_phen_std, variable, value)
-necropsy_phen_std = necropsy_phen_std %>% mutate_each(funs(scale), FATPAD:SPLEEN)
+necropsy_phen_sd = sapply(necropsy_phen_std[necropsy_traits], sd)
+necropsy_phen_std[necropsy_traits] = scale(necropsy_phen_std[necropsy_traits])
