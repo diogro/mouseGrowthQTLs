@@ -81,6 +81,8 @@ m_growth_phen_std = m_growth_phen
 m_growth_phen_std$value = residuals(mouse_no_fixed)
 
 growth_phen_std = spread(m_growth_phen_std, variable, value)
+growth_phen_sd = sapply(growth_phen_std[growth_traits], sd)
+growth_phen_std[growth_traits] = scale(growth_phen_std[growth_traits])
 
 # weight traits
 
