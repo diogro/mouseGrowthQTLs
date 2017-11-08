@@ -14,3 +14,5 @@ OAuth_lem_server.R
 animation
 animation/*
 *.rda
+SUR.rds
+mixedModelGmatrix.rds
