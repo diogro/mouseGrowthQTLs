@@ -78,13 +78,6 @@ ldply(intervalMapping, function(x) -log10(x$p.value)) %>%
 
 effect_file = paste0("./data/growth traits/growth_effectsInterval_", flank_dist, "cM.csv")
 write_csv(all_effectsInterval, effect_file)
-dmSend(paste("Finished growth interval mapping with flanking", flank_dist, "cM"), "diogro")
-
-hist(p.values$V1, nclass = 20)
-summary(qobj)
-plot(qobj)
-qobj$significant
-
 
 Pvalues = function(flank_dist, ...){
     model_file = paste0(Rdatas_folder, "growth_intervalMapping_", flank_dist, "cM.Rdata")
@@ -103,27 +96,35 @@ p_values %>%
 
 p_values %>%
     select(chrom, marker, significant, flank_dist) %>%
-    filter(chrom == 19) %>%
+    filter(chrom == 10) %>%
     spread(flank_dist, significant)
 
 ldply(intervalMapping, function(x) -log10(x$p.value)) %>%
-    filter(chrom == 19) %>%
+    filter(chrom == 10) %>%
     ggplot(aes(x =seq_along(V1), V1)) + geom_point() + geom_line()
 
 x = list("1" = c(4, 19, 29),
-         "2" = 23, 
+         "2" = c(14, 23), 
+         "3" = 18,
          "4" = 15,
-         "5" = 11,
+         "5" = c(11, 16),
          "6" = c(4, 14, 19),
-         "7" = 9,
+         "7" = c(4, 9),
          "8" = c(2, 8, 12),
-         "9" = 5,
+         "9" = 4,
          "10"= c(4, 11, 16),
-         "11"= c(14, 17),
+         "11"= c(13, 19),
          "12"= c(15, 19),
+         "13"= 6,
          "14"= c(3, 8, 14),
          "15"= 15,
+         "16"= c(9, 12),
          "17"= 5,
-         "18"= c(4, 12))
+         "18"= c(5, 11))
 
-significantMarkerMatrix = ldply(x, function(x) data.frame(marker = x))
+significantMarkerMatrix = ldply(x, function(x) data.frame(marker = x), .id = "chrom")
+write_csv(significantMarkerMatrix, "./data/growth_significant_markers.csv")
+
+significantMarkerList = alply(significantMarkerMatrix, 1, makeMarkerList)
+significant_marker_term = paste(significantMarkerList, collapse = " + ")
+
