@@ -12,17 +12,17 @@ transformed data{
 }
 
 parameters {
-    # Intercept
+    // Intercept
     vector[K] w0;
 
-    # Family means
+    // Family means
     vector[K] beta_family[n_family];
 
-    # G matrix
+    // G matrix
     cholesky_factor_corr[K] L_Omega_G;
     vector<lower=0>[K] L_sigma_G;
 
-    # R matrix
+    // R matrix
     cholesky_factor_corr[K] L_Omega_R;
     vector<lower=0>[K] L_sigma_R;
 }

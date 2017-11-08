@@ -5,17 +5,12 @@ source('utils.R')
 
 library(MCMCglmm)
 
-Rdatas_folder = "~/gdrive/LGSM_project_Rdatas/"
-#Rdatas_folder = "./data/Rdatas/"
+#Rdatas_folder = "~/gdrive/LGSM_project_Rdatas/"
+Rdatas_folder = "./Rdatas/"
 
-options(mc.cores = 1)
+options(mc.cores = 10)
 
-weight_data = inner_join(weight_phen_std, simulated_genomes[[8]], by = "ID")
-
-weight_data = inner_join(weight_phen_std, markers, by = "ID")
-
-weight_data[weight_traits] = scale(weight_data[weight_traits])
-
+growth_data = inner_join(growth_phen_std, growth_markers, by = "ID")
 getStanInputMM = function(current_data, trait_vector)
 {
     K        = length(trait_vector)
@@ -32,24 +27,25 @@ getStanInputMM = function(current_data, trait_vector)
 }
 
 stan_MM = stan(file = "./mixedModelGmatrix.stan",
-               data = getStanInputMM(weight_data, weight_traits),
-               chain=3, iter = 400)
+               data = getStanInputMM(growth_data, growth_traits),
+               chain=6, iter = 500)
 
 P = colMeans(rstan::extract(stan_MM, pars = c("P"))[[1]])
 G = colMeans(rstan::extract(stan_MM, pars = c("G"))[[1]])
 R = colMeans(rstan::extract(stan_MM, pars = c("R"))[[1]])
-P  - cov(weight_data[weight_traits])
+P  - cov(growth_data[growth_traits])
+cov2cor(G)
 
-load(paste0(Rdatas_folder, "weight_MCMC_null_model.Rdata"))
-summary(weight_MCMC_null_model)
+load(paste0(Rdatas_folder, "growth_MCMC_null_model.Rdata"))
+summary(growth_MCMC_null_model)
 
-G_mcmc = apply(array(weight_MCMC_null_model$VCV[,1:(num_weight_traits*num_weight_traits)], dim = c(1000, num_weight_traits, num_weight_traits)), 2:3, median)
-R_mcmc = apply(array(weight_MCMC_null_model$VCV[,-c(1:(num_weight_traits*num_weight_traits))], dim = c(1000, num_weight_traits, num_weight_traits)), 2:3, median)
+G_mcmc = apply(array(growth_MCMC_null_model$VCV[,1:(num_growth_traits*num_growth_traits)], dim = c(1000, num_growth_traits, num_growth_traits)), 2:3, median)
+R_mcmc = apply(array(growth_MCMC_null_model$VCV[,-c(1:(num_growth_traits*num_growth_traits))], dim = c(1000, num_growth_traits, num_growth_traits)), 2:3, median)
 
 P_mcmc = G_mcmc + R_mcmc
 
 data.frame(stan = cov2cor(P)[lower.tri(P)],
            MCMC = cov2cor(P_mcmc)[lower.tri(P)],
-           P = cor(weight_data[weight_traits])[lower.tri(P)]) %>%
+           P = cor(growth_data[growth_traits])[lower.tri(P)]) %>%
 gather(variable, value, stan:MCMC) %>%
 ggplot(aes(P, value, group = variable, color = variable)) + geom_point() + geom_abline()
