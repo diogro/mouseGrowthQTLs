@@ -152,7 +152,7 @@ necropsy_phen = inner_join(mouse_meta, raw.necropsy_phen, by = "ID") %>%
 
 necropsy_markers = semi_join(markers, necropsy_phen, by = "ID")
 
-necropsy_traits = c("FATPAD", "HEART", "KIDNEY", "SPLEEN", "LIVER")
+necropsy_traits = c("FATPAD", "HEART", "KIDNEY", "LIVER", "SPLEEN")
 num_necropsy_traits = length(necropsy_traits)
 
 m_necropsy_phen = gather(necropsy_phen, variable, value, FATPAD:LIVER)

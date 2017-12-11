@@ -30,8 +30,8 @@ genotype_formula = paste(null_formula, significant_marker_term, sep = ' + ')
 #significant_markers_model = lmer(as.formula(genotype_formula),
 									   #data = area_data,
 									   #REML = FALSE)
-#save(significant_markers_model, file = "./Rdatas/area_significant_lmer_fit.Rdata")
-load(file = "./Rdatas/area_significant_lmer_fit.Rdata")
+#save(significant_markers_model, file = "./Rdatas/significant_lmer_fit.Rdata")
+load(file = "./Rdatas/significant_lmer_fit.Rdata")
 
 coef_df = summary(significant_markers_model)$coef[-c(1:7), ]
 coef_mean = matrix(coef_df[,1], ncol = 7, byrow = T)
