@@ -30,9 +30,9 @@ stan_MM = stan(file = "./mixedModelGmatrix.stan",
                data = getStanInputMM(growth_data, growth_traits),
                chain=6, iter = 500)
 
-P = colMeans(rstan::extract(stan_MM, pars = c("P"))[[1]])
-G = colMeans(rstan::extract(stan_MM, pars = c("G"))[[1]])
-R = colMeans(rstan::extract(stan_MM, pars = c("R"))[[1]])
+P_stan = colMeans(rstan::extract(stan_MM, pars = c("P"))[[1]])
+G_stan = colMeans(rstan::extract(stan_MM, pars = c("G"))[[1]])
+R_stan = colMeans(rstan::extract(stan_MM, pars = c("R"))[[1]])
 P  - cov(growth_data[growth_traits])
 cov2cor(G)
 
@@ -43,6 +43,9 @@ G_mcmc = apply(array(growth_MCMC_null_model$VCV[,1:(num_growth_traits*num_growth
 R_mcmc = apply(array(growth_MCMC_null_model$VCV[,-c(1:(num_growth_traits*num_growth_traits))], dim = c(1000, num_growth_traits, num_growth_traits)), 2:3, median)
 
 P_mcmc = G_mcmc + R_mcmc
+
+library(corrplot)
+corrplot.mixed(cov2cor(G_mcmc), upper = "ellipse")
 
 data.frame(stan = cov2cor(P)[lower.tri(P)],
            MCMC = cov2cor(P_mcmc)[lower.tri(P)],

@@ -87,8 +87,8 @@ stan_model_SUR_HC = stan(file = "./SUR_horseShoePlus.stan",
                          data = param_list,
                          chain=6, iter = 700, warmup = 500,
                          control = list(adapt_delta = 0.99, max_tree_depth = 12))
-save(stan_model_SUR_HC, file = "./Rdatas/significant_stan_HCp_fit.Rdata")
-load(file = "./Rdatas/significant_stan_HCp_fit.Rdata")
+save(stan_model_SUR_HC, file = "./Rdatas/area_significant_stan_HCp_fit.Rdata")
+load(file = "./Rdatas/area_significant_stan_HCp_fit.Rdata")
 plot(stan_model_SUR_HC, pars = "w_ad")
 
 stan_model_SUR = stan(file = "./SUR.stan",
@@ -96,8 +96,8 @@ stan_model_SUR = stan(file = "./SUR.stan",
                          chain=4, iter = 200, warmup = 100,
                          control = list(adapt_delta = 0.99, max_tree_depth = 12))
 
-save(stan_model_SUR, file = "./Rdatas/significant_stan_fit.Rdata")
-load(file = "./Rdatas/significant_stan_fit.Rdata")
+save(stan_model_SUR, file = "./Rdatas/area_significant_stan_fit.Rdata")
+load(file = "./Rdatas/area_significant_stan_fit.Rdata")
 plot(stan_model_SUR, pars = "w_ad")
 
 getStanEffects = function(markerMatrix, stan_model, trait_vector,

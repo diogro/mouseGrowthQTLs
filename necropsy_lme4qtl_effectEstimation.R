@@ -6,54 +6,54 @@ options(mc.cores = parallel::detectCores())
 #Rdatas_folder = "~/gdrive/LGSM_project_Rdatas/"
 Rdatas_folder = "./Rdatas/"
 
-area_data = inner_join(area_phen_std,
-                        area_markers,
+necropsy_data = inner_join(necropsy_phen_std,
+                        necropsy_markers,
                         by = "ID") %>%
-  gather(variable, value, area1:area7)
+  gather(variable, value, FATPAD:SPLEEN)
 
-area_data = mutate(area_data, FAMILY = as.factor(FAMILY), variable = as.factor(variable))
+necropsy_data = mutate(necropsy_data, FAMILY = as.factor(FAMILY), variable = as.factor(variable))
 null_formula = "value ~ variable + (0 + variable|FAMILY)"
 
-makeMarkerList = function(pos) paste(paste('variable:chrom', pos[1],"_", c('A', 'D'), pos[2], sep = ''), collapse = ' + ')
+makeMarkerList = function(pos) paste(paste('variable:chrom', pos[1],"_", c('A', 'D', 'I'), pos[2], sep = ''), collapse = ' + ')
 markerMatrix = ldply(1:19, function(x) data.frame(chrom = x, marker = 1:loci_per_chrom[[x]]))
 markerList = alply(markerMatrix, 1, makeMarkerList)
 markerPositions = cbind(markerMatrix, read_csv("./data/markers/marker_positions.csv")[,3])
 names(markerPositions)[3] = "cM"
 
-significantMarkerMatrix = read_csv("./data/area_significant_markers.csv")
+significantMarkerMatrix = read_csv("./data/necropsy_significant_markers.csv")
 
 significantMarkerList = alply(significantMarkerMatrix, 1, makeMarkerList)
 significant_marker_term = paste(significantMarkerList, collapse = " + ")
 
 genotype_formula = paste(null_formula, significant_marker_term, sep = ' + ')
 
-#significant_markers_model = lmer(as.formula(genotype_formula),
-									   #data = area_data,
-									   #REML = FALSE)
-#save(significant_markers_model, file = "./Rdatas/significant_lmer_fit.Rdata")
-load(file = "./Rdatas/significant_lmer_fit.Rdata")
+significant_markers_model = lmer(as.formula(genotype_formula),
+                                       data = necropsy_data,
+                                       REML = FALSE)
+save(significant_markers_model, file = "./Rdatas/necropsy_significant_lmer_fit.Rdata")
+load(file = "./Rdatas/necropsy_significant_lmer_fit.Rdata")
 
-coef_df = summary(significant_markers_model)$coef[-c(1:7), ]
-coef_mean = matrix(coef_df[,1], ncol = 7, byrow = T)
-coef_sd = matrix(coef_df[,2], ncol = 7, byrow = T)
-ID = unlist(paste(rep(c("A", "D"), nrow(significantMarkerMatrix)),
-                  rep(apply(significantMarkerMatrix, 1, paste, collapse = "_"), each = 2)) %>% {gsub(" ", "", .)})
+coef_df = summary(significant_markers_model)$coef[-c(1:5), ]
+coef_mean = matrix(coef_df[,1], ncol = 5, byrow = T)
+coef_sd = matrix(coef_df[,2], ncol = 5, byrow = T)
+ID = unlist(paste(rep(c("A", "D", "I"), nrow(significantMarkerMatrix)),
+                  rep(apply(significantMarkerMatrix, 1, paste, collapse = "_"), each = 3)) %>% {gsub(" ", "", .)})
 
-colnames(coef_mean) = colnames(coef_sd) = area_traits
+colnames(coef_mean) = colnames(coef_sd) = necropsy_traits
 rownames(coef_mean) = rownames(coef_sd) = ID 
 
 coef_upper = coef_mean + 2*coef_sd
 coef_lower = coef_mean - 2*coef_sd
 
-ID = unlist(rep(apply(significantMarkerMatrix, 1, paste, collapse = "_"), each = 2) %>% {gsub(" ", "", .)})
+ID = unlist(rep(apply(significantMarkerMatrix, 1, paste, collapse = "_"), each = 3) %>% {gsub(" ", "", .)})
 
 effects = data.frame(coef_mean) %>%
            mutate(id = ID) %>%
-           gather(trait, mean, area1:area7)
-effects$class = c("additive", "dominance")
-effects$upper = (data.frame(coef_upper) %>% mutate(id = ID) %>% gather(trait, upper, area1:area7))$upper
-effects$lower = (data.frame(coef_lower) %>% mutate(id = ID) %>% gather(trait, lower, area1:area7))$lower
-write_csv(effects, "./data/area_significant_marker_effects.csv")
+           gather(trait, mean, FATPAD:SPLEEN)
+effects$class = c("additive", "dominance", "imprinting")
+effects$upper = (data.frame(coef_upper) %>% mutate(id = ID) %>% gather(trait, upper, FATPAD:SPLEEN))$upper
+effects$lower = (data.frame(coef_lower) %>% mutate(id = ID) %>% gather(trait, lower, FATPAD:SPLEEN))$lower
+write_csv(effects, "./data/necropsy_significant_marker_effects.csv")
 
 effects_plot = ggplot(effects, aes(id, mean)) + geom_point() + facet_wrap(~class) + geom_pointrange(aes(ymin = lower, ymax = upper)) + facet_grid(trait~class) + geom_hline(yintercept = 0)
 
@@ -63,17 +63,17 @@ getGenColumn <- function(pos, type){
     gsub(" ", "", paste0("chrom", chrom, "_", type, marker))
 }
 
-area_data_wide = inner_join(area_phen_std,
-                              area_markers,
+necropsy_data_wide = inner_join(necropsy_phen_std,
+                              necropsy_markers,
                               by = "ID")
-K        = length(area_traits)
-N        = dim(area_data_wide)[1]
+K        = length(necropsy_traits)
+N        = dim(necropsy_data_wide)[1]
 J        = nrow(significantMarkerMatrix)
-n_family = length(unique(area_data_wide$FAMILY))
-family   = as.integer(as.factor(area_data_wide$FAMILY))
-ad       = as.matrix(dplyr::select(area_data_wide, apply(significantMarkerMatrix, 1, getGenColumn, "A")))
-dm       = as.matrix(dplyr::select(area_data_wide, apply(significantMarkerMatrix, 1, getGenColumn, "D")))
-y        = as.matrix(dplyr::select(area_data_wide, area_traits))
+n_family = length(unique(necropsy_data_wide$FAMILY))
+family   = as.integer(as.factor(necropsy_data_wide$FAMILY))
+ad       = as.matrix(dplyr::select(necropsy_data_wide, apply(significantMarkerMatrix, 1, getGenColumn, "A")))
+dm       = as.matrix(dplyr::select(necropsy_data_wide, apply(significantMarkerMatrix, 1, getGenColumn, "D")))
+y        = as.matrix(dplyr::select(necropsy_data_wide, necropsy_traits))
 param_list = list(K        = K,
                   J        = J,
                   N        = N,
@@ -86,18 +86,18 @@ param_list = list(K        = K,
 stan_model_SUR_HC = stan(file = "./SUR_horseShoePlus.stan",
                          data = param_list,
                          chain=6, iter = 700, warmup = 500,
-                         control = list(adapt_delta = 0.99, max_tree_depth = 12))
-save(stan_model_SUR_HC, file = "./Rdatas/significant_stan_HCp_fit.Rdata")
-load(file = "./Rdatas/significant_stan_HCp_fit.Rdata")
+                         control = list(adapt_delta = 0.99, max_treedepth = 12))
+save(stan_model_SUR_HC, file = "./Rdatas/necropsy_significant_stan_HCp_fit.Rdata")
+load(file = "./Rdatas/necropsy_significant_stan_HCp_fit.Rdata")
 plot(stan_model_SUR_HC, pars = "w_ad")
 
 stan_model_SUR = stan(file = "./SUR.stan",
                          data = param_list,
                          chain=4, iter = 200, warmup = 100,
-                         control = list(adapt_delta = 0.99, max_tree_depth = 12))
+                         control = list(adapt_delta = 0.99, max_treedepth = 12))
 
-save(stan_model_SUR, file = "./Rdatas/significant_stan_fit.Rdata")
-load(file = "./Rdatas/significant_stan_fit.Rdata")
+save(stan_model_SUR, file = "./Rdatas/necropsy_significant_stan_fit.Rdata")
+load(file = "./Rdatas/necropsy_significant_stan_fit.Rdata")
 plot(stan_model_SUR, pars = "w_ad")
 
 getStanEffects = function(markerMatrix, stan_model, trait_vector,
@@ -118,12 +118,12 @@ getStanEffects = function(markerMatrix, stan_model, trait_vector,
   tbl_df(effects)
 }
 
-effectsStan = getStanEffects(significantMarkerMatrix, stan_model_SUR_HC, area_traits)
+effectsStan = getStanEffects(significantMarkerMatrix, stan_model_SUR, necropsy_traits)
 effectsStan_plot = ggplot(effectsStan, aes(id, mean)) + geom_point() + facet_wrap(~class) + geom_pointrange(aes(ymin = lower, ymax = upper)) + facet_grid(trait~class) + geom_hline(yintercept = 0)
 
 names(effects)
 names(effectsStan)
 
 plot_grid(effects_plot, effectsStan_plot)
-write_csv(effectsStan[,names(effects)], "./data/area_significant_marker_effects_SUR.csv")
+write_csv(effectsStan[,names(effects)], "./data/necropsy_significant_marker_effects_SUR.csv")
 

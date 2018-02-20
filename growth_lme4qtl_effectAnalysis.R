@@ -22,7 +22,7 @@ full_HCp = readRDS("./Rdatas/growth_scaled_allmarkers_HCPlus")
 effect_matrix = e %>%
     select(id, class, trait, mean) %>%
     spread(trait, mean) %>%
-    filter(class == "additive") %>% select(-class)
+    filter(class == "dominance") %>% select(-class)
 effect_matrix_HC = eHC %>%
     select(id, class, trait, mean) %>%
     spread(trait, mean) %>%
@@ -40,6 +40,35 @@ abline(0, 1)
 LG = c(3.785,4.435,8.43,7.395,2.995,1.85,2.085)
 SM = c(3.31 ,2.98,3.82,2.175,0.765,1.165,0.51)
 F3 = sapply(growth_phen[,growth_traits], mean)
+
+d_z = LG - SM
+dz = LG - SM
+library(evolqg)
+growth_sds = apply(growth_phen[,growth_traits], 2, sd)
+G = G_stan * outer(growth_sds, growth_sds)
+corrplot.mixed(cov2cor(G), upper = "ellipse")
+plot(eigen(G_mcmc)$values)
+G_ext4 = ExtendMatrix(G, ret.dim = 4)[[1]]
+G_ext5 = ExtendMatrix(G, ret.dim = 5)[[1]]
+solve(G, d_z)
+solve(G_ext4, d_z)
+beta = solve(G_ext5, d_z)
+
+library(viridis)
+vectorCor = function(x, y) Normalize(x) %*% Normalize(y)
+vectorCor(d_z, beta)
+random_vec = matrix(rnorm(7*1000), 1000, 7)
+quantile(abs(apply(random_vec, 1, vectorCor, rep(1, 7))), 0.95)
+crss = data.frame(beta = apply(effect_matrix[,growth_traits], 1, vectorCor, beta),
+                  dz = apply(effect_matrix[,growth_traits], 1, vectorCor, d_z)) %>% gather(class, value, beta:dz)
+
+corrs = data.frame(beta = apply(effect_matrix[,growth_traits], 1, vectorCor, beta),
+                  dz = apply(effect_matrix[,growth_traits], 1, vectorCor, d_z),
+                  norm = apply(effect_matrix[,growth_traits], 1, Norm))
+ggplot(crss, aes(class, value, fill = class)) + geom_violin()
+ggplot(corrs, aes(norm, beta)) + geom_point() + geom_smooth(method = "lm")
+ggplot(corrs, aes(norm, dz)) + geom_point() + geom_smooth(method = "lm")
+
 
 
 growth_m = as.numeric(ddply(growth_phen, .(SEX), numcolwise(mean))[2,growth_traits])

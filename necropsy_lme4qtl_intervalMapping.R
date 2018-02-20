@@ -7,14 +7,15 @@ Rdatas_folder = "./Rdatas/"
 install_load("doMC", "lme4qtl", "qvalue")
 registerDoMC(10)
 
-area_data = inner_join(area_phen_std,
-                        area_markers,
+names(necropsy_phen_std)
+necropsy_data = inner_join(necropsy_phen_std,
+                        necropsy_markers,
                         by = "ID") %>%
-  gather(variable, value, area1:area7)
-area_data = mutate(area_data, FAMILY = as.factor(FAMILY), variable = as.factor(variable))
+  gather(variable, value, FATPAD:SPLEEN)
+necropsy_data = mutate(necropsy_data, FAMILY = as.factor(FAMILY), variable = as.factor(variable))
 null_formula = "value ~ variable + (0 + variable|FAMILY)"
 
-makeMarkerList = function(pos) paste(paste('variable:chrom', pos[1],"_", c('A', 'D'), pos[2], sep = ''), collapse = ' + ')
+makeMarkerList = function(pos) paste(paste('variable:chrom', pos[1],"_", c('A', 'D', 'I'), pos[2], sep = ''), collapse = ' + ')
 markerMatrix = ldply(1:19, function(x) data.frame(chrom = x, marker = 1:loci_per_chrom[[x]]))
 markerList = alply(markerMatrix, 1, makeMarkerList)
 markerPositions = cbind(markerMatrix, read_csv("./data/markers/marker_positions.csv")[,3])
@@ -34,14 +35,14 @@ runIntervalModel <- function(marker_term, null_formula){
     flanking_formula = paste(null_formula, paste(alply(flanking, 1, makeMarkerList), collapse = " + "), sep = " + ")
 
     flanking_model = relmatLmer(as.formula(flanking_formula),
-                                data = area_data,
+                                data = necropsy_data,
                                 REML = FALSE)
 
 
     genotype_formula = paste(flanking_formula, marker_term, sep = ' + ')
 
     focal_model = relmatLmer(as.formula(genotype_formula),
-                             data = area_data,
+                             data = necropsy_data,
                              REML = FALSE)
     test = anova(focal_model, flanking_model)
 
@@ -53,32 +54,30 @@ runIntervalModel <- function(marker_term, null_formula){
                 model_summary = summary(focal_model)))
 }
 flank_dist = 5
-model_file = paste0(Rdatas_folder, "area_intervalMapping_", flank_dist, "cM.Rdata")
+model_file = paste0(Rdatas_folder, "necropsy_intervalMapping_", flank_dist, "cM.Rdata")
 intervalMapping = llply(markerList, runIntervalModel, null_formula, .parallel = TRUE)
 save(intervalMapping, file = model_file)
 
 flank_dist = 10
-model_file = paste0(Rdatas_folder, "area_intervalMapping_", flank_dist, "cM.Rdata")
+model_file = paste0(Rdatas_folder, "necropsy_intervalMapping_", flank_dist, "cM.Rdata")
 intervalMapping = llply(markerList, runIntervalModel, null_formula, .parallel = TRUE)
 save(intervalMapping, file = model_file)
 load(model_file)
 
 flank_dist = 15
-model_file = paste0(Rdatas_folder, "area_intervalMapping_", flank_dist, "cM.Rdata")
+model_file = paste0(Rdatas_folder, "necropsy_intervalMapping_", flank_dist, "cM.Rdata")
 intervalMapping = llply(markerList, runIntervalModel, null_formula, .parallel = TRUE)
 save(intervalMapping, file = model_file)
 
 flank_dist = 20
-model_file = paste0(Rdatas_folder, "area_intervalMapping_", flank_dist, "cM.Rdata")
+model_file = paste0(Rdatas_folder, "necropsy_intervalMapping_", flank_dist, "cM.Rdata")
 intervalMapping = llply(markerList, runIntervalModel, null_formula, .parallel = TRUE)
 save(intervalMapping, file = model_file)
 load(model_file)
 
-x = intervalMapping[[10]]
-coef(x$model_summary)
 all_effectsInterval = ldply(intervalMapping,
                             function(x){
-                                n_traits = length(area_traits)
+                                n_traits = length(necropsy_traits)
                                 coef_matrix =coef(x$model_summary) 
                                 n_coef = nrow(coef_matrix)
                                 ad = coef_matrix[(n_coef-2*n_traits + 1):(n_coef - n_traits),1]
@@ -86,17 +85,17 @@ all_effectsInterval = ldply(intervalMapping,
                                 dm = coef_matrix[(n_coef-n_traits + 1):n_coef,1]
                                 dm_se = coef_matrix[(n_coef-n_traits + 1):n_coef,2]
                                 data_frame(ad, ad_se, dm, dm_se)
-                            }, .id = NULL, .parallel = TRUE) %>% tbl_df %>% mutate(count = rep(seq(intervalMapping), each = num_area_traits)) %>% select(count, everything())
+                            }, .id = NULL, .parallel = TRUE) %>% tbl_df %>% mutate(count = rep(seq(intervalMapping), each = num_necropsy_traits)) %>% select(count, everything())
 
 ldply(intervalMapping, function(x) -log10(x$p.value)) %>%
     filter(chrom == 1) %>%
     ggplot(aes(x =seq_along(V1), V1)) + geom_point() + geom_line()
 
-effect_file = paste0("./data/area traits/area_effectsInterval_", flank_dist, "cM.csv")
+effect_file = paste0("./data/necropsy traits/necropsy_effectsInterval_", flank_dist, "cM.csv")
 write_csv(all_effectsInterval, effect_file)
 
 Pvalues = function(flank_dist, ...){
-    model_file = paste0(Rdatas_folder, "area_intervalMapping_", flank_dist, "cM.Rdata")
+    model_file = paste0(Rdatas_folder, "necropsy_intervalMapping_", flank_dist, "cM.Rdata")
     load(model_file)
     p.values = ldply(intervalMapping, function(x) x$p.value) 
     qobj = qvalue(p.values$V1, ...)
@@ -110,7 +109,10 @@ p_values %>%
     filter(flank_dist == 5) %>% 
     ggplot(aes(x =seq_along(V1), -log10(V1), color = as.factor(chrom))) + geom_point() + geom_line()
 
-ch = 7
+flank_dist = 10
+model_file = paste0(Rdatas_folder, "necropsy_intervalMapping_", flank_dist, "cM.Rdata")
+load(model_file)
+ch = 1
 p_values %>%
     select(chrom, marker, significant, flank_dist) %>%
     filter(chrom == ch) %>%
@@ -120,27 +122,25 @@ ldply(intervalMapping, function(x) -log10(x$p.value)) %>%
     filter(chrom == ch) %>%
     ggplot(aes(x =seq_along(V1), V1)) + geom_point() + geom_line()
 
-x = list("1" = c(13, 29),
-         "2" = c(5, 25), 
-         "3" = c(24),
-         "4" = c(5, 9, 12, 21),
-         "5" = c(6, 14, 19),
-         "6" = c(10, 13, 19),
-         "7" = c(11),
-         "8" = c(2, 8, 12),
-         "9" = 4,
-         "10"= c(4, 11, 16),
-         "11"= c(13, 19),
-         "12"= c(15, 19),
-         "13"= 6,
-         "14"= c(3, 8, 14),
-         "15"= 15,
-         "16"= c(9, 12),
+x = list("1" = c(5, 11, 29),
+         "2" = c(10, 19, 24), 
+         "3" = c(1, 25),
+         "4" = c(12, 21),
+         "6" = c(5, 13, 21),
+         "7" = c(9, 13, 17),
+         "8" = 2, 
+         "9" = 6,
+         "10"= c(4, 16),
+         "11"= 14,
+         "12"= c(4, 9),
+         "13"= 9,
+         "16"= 11,
          "17"= 5,
-         "18"= c(5, 11))
+         "18"= 11, 
+         "19"= 2)
 
 significantMarkerMatrix = ldply(x, function(x) data.frame(marker = x), .id = "chrom")
-write_csv(significantMarkerMatrix, "./data/area_significant_markers.csv")
+write_csv(significantMarkerMatrix, "./data/necropsy_significant_markers.csv")
 
 significantMarkerList = alply(significantMarkerMatrix, 1, makeMarkerList)
 significant_marker_term = paste(significantMarkerList, collapse = " + ")
