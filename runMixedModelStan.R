@@ -10,7 +10,7 @@ Rdatas_folder = "./Rdatas/"
 
 options(mc.cores = 10)
 
-growth_data = inner_join(growth_phen_std, growth_markers, by = "ID")
+growth_data = inner_join(growth_phen, growth_markers, by = "ID")
 getStanInputMM = function(current_data, trait_vector)
 {
     K        = length(trait_vector)
@@ -28,12 +28,13 @@ getStanInputMM = function(current_data, trait_vector)
 
 stan_MM = stan(file = "./mixedModelGmatrix.stan",
                data = getStanInputMM(growth_data, growth_traits),
-               chain=6, iter = 500)
+               chain=6, iter = 600, control = list(max_treedepth = 11))
 
 P_stan = colMeans(rstan::extract(stan_MM, pars = c("P"))[[1]])
 G_stan = colMeans(rstan::extract(stan_MM, pars = c("G"))[[1]])
 R_stan = colMeans(rstan::extract(stan_MM, pars = c("R"))[[1]])
-P  - cov(growth_data[growth_traits])
+save(P_stan, G_stan, R_stan, file = "./Rdatas/growth_CovMatrices.Rdata")
+P = cov(growth_data[growth_traits])
 cov2cor(G)
 
 load(paste0(Rdatas_folder, "growth_MCMC_null_model.Rdata"))
@@ -45,10 +46,10 @@ R_mcmc = apply(array(growth_MCMC_null_model$VCV[,-c(1:(num_growth_traits*num_gro
 P_mcmc = G_mcmc + R_mcmc
 
 library(corrplot)
-corrplot.mixed(cov2cor(G_mcmc), upper = "ellipse")
+corrplot.mixed(cov2cor(G_stan), upper = "ellipse")
 
-data.frame(stan = cov2cor(P)[lower.tri(P)],
-           MCMC = cov2cor(P_mcmc)[lower.tri(P)],
-           P = cor(growth_data[growth_traits])[lower.tri(P)]) %>%
+data.frame(stan = (P_stan)[lower.tri(P)],
+           MCMC = (P_mcmc)[lower.tri(P)],
+           P = cov(growth_data[growth_traits])[lower.tri(P)]) %>%
 gather(variable, value, stan:MCMC) %>%
 ggplot(aes(P, value, group = variable, color = variable)) + geom_point() + geom_abline()
