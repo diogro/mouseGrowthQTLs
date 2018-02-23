@@ -8,7 +8,7 @@ library(MCMCglmm)
 #Rdatas_folder = "~/gdrive/LGSM_project_Rdatas/"
 Rdatas_folder = "./Rdatas/"
 
-options(mc.cores = 10)
+options(mc.cores = 8)
 
 growth_data = inner_join(growth_phen, growth_markers, by = "ID")
 getStanInputMM = function(current_data, trait_vector)

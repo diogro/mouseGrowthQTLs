@@ -6,8 +6,16 @@ source('read_mouse_data.R')
 #Rdatas_folder = "~/gdrive/LGSM_project_Rdatas/"
 Rdatas_folder = "./Rdatas/"
 
+vectorCor = function(x, y) Normalize(x) %*% Normalize(y)
+markerCov = function(marker1, marker2){
+  marker1_col = growth_markers[,makeMarkerList(marker1)]
+  marker2_col = growth_markers[,makeMarkerList(marker2)]
+  cov(marker1_col, marker2_col)[1]
+}
+makeMarkerList = function(pos) paste('chrom', pos[1],"_", 'A', pos[2], sep = '')
+
 install_load("doMC", "lme4qtl", "qvalue")
-registerDoMC(10)
+registerDoMC(6)
 
 growth_data = inner_join(growth_phen_std,
                         growth_markers,
@@ -40,6 +48,9 @@ d_effect_matrix_HC = eHC %>%
 png("data/growth_additive_effects_PCA.png")
 biplot(prcomp(a_effect_matrix[,growth_traits]))
 dev.off()
+png("data/growth_dominance_effects_PCA.png")
+biplot(prcomp(d_effect_matrix[,growth_traits]))
+dev.off()
 eig_effects  =  eigen(cov(effect_matrix[,growth_traits]))
 plot(eig_effects$values)
 plot(e$mean, eHC$mean)
@@ -69,24 +80,46 @@ mean_d = colMeans(d_effect_matrix[,growth_traits])
 vectorCor(mean_a, d_z)
 vectorCor(mean_d, d_z)
 
-significantMarkerMatrix = read_csv("./data/growth_significant_markers.csv")
-calcVa = function(i){
-  marker_col = growth_markers[,map2_chr(c("chrom", "A"), as.character(significantMarkerMatrix[i,1:2]), paste0) %>% 
-                                paste(collapse = "_")]
+
+
+markerMatrix
+calcVa = function(i, effects, markerMatrix){
+  current_chrom = markerMatrix[i,1]
+  
+  focal_marker = markerMatrix[i,]
+  focal_marker_col = growth_markers[,makeMarkerList(focal_marker)]
+  
   n = dim(marker_col)[1]
-  genotype_freq = table(marker_col)/n
+  genotype_freq = table(focal_marker_col)/n
+  
+  # Variance due to focal marker
   q = genotype_freq[1] + 1/2 * genotype_freq[2]
   p = genotype_freq[3] + 1/2 * genotype_freq[2]
-  V_a = 2 * p * q * outer(effect_matrix[,i], effect_matrix[,i])
+  V_a = 2 * p * q * outer(effects[,i], effects[,i]) 
+  
+  # Variance due to LD with focal marker
+  for(j in 1:nrow(markerMatrix)){
+    if (i != j) V_a = V_a + markerCov(focal_marker, markerMatrix[j,]) * 
+                            outer(effects[,i], effects[,j])
+  }
   V_a
 }
-Va = colSums(aaply(1:dim(significantMarkerMatrix)[1], 1, calcVa))
-MatrixCompare(G, Va)
-plot(Va)
+
+w_ad = rstan::extract(stan_model_SUR, pars = "w_ad")[[1]]
+effect_matrix = aaply(w_ad, c(2, 3), mean)
+Va = colSums(laply(seq_along(significantMarkerList), calcVa, effect_matrix, significantMarkerMatrix))
+
+w_ad = rstan::extract(full_HCp, pars = "w_ad")[[1]]
+effect_matrix_HC = aaply(w_ad, c(2, 3), mean)
+Va_HC = colSums(laply(seq_along(significantMarkerList), calcVa, effect_matrix_HC, markerMatrix))
+corrplot.mixed(G, upper = "ellipse")
+corrplot.mixed(Va, upper = "ellipse")
+MatrixCompare(Va, G)
+plot(diag(Va))
 plot(diag(G))
 
 library(viridis)
-vectorCor = function(x, y) Normalize(x) %*% Normalize(y)
+
 vectorCor(d_z, beta)
 random_vec = matrix(rnorm(7*1000), 1000, 7)
 quantile(abs(apply(random_vec, 1, vectorCor, rep(1, 7))), 0.95)
