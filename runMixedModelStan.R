@@ -32,8 +32,9 @@ stan_MM = stan(file = "./mixedModelGmatrix.stan",
 
 P_stan = colMeans(rstan::extract(stan_MM, pars = c("P"))[[1]])
 G_stan = colMeans(rstan::extract(stan_MM, pars = c("G"))[[1]])
+Gs_stan = rstan::extract(stan_MM, pars = c("G"))[[1]]
 R_stan = colMeans(rstan::extract(stan_MM, pars = c("R"))[[1]])
-save(P_stan, G_stan, R_stan, file = "./Rdatas/growth_CovMatrices.Rdata")
+save(P_stan, G_stan, Gs_stan, R_stan, file = "./Rdatas/growth_CovMatrices.Rdata")
 P = cov(growth_data[growth_traits])
 cov2cor(G)
 

@@ -1,4 +1,5 @@
 if(!require(purrr)){install.packages("purrr"); library(purrr)}
+if(!require(corrplot)){install.packages("corrplot"); library(corrplot)}
 
 setwd("/home/diogro/projects/mouse-qtls")
 source('read_mouse_data.R')
@@ -13,9 +14,10 @@ markerCov = function(marker1, marker2){
   cov(marker1_col, marker2_col)[1]
 }
 makeMarkerList = function(pos) paste('chrom', pos[1],"_", 'A', pos[2], sep = '')
+lt = function(x) x[lower.tri(x, diag = TRUE)]
 
 install_load("doMC", "lme4qtl", "qvalue")
-registerDoMC(6)
+registerDoMC(15)
 
 growth_data = inner_join(growth_phen_std,
                         growth_markers,
@@ -45,6 +47,7 @@ d_effect_matrix_HC = eHC %>%
   select(id, class, trait, mean) %>%
   spread(trait, mean) %>%
   filter(class == "dominance") %>% select(-class)
+
 png("data/growth_additive_effects_PCA.png")
 biplot(prcomp(a_effect_matrix[,growth_traits]))
 dev.off()
@@ -53,7 +56,6 @@ biplot(prcomp(d_effect_matrix[,growth_traits]))
 dev.off()
 eig_effects  =  eigen(cov(effect_matrix[,growth_traits]))
 plot(eig_effects$values)
-plot(e$mean, eHC$mean)
 abline(0, 1)
 
 
@@ -83,20 +85,17 @@ vectorCor(mean_d, d_z)
 
 
 markerMatrix
-calcVa = function(i, effects, markerMatrix){
+calcVa = function(i, a_effects, markerMatrix){
   current_chrom = markerMatrix[i,1]
-  
   focal_marker = markerMatrix[i,]
   focal_marker_col = growth_markers[,makeMarkerList(focal_marker)]
-  
-  n = dim(marker_col)[1]
+  n = dim(focal_marker_col)[1]
   genotype_freq = table(focal_marker_col)/n
-  
   # Variance due to focal marker
   q = genotype_freq[1] + 1/2 * genotype_freq[2]
   p = genotype_freq[3] + 1/2 * genotype_freq[2]
-  V_a = 2 * p * q * outer(effects[,i], effects[,i]) 
-  
+  # additive contribution to Va
+  V_a = 2*p*q * outer(a_effects[,i], a_effects[,i]) 
   # Variance due to LD with focal marker
   for(j in 1:nrow(markerMatrix)){
     if (i != j) V_a = V_a + markerCov(focal_marker, markerMatrix[j,]) * 
@@ -104,34 +103,95 @@ calcVa = function(i, effects, markerMatrix){
   }
   V_a
 }
+calcVd = function(i, d_effects, markerMatrix){
+  current_chrom = markerMatrix[i,1]
+  focal_marker = markerMatrix[i,]
+  focal_marker_col = growth_markers[,makeMarkerList(focal_marker)]
+  n = dim(focal_marker_col)[1]
+  genotype_freq = table(focal_marker_col)/n
+  # Variance due to focal marker
+  q = genotype_freq[1] + 1/2 * genotype_freq[2]
+  p = genotype_freq[3] + 1/2 * genotype_freq[2]
+  # additive contribution to Va
+  V_d = (2*p*q)^2 * outer(d_effects[,i], d_effects[,i]) 
+  # Variance due to LD with focal marker
+  for(j in 1:nrow(markerMatrix)){
+    d2ij = markerCov(focal_marker, markerMatrix[j,])
+    if (i != j) V_d = V_d + d2ij^2 * outer(d_effects[,i], d_effects[,j])
+  }
+  V_d
+}
+calcVa(1, effect_matrix, significantMarkerMatrix)
 
 w_ad = rstan::extract(stan_model_SUR, pars = "w_ad")[[1]]
-effect_matrix = aaply(w_ad, c(2, 3), mean)
-Va = colSums(laply(seq_along(significantMarkerList), calcVa, effect_matrix, significantMarkerMatrix))
+effect_matrix_additive = aaply(w_ad, c(2, 3), mean)
+w_dm = rstan::extract(stan_model_SUR, pars = "w_dm")[[1]]
+effect_matrix_dominance = aaply(w_dm, c(2, 3), mean)
+save(w_ad, w_dm, effect_matrix_additive, effect_matrix_dominance, file = "Rdatas/growth_add_dom_effectsMatrix.Rdata")
+  
+Va = laply(seq_along(1:400), function(i) colSums(laply(seq_along(significantMarkerList), calcVa, w_ad[i,,], significantMarkerMatrix)), .parallel = TRUE)
+
+Vd = laply(seq_along(1:400), function(i) colSums(laply(seq_along(significantMarkerList), calcVd, w_dm[i,,], significantMarkerMatrix)), .parallel = TRUE)
+
+Va_mean = aaply(Va, c(2, 3), mean)
+Va_upper = aaply(Va, c(2, 3), quantile, 0.975)
+Va_lower = aaply(Va, c(2, 3), quantile, 0.025)
+
+Vd_mean  = aaply(Vd, c(2, 3), mean)
+Vd_lower = aaply(Vd, c(2, 3), quantile, 0.025)
+Vd_upper = aaply(Vd, c(2, 3), quantile, 0.975)
+
+G = aaply(Gs_stan, c(2, 3), mean)
+G_lower = aaply(Gs_stan, c(2, 3), quantile, 0.025)
+G_upper = aaply(Gs_stan, c(2, 3), quantile, 0.975)
+
+Vg = 1/2 * Va + 1/4 * Vd
+
+Vg_mean  = aaply(Vg, c(2, 3), mean)
+Vg_lower = aaply(Vg, c(2, 3), quantile, 0.025)
+Vg_upper = aaply(Vg, c(2, 3), quantile, 0.975)
+
+corrplot.mixed(G, upper = "ellipse")
+corrplot.mixed(Vg_mean, upper = "ellipse")
+write.csv(MatrixCompare(Vd_mean, G), file = "./data/Vd_FamilyG_comparison.csv")
+write.csv(MatrixCompare(Va_mean, G), file = "./data/Va_FamilyG_comparison.csv")
+write.csv(MatrixCompare(Vg_mean, G), file = "./data/Vg_FamilyG_comparison.csv")
+
+data.frame(Vg = diag(Vg_mean), G = diag(G)) %>% gather %>%
+  ggplot(aes(c(1:7, 1:7), value, group = key, color = key)) + geom_point() + geom_line()
+png("./data/growth_family_qtl_cov.png", width = 1080, height = 640)
+plot(lt(G)~lt(Vg_mean), pch = 19, 
+     ylab = "Family G-matrix covariances", xlab = "Genetic covariances predicted from QTLs (1/2 * Va + 1/4 * Vd)", 
+     main = "Growth traits", xlim = c(-0.03, 0.17), ylim = c(-0.22, 0.6))
+segments(x0 = lt(Vg_lower), y0 = lt(G), x1 = lt(Vg_upper), y1 = lt(G))
+segments(x0 = lt(Vg_mean), y0 = lt(G_lower), x1 = lt(Vg_mean), y1 = lt(G_upper))
+points(diag(G)~diag(Vg_mean), col = "tomato3", pch = 19)
+abline(lm(lt(G)~lt(Vg_mean)))
+abline(0, 1, col = "blue")
+text(0.15, 0.12, "Identity", col = "blue")
+text(0.11, 0.35, "Variances", col = "tomato3")
+text(0.05, -0.05, "Co-variances")
+dev.off()
+summary(lm(lt(G)~lt(Vg_mean)))
 
 w_ad = rstan::extract(full_HCp, pars = "w_ad")[[1]]
 effect_matrix_HC = aaply(w_ad, c(2, 3), mean)
 Va_HC = colSums(laply(seq_along(significantMarkerList), calcVa, effect_matrix_HC, markerMatrix))
-corrplot.mixed(G, upper = "ellipse")
-corrplot.mixed(Va, upper = "ellipse")
-MatrixCompare(Va, G)
-plot(diag(Va))
-plot(diag(G))
 
 library(viridis)
 
 vectorCor(d_z, beta)
 random_vec = matrix(rnorm(7*1000), 1000, 7)
 quantile(abs(apply(random_vec, 1, vectorCor, rep(1, 7))), 0.95)
-crss = data.frame(beta = apply(effect_matrix[,growth_traits], 1, vectorCor, beta),
-                    dz = abs(apply(effect_matrix[,growth_traits], 1, vectorCor, d_z))) %>% gather(class, value, beta:dz)
+crss = data.frame(beta = apply(a_effect_matrix[,growth_traits], 1, vectorCor, beta),
+                    dz = abs(apply(a_effect_matrix[,growth_traits], 1, vectorCor, d_z))) %>% gather(class, value, beta:dz)
 
-corrs = data.frame(beta = apply(effect_matrix[,growth_traits], 1, vectorCor, beta),
-                     dz = abs(apply(effect_matrix[,growth_traits], 1, vectorCor, d_z)),
-                   norm = apply(effect_matrix[,growth_traits], 1, Norm))
+corrs = data.frame(beta = apply(a_effect_matrix[,growth_traits], 1, vectorCor, beta),
+                     dz = abs(apply(a_effect_matrix[,growth_traits], 1, vectorCor, d_z)),
+                   norm = apply(a_effect_matrix[,growth_traits], 1, Norm))
 ggplot(crss, aes(class, value, fill = class)) + geom_violin()
-ggplot(corrs, aes(norm, beta)) + geom_point() + geom_smooth(method = "lm")
-ggplot(corrs, aes(dz, norm)) + geom_point() + geom_smooth(method = "lm")
+ggplot(corrs, aes(norm, beta)) + geom_point() + geom_smooth(method = "lm", color = "black", se = FALSE)
+ggplot(corrs, aes(dz, norm)) + geom_point() + geom_smooth(method = "lm", color = "black", se = FALSE)
 
 lm(beta~norm, data = corrs) %>% summary
 lm(norm~dz, data = corrs) %>% summary
