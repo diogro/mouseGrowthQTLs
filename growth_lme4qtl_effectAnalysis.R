@@ -14,7 +14,8 @@ markerCov = function(marker1, marker2){
   cov(marker1_col, marker2_col)[1]
 }
 makeMarkerList = function(pos) paste('chrom', pos[1],"_", 'A', pos[2], sep = '')
-lt = function(x) x[lower.tri(x, diag = TRUE)]
+lt = function(x, diag = TRUE) x[lower.tri(x, diag = diag)]
+CalcInt = function(x) sd(eigen(cov2cor(x))$values)/(nrow(x) - 1)
 
 install_load("doMC", "lme4qtl", "qvalue")
 registerDoMC(15)
@@ -49,15 +50,15 @@ d_effect_matrix_HC = eHC %>%
   filter(class == "dominance") %>% select(-class)
 
 png("data/growth_additive_effects_PCA.png")
+par(mfrow = c(1, 1))
 biplot(prcomp(a_effect_matrix[,growth_traits]))
 dev.off()
+
+eigen(cov(a_effect_matrix[,growth_traits]))
+
 png("data/growth_dominance_effects_PCA.png")
 biplot(prcomp(d_effect_matrix[,growth_traits]))
 dev.off()
-eig_effects  =  eigen(cov(effect_matrix[,growth_traits]))
-plot(eig_effects$values)
-abline(0, 1)
-
 
 LG = c(3.785,4.435,8.43,7.395,2.995,1.85,2.085)
 SM = c(3.31 ,2.98,3.82,2.175,0.765,1.165,0.51)
@@ -69,23 +70,23 @@ load("./Rdatas/growth_CovMatrices.Rdata")
 growth_sds = apply(growth_phen[,growth_traits], 2, sd)
 G = G_stan #* outer(growth_sds, growth_sds)
 corrplot.mixed(cov2cor(G), upper = "ellipse")
-plot(eigen(G_mcmc)$values)
+plot(eigen(G)$values)
 G_ext4 = ExtendMatrix(G, ret.dim = 4)[[1]]
 G_ext5 = ExtendMatrix(G, ret.dim = 5)[[1]]
 solve(G, d_z)
 (beta = solve(G_ext4, d_z))
 solve(G_ext5, d_z)
 
-
 mean_a = colMeans(a_effect_matrix[,growth_traits])
 mean_d = colMeans(d_effect_matrix[,growth_traits])
 vectorCor(mean_a, d_z)
 vectorCor(mean_d, d_z)
 
-
-
 markerMatrix
-calcVa = function(i, a_effects, markerMatrix){
+calcVa = function(i, a_effects, d_effects, markerMatrix){
+  trait_sd = sapply(growth_phen[,growth_traits], sd)
+  a_effects = a_effects * trait_sd
+  d_effects = d_effects * trait_sd
   current_chrom = markerMatrix[i,1]
   focal_marker = markerMatrix[i,]
   focal_marker_col = growth_markers[,makeMarkerList(focal_marker)]
@@ -96,14 +97,21 @@ calcVa = function(i, a_effects, markerMatrix){
   p = genotype_freq[3] + 1/2 * genotype_freq[2]
   # additive contribution to Va
   V_a = 2*p*q * outer(a_effects[,i], a_effects[,i]) 
+  # Dominance contribution to Va
+  V_a = V_a + 2*p*q * (q - p)^2 * outer(d_effects[,i], d_effects[,i])
+  # Additive by dominance contribution to Va
+  V_a = V_a + 2*p*q * (q - p)  * (outer(a_effects[,i], d_effects[,i]) + 
+                                  outer(d_effects[,i], a_effects[,i]))
   # Variance due to LD with focal marker
   for(j in 1:nrow(markerMatrix)){
     if (i != j) V_a = V_a + markerCov(focal_marker, markerMatrix[j,]) * 
-                            outer(effects[,i], effects[,j])
+                                      outer(a_effects[,i], a_effects[,j])
   }
   V_a
 }
 calcVd = function(i, d_effects, markerMatrix){
+  trait_sd = sapply(growth_phen[,growth_traits], sd)
+  d_effects = d_effects * trait_sd
   current_chrom = markerMatrix[i,1]
   focal_marker = markerMatrix[i,]
   focal_marker_col = growth_markers[,makeMarkerList(focal_marker)]
@@ -121,7 +129,6 @@ calcVd = function(i, d_effects, markerMatrix){
   }
   V_d
 }
-calcVa(1, effect_matrix, significantMarkerMatrix)
 
 w_ad = rstan::extract(stan_model_SUR, pars = "w_ad")[[1]]
 effect_matrix_additive = aaply(w_ad, c(2, 3), mean)
@@ -129,7 +136,9 @@ w_dm = rstan::extract(stan_model_SUR, pars = "w_dm")[[1]]
 effect_matrix_dominance = aaply(w_dm, c(2, 3), mean)
 save(w_ad, w_dm, effect_matrix_additive, effect_matrix_dominance, file = "Rdatas/growth_add_dom_effectsMatrix.Rdata")
   
-Va = laply(seq_along(1:400), function(i) colSums(laply(seq_along(significantMarkerList), calcVa, w_ad[i,,], significantMarkerMatrix)), .parallel = TRUE)
+calcVa(1, effect_matrix_additive, effect_matrix_dominance, significantMarkerMatrix)
+
+Va = laply(seq_along(1:400), function(i) colSums(laply(seq_along(significantMarkerList), calcVa, w_ad[i,,], w_dm[i,,], significantMarkerMatrix)), .parallel = TRUE)
 
 Vd = laply(seq_along(1:400), function(i) colSums(laply(seq_along(significantMarkerList), calcVd, w_dm[i,,], significantMarkerMatrix)), .parallel = TRUE)
 
@@ -151,15 +160,22 @@ Vg_mean  = aaply(Vg, c(2, 3), mean)
 Vg_lower = aaply(Vg, c(2, 3), quantile, 0.025)
 Vg_upper = aaply(Vg, c(2, 3), quantile, 0.975)
 
-corrplot.mixed(G, upper = "ellipse")
-corrplot.mixed(Vg_mean, upper = "ellipse")
+old.par = par()
+
+png("./data/growth_family_Vg_FullSibG_correlation.png", width = 1500, height = 800)
+par(mfrow = c(1, 2), cex=2)
+corrplot.mixed(cov2cor(G), upper = "ellipse", main = "\n\n\nFull-Sib G-matrix Correlation")
+corrplot.mixed(cov2cor(Vg_mean), upper = "ellipse", main = "\n\n\nVa/2 + Vd/4 Correlation")
+dev.off()
+par(old.par)
 write.csv(MatrixCompare(Vd_mean, G), file = "./data/Vd_FamilyG_comparison.csv")
 write.csv(MatrixCompare(Va_mean, G), file = "./data/Va_FamilyG_comparison.csv")
 write.csv(MatrixCompare(Vg_mean, G), file = "./data/Vg_FamilyG_comparison.csv")
 
 data.frame(Vg = diag(Vg_mean), G = diag(G)) %>% gather %>%
   ggplot(aes(c(1:7, 1:7), value, group = key, color = key)) + geom_point() + geom_line()
-png("./data/growth_family_qtl_cov.png", width = 1080, height = 640)
+png("./data/growth_family_qtl_cov.png", width = 1500, height = 800)
+par(mfrow = c(1, 1), cex=2)
 plot(lt(G)~lt(Vg_mean), pch = 19, 
      ylab = "Family G-matrix covariances", xlab = "Genetic covariances predicted from QTLs (1/2 * Va + 1/4 * Vd)", 
      main = "Growth traits", xlim = c(-0.03, 0.17), ylim = c(-0.22, 0.6))
@@ -174,9 +190,11 @@ text(0.05, -0.05, "Co-variances")
 dev.off()
 summary(lm(lt(G)~lt(Vg_mean)))
 
-w_ad = rstan::extract(full_HCp, pars = "w_ad")[[1]]
-effect_matrix_HC = aaply(w_ad, c(2, 3), mean)
-Va_HC = colSums(laply(seq_along(significantMarkerList), calcVa, effect_matrix_HC, markerMatrix))
+w_ad_HC = rstan::extract(full_HCp, pars = "w_ad")[[1]]
+w_dm_HC = rstan::extract(full_HCp, pars = "w_dm")[[1]]
+effect_matrix_ad_HC = aaply(w_ad_HC, c(2, 3), mean)
+effect_matrix_dm_HC = aaply(w_dm_HC, c(2, 3), mean)
+Va_HC = colSums(laply(seq_along(significantMarkerList), calcVa, effect_matrix_ad_HC, effect_matrix_dm_HC, markerMatrix))
 
 library(viridis)
 
@@ -228,9 +246,9 @@ LG_e = rowSums(as.matrix(effect_matrix)) * sapply(growth_phen[,growth_traits], s
     sapply(growth_phen[,growth_traits], mean)
 post = adply(w_ad, 1, posterior_predict)
 growth_prediction = reshape2::melt(data.frame(trait = as.factor(growth_traits), 
-                                              SM_stan = SM_e,
+                                              SM_QTL = SM_e,
                                               SM_Observed = SM,
-                                              LG_stan = LG_e,
+                                              LG_QTL = LG_e,
                                               F3_Observed = F3,
                                               LG_Observed = LG)) %>% separate(variable, c("Line", "Type"))
 growth_pred_plot_SUR = ggplot() + scale_x_discrete(labels = paste("Week", 1:7)) + labs(y = "Weekly growth (g)", x = "Start week") + geom_line(data = post, color = "gray", size = 0.5, linetype = 1, alpha = 0.1, aes(trait, value, group = interaction(Type, Line, iterations))) + geom_line(size = 1, data = growth_prediction, aes(trait, value, group = interaction(Type, Line), color = Line, linetype = Type))

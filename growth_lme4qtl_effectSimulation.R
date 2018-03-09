@@ -29,11 +29,10 @@ load(file = "./Rdatas/significant_stan_fit.Rdata")
 load(file = "Rdatas/growth_add_dom_effectsMatrix.Rdata")
 significantMarkerMatrix = read_csv("./data/growth_significant_markers.csv")
 
-
 simulateVg = function(a_effects, d_effects, markerMatrix){
-  n_traits = dim(a_effects)[1]
-  V_a = matrix(0, n_traits, n_traits)
-  V_d = matrix(0, n_traits, n_traits)
+  trait_sd = sapply(growth_phen[,growth_traits], sd)
+  a_effects = a_effects * trait_sd
+  d_effects = d_effects * trait_sd
   singleMakerSimulation = function(i){
     current_chrom = markerMatrix[i,1]
     focal_marker = markerMatrix[i,]
@@ -42,6 +41,11 @@ simulateVg = function(a_effects, d_effects, markerMatrix){
     q = 1-p
     # additive contribution to Va
     V_a = 2*p*q * outer(a_effects[,i], a_effects[,i]) 
+    # Dominance contribution to Va
+    V_a = V_a + 2*p*q * (q - p)^2 * outer(d_effects[,i], d_effects[,i])
+    # Additive by dominance contribution to Va
+    V_a = V_a + 2*p*q * (q - p)  * (outer(a_effects[,i], d_effects[,i]) + 
+                                    outer(d_effects[,i], a_effects[,i]))
     # Variance due to LD with focal marker
     # diseqVa = function(j){
     #   if (i != j){ V_a = markerCov(focal_marker, markerMatrix[j,]) * outer(a_effects[,i], a_effects[,j])
@@ -62,6 +66,27 @@ simulateVg = function(a_effects, d_effects, markerMatrix){
   }
   Reduce("+", llply(1:dim(markerMatrix)[1], singleMakerSimulation, .parallel = TRUE))
 }
+
 simulateVg(effect_matrix_additive, effect_matrix_dominance, significantMarkerMatrix)
+G
 sim_Vg = rlply(100, simulateVg(effect_matrix_additive, effect_matrix_dominance, significantMarkerMatrix))
-hist(RandomSkewers(sim_Vg, G)[,1])
+
+Comparisons = data.frame(Krzanowski = KrzCor(sim_Vg, G),
+           RandomSkewers = RandomSkewers(sim_Vg, G)[,1]) %>%  gather() 
+  
+ggplot(Comparisons, aes(value, group = key, fill = key)) + geom_density(alpha = 0.5) + 
+  scale_x_continuous(limits = c(0.7, 1.0)) + 
+  geom_vline(xintercept = RandomSkewers(Vg_mean, G)[1], color = "seagreen") + 
+  geom_vline(xintercept = KrzCor(Vg_mean, G), color = "red") + 
+  labs(x = "Matrix similarity with Full-Sib Family G Matrix", y = "Density") + 
+  annotate("text", x = 0.955, y = 22, label = "Comparison with observed\n allele frequencies")
+
+ggplot(ldply(sim_Vg, CalcInt), aes(V1)) + geom_density(fill = "blue", alpha = 0.5) + 
+  geom_vline(xintercept = CalcInt(Vg_mean), color = "red")
+
+CalcInt(G)
+CalcInt(Vg_mean)
+corrG = cov2cor(G)
+corrVg = cov2cor(Vg_mean)
+plot(lt(G, FALSE) ~ lt(Vg_mean, FALSE))
+abline(0, 1)
