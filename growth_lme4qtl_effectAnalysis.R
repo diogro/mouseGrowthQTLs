@@ -16,9 +16,10 @@ markerCov = function(marker1, marker2){
 makeMarkerList = function(pos) paste('chrom', pos[1],"_", 'A', pos[2], sep = '')
 lt = function(x, diag = TRUE) x[lower.tri(x, diag = diag)]
 CalcInt = function(x) sd(eigen(cov2cor(x))$values)/(nrow(x) - 1)
+markerMatrix = ldply(1:19, function(x) data.frame(chrom = x, marker = 1:loci_per_chrom[[x]]))
 
 install_load("doMC", "lme4qtl", "qvalue")
-registerDoMC(15)
+registerDoMC(6)
 
 growth_data = inner_join(growth_phen_std,
                         growth_markers,
@@ -82,7 +83,6 @@ mean_d = colMeans(d_effect_matrix[,growth_traits])
 vectorCor(mean_a, d_z)
 vectorCor(mean_d, d_z)
 
-markerMatrix
 calcVa = function(i, a_effects, d_effects, markerMatrix){
   trait_sd = sapply(growth_phen[,growth_traits], sd)
   a_effects = a_effects * trait_sd
@@ -136,11 +136,12 @@ w_dm = rstan::extract(stan_model_SUR, pars = "w_dm")[[1]]
 effect_matrix_dominance = aaply(w_dm, c(2, 3), mean)
 save(w_ad, w_dm, effect_matrix_additive, effect_matrix_dominance, file = "Rdatas/growth_add_dom_effectsMatrix.Rdata")
   
+significantMarkerMatrix = read_csv("./data/growth_significant_markers.csv")
 calcVa(1, effect_matrix_additive, effect_matrix_dominance, significantMarkerMatrix)
 
-Va = laply(seq_along(1:400), function(i) colSums(laply(seq_along(significantMarkerList), calcVa, w_ad[i,,], w_dm[i,,], significantMarkerMatrix)), .parallel = TRUE)
+Va = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix), calcVa, w_ad[i,,], w_dm[i,,], significantMarkerMatrix)), .parallel = TRUE)
 
-Vd = laply(seq_along(1:400), function(i) colSums(laply(seq_along(significantMarkerList), calcVd, w_dm[i,,], significantMarkerMatrix)), .parallel = TRUE)
+Vd = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix), calcVd, w_dm[i,,], significantMarkerMatrix)), .parallel = TRUE)
 
 Va_mean = aaply(Va, c(2, 3), mean)
 Va_upper = aaply(Va, c(2, 3), quantile, 0.975)
@@ -160,9 +161,9 @@ Vg_mean  = aaply(Vg, c(2, 3), mean)
 Vg_lower = aaply(Vg, c(2, 3), quantile, 0.025)
 Vg_upper = aaply(Vg, c(2, 3), quantile, 0.975)
 
-old.par = par()
 
 png("./data/growth_family_Vg_FullSibG_correlation.png", width = 1500, height = 800)
+old.par = par()
 par(mfrow = c(1, 2), cex=2)
 corrplot.mixed(cov2cor(G), upper = "ellipse", main = "\n\n\nFull-Sib G-matrix Correlation")
 corrplot.mixed(cov2cor(Vg_mean), upper = "ellipse", main = "\n\n\nVa/2 + Vd/4 Correlation")
@@ -194,7 +195,13 @@ w_ad_HC = rstan::extract(full_HCp, pars = "w_ad")[[1]]
 w_dm_HC = rstan::extract(full_HCp, pars = "w_dm")[[1]]
 effect_matrix_ad_HC = aaply(w_ad_HC, c(2, 3), mean)
 effect_matrix_dm_HC = aaply(w_dm_HC, c(2, 3), mean)
-Va_HC = colSums(laply(seq_along(significantMarkerList), calcVa, effect_matrix_ad_HC, effect_matrix_dm_HC, markerMatrix))
+markerMatrix = ldply(1:19, function(x) data.frame(chrom = x, marker = 1:loci_per_chrom[[x]]))
+Va_HC = colSums(laply(1:353, calcVa, effect_matrix_ad_HC, effect_matrix_dm_HC, markerMatrix))
+old.par = par()
+par(mfrow = c(1, 2), cex=2)
+corrplot.mixed(cov2cor(G), upper = "ellipse", main = "\n\n\nFull-Sib G-matrix Correlation")
+corrplot.mixed(cov2cor(Va_HC), upper = "ellipse", main = "\n\n\nVa_HC")
+par(old.par)
 
 library(viridis)
 
@@ -208,25 +215,14 @@ corrs = data.frame(beta = apply(a_effect_matrix[,growth_traits], 1, vectorCor, b
                      dz = abs(apply(a_effect_matrix[,growth_traits], 1, vectorCor, d_z)),
                    norm = apply(a_effect_matrix[,growth_traits], 1, Norm))
 ggplot(crss, aes(class, value, fill = class)) + geom_violin()
-ggplot(corrs, aes(norm, beta)) + geom_point() + geom_smooth(method = "lm", color = "black", se = FALSE)
-ggplot(corrs, aes(dz, norm)) + geom_point() + geom_smooth(method = "lm", color = "black", se = FALSE)
+ggplot(corrs, aes(norm, beta)) + geom_point() + geom_smooth(method = "lm", color = "black")
+ggplot(corrs, aes(norm, dz)) + geom_point() + geom_smooth(method = "lm", color = "black")
 
 lm(beta~norm, data = corrs) %>% summary
 lm(norm~dz, data = corrs) %>% summary
 
 growth_m = as.numeric(ddply(growth_phen, .(SEX), numcolwise(mean))[2,growth_traits])
 growth_f = as.numeric(ddply(growth_phen, .(SEX), numcolwise(mean))[1,growth_traits])
-
-growth_prediction = reshape2::melt(data.frame(trait = as.factor(growth_traits), 
-                                              SM_SUR = SM_e,
-                                              SM_HC = SM_e_HC,
-                                              SM_Observed = SM,
-                                              LG_SUR = LG_e,
-                                              LG_HC = LG_e_HC,
-                                              F3_Observed = F3,
-                                              LG_Observed = LG)) %>% separate(variable, c("Line", "Type"))
-growth_pred_plot = ggplot(growth_prediction, aes(trait, value, group = interaction(Type, Line), color = Line, linetype = Type)) + geom_line(size = 1) + scale_x_discrete(labels = paste("Week", 1:7)) + labs(y = "Weekly growth (g)", x = "Start week")
-
 
 posterior_predict = function(beta_ad){
     SM_e = rowSums(-1 * beta_ad) * sapply(growth_phen[,growth_traits], sd) + 
@@ -269,6 +265,3 @@ growth_prediction = reshape2::melt(data.frame(trait = as.factor(growth_traits),
                                               LG_Observed = LG)) %>% separate(variable, c("Line", "Type"))
 growth_pred_plot_HC_full = ggplot() + scale_x_discrete(labels = paste("Week", 1:7)) + labs(y = "Weekly growth (g)", x = "Start week") + geom_line(data = post, color = "gray", size = 0.5, linetype = 1, alpha = 0.1, aes(trait, value, group = interaction(Type, Line, iterations))) + geom_line(size = 1, data = growth_prediction, aes(trait, value, group = interaction(Type, Line), color = Line, linetype = Type))
 plot_grid(growth_pred_plot_SUR, growth_pred_plot_HC_full)
-
-effect_matrix[,1]
-Reduce("+", alply(effect_matrix, 2, function(x) outer(x, x)))
