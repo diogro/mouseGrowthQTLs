@@ -14,10 +14,12 @@ markerCov = function(marker1, marker2){
   cov(marker1_col, marker2_col)[1]
 }
 makeMarkerList = function(pos) paste('chrom', pos[1],"_", 'A', pos[2], sep = '')
-lt = function(x) x[lower.tri(x, diag = TRUE)]
+lt = function(x, diag = TRUE) x[lower.tri(x, diag = diag)]
+CalcInt = function(x) sd(eigen(cov2cor(x))$values)/(nrow(x) - 1)
+markerMatrix = ldply(1:19, function(x) data.frame(chrom = x, marker = 1:loci_per_chrom[[x]]))
 
 install_load("doMC", "lme4qtl", "qvalue")
-registerDoMC(15)
+registerDoMC(6)
 
 growth_data = inner_join(growth_phen_std,
                          growth_markers,
@@ -26,7 +28,7 @@ growth_data = inner_join(growth_phen_std,
 growth_data = mutate(growth_data, FAMILY = as.factor(FAMILY), variable = as.factor(variable))
 
 load(file = "./Rdatas/significant_stan_fit.Rdata")
-load(file = "Rdatas/growth_add_dom_effectsMatrix.Rdata")
+load(file = "./Rdatas/growth_add_dom_effectsMatrix.Rdata")
 significantMarkerMatrix = read_csv("./data/growth_significant_markers.csv")
 
 simulateVg = function(a_effects, d_effects, markerMatrix){
@@ -74,19 +76,22 @@ sim_Vg = rlply(100, simulateVg(effect_matrix_additive, effect_matrix_dominance, 
 Comparisons = data.frame(Krzanowski = KrzCor(sim_Vg, G),
            RandomSkewers = RandomSkewers(sim_Vg, G)[,1]) %>%  gather() 
   
-ggplot(Comparisons, aes(value, group = key, fill = key)) + geom_density(alpha = 0.5) + 
+simulated_comparisons = ggplot(Comparisons, aes(value, group = key, fill = key)) + geom_density(alpha = 0.5) + 
   scale_x_continuous(limits = c(0.7, 1.0)) + 
   geom_vline(xintercept = RandomSkewers(Vg_mean, G)[1], color = "seagreen") + 
   geom_vline(xintercept = KrzCor(Vg_mean, G), color = "red") + 
   labs(x = "Matrix similarity with Full-Sib Family G Matrix", y = "Density") + 
   annotate("text", x = 0.955, y = 22, label = "Comparison with observed\n allele frequencies")
+save_plot("data/simulated_comparisons.png", simulated_comparisons, base_height = 7, base_aspect_ratio = 2)
 
-ggplot(ldply(sim_Vg, CalcInt), aes(V1)) + geom_density(fill = "blue", alpha = 0.5) + 
-  geom_vline(xintercept = CalcInt(Vg_mean), color = "red")
+simulated_integration = ggplot(ldply(sim_Vg, CalcInt), aes(V1)) + geom_density(fill = "blue", alpha = 0.5) + 
+  geom_vline(xintercept = CalcInt(Vg_mean), color = "blue") + scale_x_continuous(limits = c(0.1, .2))
+save_plot("data/simulated_integration.png", simulated_integration, base_height = 7, base_aspect_ratio = 2)
+
 
 CalcInt(G)
 CalcInt(Vg_mean)
 corrG = cov2cor(G)
 corrVg = cov2cor(Vg_mean)
-plot(lt(G, FALSE) ~ lt(Vg_mean, FALSE))
+plot(lt(corrG, FALSE) ~ lt(corrVg, FALSE))
 abline(0, 1)
