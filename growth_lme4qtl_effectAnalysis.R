@@ -162,16 +162,20 @@ Vg_lower = aaply(Vg, c(2, 3), quantile, 0.025)
 Vg_upper = aaply(Vg, c(2, 3), quantile, 0.975)
 
 
-png("./data/growth_family_Vg_FullSibG_correlation.png", width = 1500, height = 800)
+png("./data/growth_family_Vg_FullSibG_correlation.png", width = 1500, height = 1500)
 old.par = par()
-par(mfrow = c(1, 2), cex=2)
-corrplot.mixed(cov2cor(G), upper = "ellipse", main = "\n\n\nFull-Sib G-matrix Correlation")
-corrplot.mixed(cov2cor(Vg_mean), upper = "ellipse", main = "\n\n\nVa/2 + Vd/4 Correlation")
+par(mfrow = c(2, 2), cex=2, oma = c(0, 0, 0, 0))
+corrplot.mixed(cov2cor(G),       upper = "ellipse", mar = c(0, 0, 1, 0), main = "Family Full-Sib G")
+corrplot.mixed(cov2cor(Vg_mean), upper = "ellipse", mar = c(0, 0, 1, 0), main = "Va/2 + Vd/4")
+corrplot.mixed(cov2cor(Va_mean), upper = "ellipse", mar = c(0, 0, 1, 0), main = "Va")
+corrplot.mixed(cov2cor(Vd_mean), upper = "ellipse", mar = c(0, 0, 1, 0), main = "Vd")
 dev.off()
 par(old.par)
-write.csv(MatrixCompare(Vd_mean, G), file = "./data/Vd_FamilyG_comparison.csv")
-write.csv(MatrixCompare(Va_mean, G), file = "./data/Va_FamilyG_comparison.csv")
-write.csv(MatrixCompare(Vg_mean, G), file = "./data/Vg_FamilyG_comparison.csv")
+
+write.csv(MatrixCompare(Vd_mean, G), file = "./data/TalkStuff/Vd_FamilyG_comparison.csv")
+write.csv(MatrixCompare(Va_mean, G), file = "./data/TalkStuff/Va_FamilyG_comparison.csv")
+write.csv(MatrixCompare(Vg_mean, G), file = "./data/TalkStuff/Vg_FamilyG_comparison.csv")
+write.csv(MatrixCompare(Vg_mean, Vd_mean), file = "./data/TalkStuff/Va_Vd_comparison.csv")
 
 data.frame(Vg = diag(Vg_mean), G = diag(G)) %>% gather %>%
   ggplot(aes(c(1:7, 1:7), value, group = key, color = key)) + geom_point() + geom_line()
@@ -209,17 +213,28 @@ vectorCor(d_z, beta)
 random_vec = matrix(rnorm(7*1000), 1000, 7)
 quantile(abs(apply(random_vec, 1, vectorCor, rep(1, 7))), 0.95)
 crss = data.frame(beta = apply(a_effect_matrix[,growth_traits], 1, vectorCor, beta),
-                    dz = abs(apply(a_effect_matrix[,growth_traits], 1, vectorCor, d_z))) %>% gather(class, value, beta:dz)
+                    dz = apply(a_effect_matrix[,growth_traits], 1, vectorCor,  d_z)) %>% gather(class, value, beta:dz)
 
-corrs = data.frame(beta = apply(a_effect_matrix[,growth_traits], 1, vectorCor, beta),
+a_corrs = data.frame(beta = abs(apply(a_effect_matrix[,growth_traits], 1, vectorCor, beta)),
                      dz = abs(apply(a_effect_matrix[,growth_traits], 1, vectorCor, d_z)),
                    norm = apply(a_effect_matrix[,growth_traits], 1, Norm))
+d_corrs = data.frame(beta = abs(apply(d_effect_matrix[,growth_traits], 1, vectorCor, beta)),
+                   dz = abs(apply(d_effect_matrix[,growth_traits], 1, vectorCor, d_z)),
+                   norm = apply(d_effect_matrix[,growth_traits], 1, Norm))
 ggplot(crss, aes(class, value, fill = class)) + geom_violin()
-ggplot(corrs, aes(norm, beta)) + geom_point() + geom_smooth(method = "lm", color = "black")
-ggplot(corrs, aes(norm, dz)) + geom_point() + geom_smooth(method = "lm", color = "black")
+additive_beta = ggplot(a_corrs, aes(norm, beta)) + geom_point() + geom_smooth(method = "lm", color = "black") + 
+  labs(x = "Additive effect vector norm", y = expression(paste("Alligment with ", beta)))
+dominance_beta = ggplot(d_corrs, aes(norm, beta)) + geom_point() + geom_smooth(method = "lm", color = "black") + 
+  labs(x = "Dominance effect vector norm", y = expression(paste("Alligment with ", beta)))
+additive_dz = ggplot(a_corrs, aes(norm, dz)) + geom_point() + geom_smooth(method = "lm", color = "black") + 
+  labs(x = "Additive effect vector norm", y = expression("Alligment with divergence"))
+dominance_dz = ggplot(d_corrs, aes(norm, dz)) + geom_point() + geom_smooth(method = "lm", color = "black") + 
+  labs(x = "Dominance effect vector norm", y = expression("Alligment with divergence"))
+regressions = plot_grid(additive_beta, dominance_beta, additive_dz, dominance_dz)
+save_plot("data/growth_effect_aligment_regressions.png", regressions, base_height = 5, base_aspect_ratio = 2, ncol = 2, nrow = 2)
 
-lm(beta~norm, data = corrs) %>% summary
-lm(norm~dz, data = corrs) %>% summary
+lm(beta~norm, data = a_corrs) %>% summary
+lm(norm~dz, data = a_corrs) %>% summary
 
 growth_m = as.numeric(ddply(growth_phen, .(SEX), numcolwise(mean))[2,growth_traits])
 growth_f = as.numeric(ddply(growth_phen, .(SEX), numcolwise(mean))[1,growth_traits])
@@ -264,4 +279,6 @@ growth_prediction = reshape2::melt(data.frame(trait = as.factor(growth_traits),
                                               F3_Observed = F3,
                                               LG_Observed = LG)) %>% separate(variable, c("Line", "Type"))
 growth_pred_plot_HC_full = ggplot() + scale_x_discrete(labels = paste("Week", 1:7)) + labs(y = "Weekly growth (g)", x = "Start week") + geom_line(data = post, color = "gray", size = 0.5, linetype = 1, alpha = 0.1, aes(trait, value, group = interaction(Type, Line, iterations))) + geom_line(size = 1, data = growth_prediction, aes(trait, value, group = interaction(Type, Line), color = Line, linetype = Type))
+save_plot("data/growth_multiple_regression_ancestral_prediction_full_genome.png", growth_pred_plot_HC_full, base_height = 7, base_aspect_ratio = 2)
+
 plot_grid(growth_pred_plot_SUR, growth_pred_plot_HC_full)
