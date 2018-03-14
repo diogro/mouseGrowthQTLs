@@ -20,14 +20,18 @@ w_dm = colMeans(rstan::extract(full_HCp, "w_dm")[[1]])
 w0m = matrix(w0, length(stan_input$family), 7, byrow = TRUE)
 
 growth_sds = apply(growth_phen[,growth_traits], 2, sd)
-G_HCp = cov(beta_family[stan_input$family,] + stan_input$ad %*% t(w_ad) + stan_input$dm %*% t(w_dm)) * outer(growth_sds, growth_sds)
+G_Fam_HCp = cov(beta_family[stan_input$family,] + stan_input$ad %*% t(w_ad) + stan_input$dm %*% t(w_dm)) * outer(growth_sds, growth_sds)
+G_HCp = cov(stan_input$ad %*% t(w_ad) + stan_input$dm %*% t(w_dm)) * outer(growth_sds, growth_sds)
+dimnames(G) = NULL
 dimnames(G_HCp) = NULL
+dimnames(G_Fam_HCp) = NULL
 
 old.par = par()
-png("./data/growth_genomePrediction_fullSib_Gcorrelation.png", width = 1500, height = 800)
-par(mfrow = c(1, 2), cex=2, oma = c(0, 0, 0, 0))
+png("./data/growth_genomePrediction_fullSib_Gcorrelation.png", width = 2100, height = 700)
+par(mfrow = c(1, 3), cex=2, oma = c(0, 0, 0, 0))
 corrplot.mixed(cov2cor(G),       upper = "ellipse", mar = c(0, 0, 1, 0), main = "Family Full-Sib G")
-corrplot.mixed(cov2cor(G_HCp), upper = "ellipse", mar = c(0, 0, 1, 0), main = "Genome prediction")
+corrplot.mixed(cov2cor(G_Fam_HCp ), upper = "ellipse", mar = c(0, 0, 1, 0), main = "Genome prediction + Fam BLUPS")
+corrplot.mixed(cov2cor(G_HCp), upper = "ellipse", mar = c(0, 0, 1, 0), main = "Genome prediction (Only Markers)")
 par(old.par)
 dev.off()
 
