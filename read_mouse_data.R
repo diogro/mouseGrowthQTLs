@@ -1,6 +1,6 @@
 if(!require(install.load)) {install.packages("install.load"); library(install.load)}
 library(rstan)
-install_load("plyr", "dplyr", "tidyr", "readr", "lme4", "ggplot2", "cowplot")
+install_load("plyr", "dplyr", "tidyr", "readr", "lme4", "ggplot2", "cowplot", "corrplot", "purrr", "evolqg")
 
 ## Meta data
 

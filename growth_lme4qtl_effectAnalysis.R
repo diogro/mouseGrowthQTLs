@@ -1,6 +1,3 @@
-if(!require(purrr)){install.packages("purrr"); library(purrr)}
-if(!require(corrplot)){install.packages("corrplot"); library(corrplot)}
-
 setwd("/home/diogro/projects/mouse-qtls")
 source('read_mouse_data.R')
 
@@ -17,9 +14,10 @@ makeMarkerList = function(pos) paste('chrom', pos[1],"_", 'A', pos[2], sep = '')
 lt = function(x, diag = TRUE) x[lower.tri(x, diag = diag)]
 CalcInt = function(x) sd(eigen(cov2cor(x))$values)/(nrow(x) - 1)
 markerMatrix = ldply(1:19, function(x) data.frame(chrom = x, marker = 1:loci_per_chrom[[x]]))
+significantMarkerMatrix = read_csv("./data/growth_significant_markers.csv")
 
 install_load("doMC", "lme4qtl", "qvalue")
-registerDoMC(6)
+registerDoMC(8)
 
 growth_data = inner_join(growth_phen_std,
                         growth_markers,
@@ -66,7 +64,6 @@ SM = c(3.31 ,2.98,3.82,2.175,0.765,1.165,0.51)
 F3 = sapply(growth_phen[,growth_traits], mean)
 
 d_z = LG - SM
-library(evolqg)
 load("./Rdatas/growth_CovMatrices.Rdata")
 growth_sds = apply(growth_phen[,growth_traits], 2, sd)
 G = G_stan #* outer(growth_sds, growth_sds)
@@ -82,6 +79,8 @@ mean_a = colMeans(a_effect_matrix[,growth_traits])
 mean_d = colMeans(d_effect_matrix[,growth_traits])
 vectorCor(mean_a, d_z)
 vectorCor(mean_d, d_z)
+vectorCor(mean_a, beta)
+vectorCor(mean_d, beta)
 
 calcVa = function(i, a_effects, d_effects, markerMatrix){
   trait_sd = sapply(growth_phen[,growth_traits], sd)
@@ -135,9 +134,6 @@ effect_matrix_additive = aaply(w_ad, c(2, 3), mean)
 w_dm = rstan::extract(stan_model_SUR, pars = "w_dm")[[1]]
 effect_matrix_dominance = aaply(w_dm, c(2, 3), mean)
 save(w_ad, w_dm, effect_matrix_additive, effect_matrix_dominance, file = "Rdatas/growth_add_dom_effectsMatrix.Rdata")
-  
-significantMarkerMatrix = read_csv("./data/growth_significant_markers.csv")
-calcVa(1, effect_matrix_additive, effect_matrix_dominance, significantMarkerMatrix)
 
 Va = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix), calcVa, w_ad[i,,], w_dm[i,,], significantMarkerMatrix)), .parallel = TRUE)
 
@@ -161,6 +157,15 @@ Vg_mean  = aaply(Vg, c(2, 3), mean)
 Vg_lower = aaply(Vg, c(2, 3), quantile, 0.025)
 Vg_upper = aaply(Vg, c(2, 3), quantile, 0.975)
 
+matrices <- list(FullSib = G_stan,
+                 "Va QTL" = Va_mean,
+                 "Vd QTL" = Vd_mean,
+                 "1/2 Va + 1/4 Vd" = Vg_mean,
+                 "FullSib cross-foster" = G_cf,
+                 "FullSib non-cross-foster" = G_ncf,
+                 "beta" = beta,
+                 "delta Z" = d_z)
+PrintMatrix(matrices)
 
 png("./data/growth_family_Vg_FullSibG_correlation.png", width = 1500, height = 1500)
 old.par = par()
@@ -215,20 +220,24 @@ quantile(abs(apply(random_vec, 1, vectorCor, rep(1, 7))), 0.95)
 crss = data.frame(beta = apply(a_effect_matrix[,growth_traits], 1, vectorCor, beta),
                     dz = apply(a_effect_matrix[,growth_traits], 1, vectorCor,  d_z)) %>% gather(class, value, beta:dz)
 
-a_corrs = data.frame(beta = abs(apply(a_effect_matrix[,growth_traits], 1, vectorCor, beta)),
-                     dz = abs(apply(a_effect_matrix[,growth_traits], 1, vectorCor, d_z)),
-                   norm = apply(a_effect_matrix[,growth_traits], 1, Norm))
-d_corrs = data.frame(beta = abs(apply(d_effect_matrix[,growth_traits], 1, vectorCor, beta)),
-                   dz = abs(apply(d_effect_matrix[,growth_traits], 1, vectorCor, d_z)),
-                   norm = apply(d_effect_matrix[,growth_traits], 1, Norm))
+a_corrs = data.frame(marker = 1:35, 
+                     betaCorr = abs(apply(a_effect_matrix[,growth_traits], 1, vectorCor, beta)),
+                     dzCorr = abs(apply(a_effect_matrix[,growth_traits], 1, vectorCor, d_z)),
+                     norm = apply(a_effect_matrix[,growth_traits], 1, Norm))
+d_corrs = data.frame(marker = 1:35,
+                     betaCorr = abs(apply(d_effect_matrix[,growth_traits], 1, vectorCor, beta)),
+                     dzCorr = abs(apply(d_effect_matrix[,growth_traits], 1, vectorCor, d_z)),
+                     norm = apply(d_effect_matrix[,growth_traits], 1, Norm))
+write.csv(a_corrs, "./data/growth_additive_correlations_beta_dZ.csv")
+write.csv(d_corrs, "./data/growth_dominance_correlations_beta_dZ.csv")
 ggplot(crss, aes(class, value, fill = class)) + geom_violin()
-additive_beta = ggplot(a_corrs, aes(norm, beta)) + geom_point() + geom_smooth(method = "lm", color = "black") + 
+additive_beta = ggplot(a_corrs, aes(norm, betaCorr)) + geom_point() + geom_smooth(method = "lm", color = "black") + 
   labs(x = "Additive effect vector norm", y = expression(paste("Alligment with ", beta)))
-dominance_beta = ggplot(d_corrs, aes(norm, beta)) + geom_point() + geom_smooth(method = "lm", color = "black") + 
+dominance_beta = ggplot(d_corrs, aes(norm, betaCorr)) + geom_point() + geom_smooth(method = "lm", color = "black") + 
   labs(x = "Dominance effect vector norm", y = expression(paste("Alligment with ", beta)))
-additive_dz = ggplot(a_corrs, aes(norm, dz)) + geom_point() + geom_smooth(method = "lm", color = "black") + 
+additive_dz = ggplot(a_corrs, aes(norm, dzCorr)) + geom_point() + geom_smooth(method = "lm", color = "black") + 
   labs(x = "Additive effect vector norm", y = expression("Alligment with divergence"))
-dominance_dz = ggplot(d_corrs, aes(norm, dz)) + geom_point() + geom_smooth(method = "lm", color = "black") + 
+dominance_dz = ggplot(d_corrs, aes(norm, dzCorr)) + geom_point() + geom_smooth(method = "lm", color = "black") + 
   labs(x = "Dominance effect vector norm", y = expression("Alligment with divergence"))
 regressions = plot_grid(additive_beta, dominance_beta, additive_dz, dominance_dz)
 save_plot("data/growth_effect_aligment_regressions.png", regressions, base_height = 5, base_aspect_ratio = 2, ncol = 2, nrow = 2)
@@ -265,6 +274,26 @@ growth_prediction = reshape2::melt(data.frame(trait = as.factor(growth_traits),
 growth_pred_plot_SUR = ggplot() + scale_x_discrete(labels = paste("Week", 1:7)) + labs(y = "Weekly growth (g)", x = "Start week") + geom_line(data = post, color = "gray", size = 0.5, linetype = 1, alpha = 0.1, aes(trait, value, group = interaction(Type, Line, iterations))) + geom_line(size = 1, data = growth_prediction, aes(trait, value, group = interaction(Type, Line), color = Line, linetype = Type))
 save_plot("data/growth_multiple_regression_ancestral_prediction.png", growth_pred_plot_SUR, base_height = 7, base_aspect_ratio = 2)
 
+growth_observed_plot = ggplot() + scale_x_discrete(labels = paste("Week", 1:7)) + labs(y = "Weekly growth (g)", x = "Start week") + geom_line(size = 1, data = filter(growth_prediction, Type == "Observed"), aes(trait, value, group = Line, color = Line))
+save_plot("data/growth_LG_SM_F3.png", growth_observed_plot, base_height = 7, base_aspect_ratio = 2)
+
+growth_observed_parentals_plot = ggplot() + scale_x_discrete(labels = paste("Week", 1:7)) + labs(y = "Weekly growth (g)", x = "Start week") + geom_line(size = 1, data = filter(growth_prediction, Type == "Observed", Line != "F3"), aes(trait, value, group = Line, color = Line)) + scale_color_manual(values=c("#00BA38", "#619CFF")) 
+save_plot("data/growth_LG_SM.png", growth_observed_parentals_plot, base_height = 7, base_aspect_ratio = 2)
+
+growth_observed_parentals_Dz_plot = ggplot() + scale_x_discrete(labels = paste("Week", 1:7)) + labs(y = "Weekly growth (g)", x = "Start week") + geom_line(size = 1, data = filter(growth_prediction, Type == "Observed", Line != "F3"), aes(trait, value, group = Line, color = Line)) + scale_color_manual(values=c("#00BA38", "#619CFF")) + 
+  annotate("segment", x = 1:7, xend = 1:7, y = SM, yend = LG) + 
+  annotate("text", x = 3.5, y = 6, label = "Phenotypic\ndivergence")
+save_plot("data/growth_LG_SM_DZ1.png", growth_observed_parentals_Dz_plot, base_height = 7, base_aspect_ratio = 2)
+
+growth_observed_parentals_Dz2_plot = ggplot() + scale_x_discrete(labels = paste("Week", 1:7)) + labs(y = "Weekly growth (g)", x = "Start week") + geom_line(size = 1, data = filter(growth_prediction, Type == "Observed", Line != "F3"), aes(trait, value, group = Line, color = Line)) + scale_color_manual(values=c("#00BA38", "#619CFF")) +
+  geom_line(data = data.frame(trait = as.factor(growth_traits), dz = d_z), aes(trait, dz, group = 1)) +
+  annotate("text", x = 3.5, y = 5.5, label = "Phenotypic\ndivergence")
+save_plot("data/growth_LG_SM_DZ2.png", growth_observed_parentals_Dz2_plot, base_height = 7, base_aspect_ratio = 2)
+
+library(scales)
+show_col(hue_pal()(3))
+
+
 w_ad = rstan::extract(full_HCp, pars = "w_ad")[[1]]
 effect_matrix = aaply(w_ad, c(2, 3), mean)
 SM_e = rowSums(-1 * as.matrix(effect_matrix)) * sapply(growth_phen[,growth_traits], sd) + 
@@ -273,9 +302,9 @@ LG_e = rowSums(as.matrix(effect_matrix)) * sapply(growth_phen[,growth_traits], s
     sapply(growth_phen[,growth_traits], mean)
 post = adply(w_ad, 1, posterior_predict)
 growth_prediction = reshape2::melt(data.frame(trait = as.factor(growth_traits), 
-                                              SM_stan = SM_e,
+                                              SM_GenPred = SM_e,
                                               SM_Observed = SM,
-                                              LG_stan = LG_e,
+                                              LG_GenPred = LG_e,
                                               F3_Observed = F3,
                                               LG_Observed = LG)) %>% separate(variable, c("Line", "Type"))
 growth_pred_plot_HC_full = ggplot() + scale_x_discrete(labels = paste("Week", 1:7)) + labs(y = "Weekly growth (g)", x = "Start week") + geom_line(data = post, color = "gray", size = 0.5, linetype = 1, alpha = 0.1, aes(trait, value, group = interaction(Type, Line, iterations))) + geom_line(size = 1, data = growth_prediction, aes(trait, value, group = interaction(Type, Line), color = Line, linetype = Type))
