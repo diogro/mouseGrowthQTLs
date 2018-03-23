@@ -1,6 +1,8 @@
 setwd("/home/diogro/projects/mouse-qtls")
 source('read_mouse_data.R')
 
+if(!require(viridis)){install.packages("viridis"); library(viridis)}
+
 #Rdatas_folder = "~/gdrive/LGSM_project_Rdatas/"
 Rdatas_folder = "./Rdatas/"
 
@@ -135,6 +137,48 @@ w_dm = rstan::extract(stan_model_SUR, pars = "w_dm")[[1]]
 effect_matrix_dominance = aaply(w_dm, c(2, 3), mean)
 save(w_ad, w_dm, effect_matrix_additive, effect_matrix_dominance, file = "Rdatas/growth_add_dom_effectsMatrix.Rdata")
 
+a_effect_matrix %>% gather(variable, value, growth_traits) %>%
+  ggplot(aes(variable, value, group = id)) + geom_line()
+
+shannon = function(x) -sum(x*log(x))
+
+pleiotropic_partition = a_effect_matrix %>% 
+  mutate(norm = daply(., .(id), function(x) (Norm(x[growth_traits])))) %>%
+  mutate(part = daply(., .(id), function(x) shannon(Normalize(x[growth_traits])^2))) %>%
+  arrange(part)
+pleiotropic_partition[growth_traits] = pleiotropic_partition[growth_traits]^2
+pleiotropic_partition$id = factor(pleiotropic_partition$id, levels = pleiotropic_partition$id)
+my_factor <- 0.17/shannon(Normalize(rep(1, 7))^2)
+pleiotropic_partition_plot =  
+  ggplot() + 
+  geom_bar(data = gather(pleiotropic_partition, key, value, growth_traits), aes(id, value, group = key, color = key, fill = key), stat = "identity") +
+  geom_line(data = pleiotropic_partition,
+            # Apply the factor on values appearing on second OY axis (multiplication)
+            aes(x = id, y = part * my_factor, group = 1), 
+            colour = "black") +
+  scale_y_continuous(limits = c(0, 0.17), sec.axis = sec_axis(trans = ~ . / my_factor, name = "Effect distribution\nentropy")) +
+  scale_fill_viridis_d() + scale_color_viridis_d() + theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Marker", y = "Squared contribution to scaled vector")
+save_plot("data/growth_pleiotropic_partition_additive.png", pleiotropic_partition_plot, base_height = 7, base_aspect_ratio = 2) 
+
+pleiotropic_partition = d_effect_matrix %>% 
+  mutate(norm = daply(., .(id), function(x) (Norm(x[growth_traits])))) %>%
+  mutate(part = daply(., .(id), function(x) shannon(Normalize(x[growth_traits])^2))) %>%
+  arrange(part)
+pleiotropic_partition[growth_traits] = pleiotropic_partition[growth_traits]^2
+pleiotropic_partition$id = factor(pleiotropic_partition$id, levels = pleiotropic_partition$id)
+pleiotropic_partition_plot =  
+  ggplot() + 
+  geom_bar(data = gather(pleiotropic_partition, key, value, growth_traits), aes(id, value, group = key, color = key, fill = key), stat = "identity") +
+  geom_line(data = pleiotropic_partition,
+            # Apply the factor on values appearing on second OY axis (multiplication)
+            aes(x = id, y = part * my_factor, group = 1), 
+            colour = "black") +
+  scale_y_continuous(limits = c(0, 0.17), sec.axis = sec_axis(trans = ~ . / my_factor, name = "Effect distribution\nentropy")) +
+  scale_fill_viridis_d() + scale_color_viridis_d() + theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Marker", y = "Squared contribution to scaled vector")
+save_plot("data/growth_pleiotropic_partition_dominance.png", pleiotropic_partition_plot, base_height = 7, base_aspect_ratio = 2) 
+
 Va = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix), calcVa, w_ad[i,,], w_dm[i,,], significantMarkerMatrix)), .parallel = TRUE)
 
 Vd = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix), calcVd, w_dm[i,,], significantMarkerMatrix)), .parallel = TRUE)
@@ -193,7 +237,7 @@ segments(x0 = lt(Vg_lower), y0 = lt(G), x1 = lt(Vg_upper), y1 = lt(G))
 segments(x0 = lt(Vg_mean), y0 = lt(G_lower), x1 = lt(Vg_mean), y1 = lt(G_upper))
 points(diag(G)~diag(Vg_mean), col = "tomato3", pch = 19)
 abline(lm(lt(G)~lt(Vg_mean)))
-abline(0, 1, col = "blue")
+abline(0, 1, col = "blue")7
 text(0.15, 0.12, "Identity", col = "blue")
 text(0.11, 0.35, "Variances", col = "tomato3")
 text(0.05, -0.05, "Co-variances")

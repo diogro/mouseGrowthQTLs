@@ -37,19 +37,51 @@ R_stan = colMeans(rstan::extract(stan_MM, pars = c("R"))[[1]]) * outer(growth_ph
 load(file = "./Rdatas/growth_CovMatrices.Rdata")
 P = cov(growth_phen_std[growth_traits]) * outer(growth_phen_sd, growth_phen_sd)
 
+growth_phen_xf = growth_phen %>% 
+  filter(xfostpair == "y") %>%
+  mutate(NbyD = paste(Dam, NURSE, sep = "_")) %>%
+  select(ID:NURSE, NbyD, everything())
+formula = paste0("cbind(", paste(growth_traits, collapse = ", "), ")", "~ trait - 1" )
+prior = list(R = list(V = diag(num_growth_traits), n = 0.002),
+             G = list(G1 = list(V = diag(num_growth_traits) * 0.02, n = 0.001),
+                      G2 = list(V = diag(num_growth_traits) * 0.02, n = 0.001)))
+growth_MCMC_null_model = MCMCglmm(as.formula(formula), 
+                                  data = as.data.frame(growth_phen_xf), 
+                                  random = ~us(trait):Dam + us(trait):NURSE,
+                                  rcov = ~us(trait):ID,
+                                  prior = prior,
+                                  nitt = 103000, burnin = 3000, thin = 100,
+                                  family = rep("gaussian", length(growth_traits)))
+
+
 load(paste0(Rdatas_folder, "growth_MCMC_null_model.Rdata"))
 summary(growth_MCMC_null_model)
 
-G_mcmc = apply(array(growth_MCMC_null_model$VCV[,1:(num_growth_traits*num_growth_traits)], dim = c(1000, num_growth_traits, num_growth_traits)), 2:3, median)
-R_mcmc = apply(array(growth_MCMC_null_model$VCV[,-c(1:(num_growth_traits*num_growth_traits))], dim = c(1000, num_growth_traits, num_growth_traits)), 2:3, median)
+id = colnames(growth_MCMC_null_model$VCV)
+G_dam = apply(array(growth_MCMC_null_model$VCV[,grep("Dam", id)], 
+                     dim = c(1000, num_growth_traits, num_growth_traits)), 2:3, median)
+G_nurse = apply(array(growth_MCMC_null_model$VCV[,grep("NURSE", id)], 
+                     dim = c(1000, num_growth_traits, num_growth_traits)), 2:3, median)
+#G_NbyD = apply(array(growth_MCMC_null_model$VCV[,grep("NbyD", id)], 
+#                      dim = c(1000, num_growth_traits, num_growth_traits)), 2:3, median)
+R_mcmc = apply(array(growth_MCMC_null_model$VCV[,grep("ID", id)], 
+                     dim = c(1000, num_growth_traits, num_growth_traits)), 2:3, median)
 
-P_mcmc = G_mcmc + R_mcmc
+png("./data/growth_fullSib_Dam_Nurse_Gcorrelation.png", width = 2100, height = 700)
+par(mfrow = c(1, 3), cex=2, oma = c(0, 0, 0, 0))
+corrplot.mixed(cov2cor(G_stan), upper = "ellipse", mar = c(0, 0, 1, 0), main = "FullSib")
+corrplot.mixed(cov2cor(G_dam),   upper = "ellipse", mar = c(0, 0, 1, 0), main = "Dam")
+corrplot.mixed(cov2cor(G_nurse), upper = "ellipse", mar = c(0, 0, 1, 0), main = "Nurse")
+dev.off()
+
+P_mcmc = G_dam + G_nurse + R_mcmc
+G_mcmc = G_dam + G_nurse
 
 corrplot.mixed(cov2cor(G_stan), upper = "ellipse")
 
 data.frame(stan = (P_stan)[lower.tri(P, diag = TRUE)],
            MCMC = (P_mcmc)[lower.tri(P, diag = TRUE)],
-           P = P[lower.tri(P, diag = TRUE)]) %>%
+           P = (P)[lower.tri(P, diag = TRUE)]) %>%
 gather(variable, value, stan:MCMC) %>%
 ggplot(aes(P, value, group = variable, color = variable)) + geom_point() + geom_abline()
 
