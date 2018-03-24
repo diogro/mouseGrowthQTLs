@@ -9,7 +9,7 @@ library(MCMCglmm)
 #Rdatas_folder = "~/gdrive/LGSM_project_Rdatas/"
 Rdatas_folder = "./Rdatas/"
 
-options(mc.cores = 8)
+options(mc.cores = 4)
 
 growth_data = growth_phen_std
 getStanInputMM = function(current_data, trait_vector)
@@ -53,11 +53,13 @@ growth_MCMC_null_model = MCMCglmm(as.formula(formula),
                                   nitt = 103000, burnin = 3000, thin = 100,
                                   family = rep("gaussian", length(growth_traits)))
 
-
+load(paste0(Rdatas_folder, "growth_MCMC_DamNurse_model.Rdata"))
 load(paste0(Rdatas_folder, "growth_MCMC_null_model.Rdata"))
 summary(growth_MCMC_null_model)
 
 id = colnames(growth_MCMC_null_model$VCV)
+Gs_dam = array(growth_MCMC_null_model$VCV[,grep("Dam", id)], 
+                    dim = c(1000, num_growth_traits, num_growth_traits))
 G_dam = apply(array(growth_MCMC_null_model$VCV[,grep("Dam", id)], 
                      dim = c(1000, num_growth_traits, num_growth_traits)), 2:3, median)
 G_nurse = apply(array(growth_MCMC_null_model$VCV[,grep("NURSE", id)], 
