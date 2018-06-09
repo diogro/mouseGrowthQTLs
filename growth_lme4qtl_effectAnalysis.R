@@ -69,7 +69,9 @@ d_z = LG - SM
 load("./Rdatas/growth_CovMatrices.Rdata")
 growth_sds = apply(growth_phen[,growth_traits], 2, sd)
 G = G_stan #* outer(growth_sds, growth_sds)
+png("~/G_LGSM", width = 600, height = 600)
 corrplot.mixed(cov2cor(G), upper = "ellipse")
+dev.off()
 plot(eigen(G)$values)
 G_ext4 = ExtendMatrix(G, ret.dim = 4)[[1]]
 G_ext5 = ExtendMatrix(G, ret.dim = 5)[[1]]
