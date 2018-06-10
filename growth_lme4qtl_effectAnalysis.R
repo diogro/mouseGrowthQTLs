@@ -185,8 +185,8 @@ matrices <- list(FullSib = G_stan,
                  "1/2 Va + 1/4 Vd" = Vg_mean,
                  "FullSib cross-foster" = G_cf,
                  "FullSib non-cross-foster" = G_ncf,
-                 "G_dam" = G_dam,
-                 "G_nurse" = G_nurse,
+                 #"G_dam" = G_dam,
+                 #"G_nurse" = G_nurse,
                  "beta" = beta,
                  "delta Z" = d_z)
 PrintMatrix(matrices)
@@ -228,7 +228,7 @@ segments(x0 = lt(Vg_lower), y0 = lt(G), x1 = lt(Vg_upper), y1 = lt(G))
 segments(x0 = lt(Vg_mean), y0 = lt(G_lower), x1 = lt(Vg_mean), y1 = lt(G_upper))
 points(diag(G)~diag(Vg_mean), col = "tomato3", pch = 19)
 abline(lm(lt(G)~lt(Vg_mean)))
-abline(0, 1, col = "blue")7
+abline(0, 1, col = "blue")
 text(0.15, 0.12, "Identity", col = "blue")
 text(0.11, 0.35, "Variances", col = "tomato3")
 text(0.05, -0.05, "Co-variances")
@@ -271,11 +271,11 @@ quantile(abs(apply(random_vec, 1, vectorCor, rep(1, 7))), 0.95)
 crss = data.frame(beta = apply(a_effect_matrix[,growth_traits], 1, vectorCor, beta),
                     dz = apply(a_effect_matrix[,growth_traits], 1, vectorCor,  d_z)) %>% gather(class, value, beta:dz)
 
-a_corrs = data.frame(marker = 1:35, 
+a_corrs = data.frame(marker = 1:32, 
                      betaCorr = abs(apply(a_effect_matrix[,growth_traits], 1, vectorCor, beta)),
                      dzCorr = abs(apply(a_effect_matrix[,growth_traits], 1, vectorCor, d_z)),
                      norm = apply(a_effect_matrix[,growth_traits], 1, Norm))
-d_corrs = data.frame(marker = 1:35,
+d_corrs = data.frame(marker = 1:32,
                      betaCorr = abs(apply(d_effect_matrix[,growth_traits], 1, vectorCor, beta)),
                      dzCorr = abs(apply(d_effect_matrix[,growth_traits], 1, vectorCor, d_z)),
                      norm = apply(d_effect_matrix[,growth_traits], 1, Norm))
@@ -294,7 +294,7 @@ regressions = plot_grid(additive_beta, dominance_beta, additive_dz, dominance_dz
 save_plot("data/growth_effect_aligment_regressions.png", regressions, base_height = 5, base_aspect_ratio = 2, ncol = 2, nrow = 2)
 
 lm(beta~norm, data = a_corrs) %>% summary
-lm(norm~dz, data = a_corrs) %>% summary
+lm(norm~d_z, data = a_corrs) %>% summary
 
 growth_m = as.numeric(ddply(growth_phen, .(SEX), numcolwise(mean))[2,growth_traits])
 growth_f = as.numeric(ddply(growth_phen, .(SEX), numcolwise(mean))[1,growth_traits])

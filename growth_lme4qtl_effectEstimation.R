@@ -1,5 +1,6 @@
 setwd("/home/diogro/projects/mouse-qtls")
 source('read_mouse_data.R')
+options(mc.cores = 8)
 
 #Rdatas_folder = "~/gdrive/LGSM_project_Rdatas/"
 Rdatas_folder = "./Rdatas/"
@@ -25,10 +26,10 @@ significant_marker_term = paste(significantMarkerList, collapse = " + ")
 
 genotype_formula = paste(null_formula, significant_marker_term, sep = ' + ')
 
-significant_markers_model = lmer(as.formula(genotype_formula),
-									   data = growth_data,
-									   REML = FALSE)
-save(significant_markers_model, file = "./Rdatas/significant_lmer_fit.Rdata")
+# significant_markers_model = lmer(as.formula(genotype_formula),
+# 									   data = growth_data,
+# 									   REML = FALSE)
+# save(significant_markers_model, file = "./Rdatas/significant_lmer_fit.Rdata")
 load(file = "./Rdatas/significant_lmer_fit.Rdata")
 
 coef_df = summary(significant_markers_model)$coef[-c(1:7), ]
@@ -84,15 +85,14 @@ param_list = list(K        = K,
 stan_model_SUR_HC = stan(file = "./SUR_horseShoePlus.stan",
                          data = param_list,
                          chain=8, iter = 600, warmup = 500,
-                         control = list(adapt_delta = 0.99))
+                         control = list(adapt_delta = 0.99, max_treedepth = 12))
 save(stan_model_SUR_HC, file = "./Rdatas/significant_stan_HCp_fit.Rdata")
 load(file = "./Rdatas/significant_stan_HCp_fit.Rdata")
 plot(stan_model_SUR_HC, pars = "w_ad")
-
 stan_model_SUR = stan(file = "./SUR.stan",
                          data = param_list,
                          chain=4, iter = 200, warmup = 100,
-                         control = list(adapt_delta = 0.99, max_tree_depth = 12))
+                         control = list(adapt_delta = 0.99, max_treedepth = 12))
 
 save(stan_model_SUR, file = "./Rdatas/significant_stan_fit.Rdata")
 load(file = "./Rdatas/significant_stan_fit.Rdata")
