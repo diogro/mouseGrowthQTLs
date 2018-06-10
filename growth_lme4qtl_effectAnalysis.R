@@ -50,16 +50,28 @@ d_effect_matrix_HC = eHC %>%
   spread(trait, mean) %>%
   filter(class == "dominance") %>% select(-class)
 
-png("data/growth_additive_effects_PCA.png")
-par(mfrow = c(1, 1))
-biplot(prcomp(a_effect_matrix[,growth_traits]))
-dev.off()
-
-eigen(cov(a_effect_matrix[,growth_traits]))
-
-png("data/growth_dominance_effects_PCA.png")
-biplot(prcomp(d_effect_matrix[,growth_traits]))
-dev.off()
+PCbiplot <- function(PC, ids, x="PC1", y="PC2") {
+  # PC being a prcomp object
+  data <- data.frame(obsnames=ids, PC$x)
+  plot <- ggplot(data, aes_string(x=x, y=y)) + geom_text(alpha=.4, size=3, aes(label=obsnames))
+  plot <- plot + geom_hline(yintercept = 0, size=.2) + geom_vline(xintercept = 0, size=.2)
+  datapc <- data.frame(varnames=rownames(PC$rotation), PC$rotation)
+  mult <- min(
+    (max(data[,y]) - min(data[,y])/(max(datapc[,y])-min(datapc[,y]))),
+    (max(data[,x]) - min(data[,x])/(max(datapc[,x])-min(datapc[,x])))
+  )
+  datapc <- transform(datapc,
+                      v1 = .7 * mult * (get(x)),
+                      v2 = .7 * mult * (get(y))
+  )
+  plot <- plot + coord_equal() + geom_text(data=datapc, aes(x=v1, y=v2, label=varnames), size = 5, vjust=1, color="red")
+  plot <- plot + geom_segment(data=datapc, aes(x=0, y=0, xend=v1, yend=v2), arrow=arrow(length=unit(0.2,"cm")), alpha=0.75, color="red")
+  plot
+}
+PC = prcomp(a_effect_matrix[,growth_traits])
+a_biplot = PCbiplot(prcomp(a_effect_matrix[,growth_traits]), ids = a_effect_matrix$id)
+d_biplot = PCbiplot(prcomp(d_effect_matrix[,growth_traits]), ids = a_effect_matrix$id)
+ad_biplot = plot_grid(a_biplot, d_biplot, labels = c("C", "D"))
 
 LG = c(3.785,4.435,8.43,7.395,2.995,1.85,2.085)
 SM = c(3.31 ,2.98,3.82,2.175,0.765,1.165,0.51)
@@ -356,39 +368,48 @@ plot_grid(growth_pred_plot_SUR, growth_pred_plot_HC_full)
 
 shannon = function(x) -sum(x*log(x))
 
-pleiotropic_partition = a_effect_matrix %>% 
-  mutate(norm = daply(., .(id), function(x) (Norm(x[growth_traits])))) %>%
-  mutate(part = daply(., .(id), function(x) shannon(Normalize(x[growth_traits])^2))) %>%
-  arrange(part)
-pleiotropic_partition[growth_traits] = pleiotropic_partition[growth_traits]^2
+pleiotropic_partition = a_effect_matrix
+pleiotropic_partition[growth_traits] = sqrt(pleiotropic_partition[growth_traits]^2)
 pleiotropic_partition$id = factor(pleiotropic_partition$id, levels = pleiotropic_partition$id)
-my_factor <- 0.17/shannon(Normalize(rep(1, 7))^2)
-pleiotropic_partition_plot =  
+a_pleiotropic_partition = pleiotropic_partition %>% 
+  separate(id, c("chrom", "marker")) %>% 
+  mutate(chrom = as.numeric(chrom), 
+         marker = as.numeric(marker)) %>%
+  arrange(chrom, marker) %>%
+  mutate(id = factor(paste(chrom, marker, sep= "_"), levels = paste(chrom, marker, sep= "_")))
+
+a_pleiotropic_partition_plot =  
   ggplot() + 
-  geom_bar(data = gather(pleiotropic_partition, key, value, growth_traits), aes(id, value, group = key, color = key, fill = key), stat = "identity") +
-  geom_line(data = pleiotropic_partition,
-            # Apply the factor on values appearing on second OY axis (multiplication)
-            aes(x = id, y = part * my_factor, group = 1), 
-            colour = "black") +
-  scale_y_continuous(limits = c(0, 0.17), sec.axis = sec_axis(trans = ~ . / my_factor, name = "Effect distribution\nentropy")) +
-  scale_fill_viridis_d() + scale_color_viridis_d() + theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(x = "Marker", y = "Squared contribution to scaled vector")
+  geom_bar(data = gather(a_pleiotropic_partition, key, value, growth_traits), 
+           aes(id, value, group = key, color = key, fill = key), stat = "identity") +
+  scale_y_continuous(limits = c(0, 1.2)) + background_grid(major = "xy", minor = "none") + 
+  scale_fill_viridis(discrete = TRUE, option = "D", 
+                     guide = guide_legend(direction = "horizontal", 
+                                          label.position = "top",
+                                          nrow = 1, title = NULL)) + 
+  scale_color_viridis(discrete = TRUE, option = "D", 
+                      guide = guide_legend(direction = "horizontal",
+                                           title = NULL)) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = c(0.5, 0.9)) + 
+  labs(x = "Marker", y = "Contribution to scaled\n pleitropic vector")
 save_plot("data/growth_pleiotropic_partition_additive.png", pleiotropic_partition_plot, base_height = 7, base_aspect_ratio = 2) 
 
-pleiotropic_partition = d_effect_matrix %>% 
-  mutate(norm = daply(., .(id), function(x) (Norm(x[growth_traits])))) %>%
-  mutate(part = daply(., .(id), function(x) shannon(Normalize(x[growth_traits])^2))) %>%
-  arrange(part)
-pleiotropic_partition[growth_traits] = pleiotropic_partition[growth_traits]^2
+pleiotropic_partition = d_effect_matrix 
+pleiotropic_partition[growth_traits] = sqrt(pleiotropic_partition[growth_traits]^2)
 pleiotropic_partition$id = factor(pleiotropic_partition$id, levels = pleiotropic_partition$id)
-pleiotropic_partition_plot =  
+d_pleiotropic_partition = pleiotropic_partition %>% 
+  separate(id, c("chrom", "marker")) %>% 
+  mutate(chrom = as.numeric(chrom), 
+         marker = as.numeric(marker)) %>%
+  arrange(chrom, marker) %>%
+  mutate(id = factor(paste(chrom, marker, sep= "_"), levels = paste(chrom, marker, sep= "_")))
+d_pleiotropic_partition_plot =  
   ggplot() + 
-  geom_bar(data = gather(pleiotropic_partition, key, value, growth_traits), aes(id, value, group = key, color = key, fill = key), stat = "identity") +
-  geom_line(data = pleiotropic_partition,
-            # Apply the factor on values appearing on second OY axis (multiplication)
-            aes(x = id, y = part * my_factor, group = 1), 
-            colour = "black") +
-  scale_y_continuous(limits = c(0, 0.17), sec.axis = sec_axis(trans = ~ . / my_factor, name = "Effect distribution\nentropy")) +
-  scale_fill_viridis_d() + scale_color_viridis_d() + theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  labs(x = "Marker", y = "Squared contribution to scaled vector")
+  geom_bar(data = gather(d_pleiotropic_partition, key, value, growth_traits), aes(id, value, group = key, color = key, fill = key), stat = "identity") +
+  scale_fill_viridis(discrete = TRUE, option = "D") + scale_color_viridis(discrete = TRUE, option = "D") + 
+  scale_y_continuous(limits = c(0, 1.2)) + background_grid(major = "xy", minor = "none") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none") +
+  labs(x = "Marker", y = "Contribution to scaled\n pleitropic vector")
+pleiotropic_Effects_ad_dm = plot_grid(a_pleiotropic_partition_plot, d_pleiotropic_partition_plot, ad_biplot, ncol = 1, labels = c("A", "B"))
+save_plot("data/growth_pleiotropic_partition_ad_dm.png", pleiotropic_Effects_ad_dm, base_height = 4.5, base_aspect_ratio = 2.5, nrow = 3) 
 save_plot("data/growth_pleiotropic_partition_dominance.png", pleiotropic_partition_plot, base_height = 7, base_aspect_ratio = 2) 
