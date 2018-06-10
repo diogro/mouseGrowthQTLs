@@ -92,7 +92,7 @@ Pvalues = function(flank_dist, ...){
     p.values$snp = 1:353
     return(p.values)
 }
-p_values = ldply(c(5, 10, 15, 20), Pvalues, 0.05, .parallel = TRUE)
+p_values = ldply(c(5, 10, 15, 20), Pvalues, 0.05)
 p_values$flank_dist_chr = factor(paste0("Flanking markers at ", p_values$flank_dist, "cM"), 
                                  levels = paste0("Flanking markers at ", c(20, 15, 10, 5), "cM"))
 chrtable <- data.frame(table(p_values$chrom))
@@ -133,13 +133,12 @@ p_values_sig = inner_join(p_values, significantMarkerMatrix, by = c("chrom", "ma
 write_csv(significantMarkerMatrix, "./data/growth_significant_markers.csv")
 filter(p_values, significant == TRUE, chrom == 4, flank_dist == 10)
 library(ggman)
-p1 = ggman(p_values, snp = "snp", bp = "pos", chrom = "chrom", pvalue = "p_lrt", pointSize = 1.5, 
-           sigLine = NA, point = "significant") + facet_wrap(~flank_dist, ncol = 1)
 p1 = ggplot(p_values, aes(snp, -log10(p_lrt), color = as.factor(chrom_alt))) + 
   geom_point(aes(alpha = significant)) + 
   facet_wrap(~flank_dist_chr, ncol  = 1, scales = "free") + 
   scale_x_continuous(breaks = xbreaks) + labs(x = "Chromossome", y = "-log(p value)") + 
-  guides(colour = FALSE) + geom_vline(data = p_values_sig, aes(xintercept = snp), color = "lightgrey")
+  guides(colour = FALSE) + geom_vline(data = p_values_sig, aes(xintercept = snp), color = "lightgrey") + 
+  theme(legend.position = "none")
 save_plot("./data/TalkStuff/growth_manhattan.png", p1, base_height = 7, base_aspect_ratio = 1.5)
 
 significantMarkerList = alply(significantMarkerMatrix, 1, makeMarkerList)
