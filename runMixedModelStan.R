@@ -53,11 +53,8 @@ growth_MCMC_null_model = MCMCglmm(as.formula(formula),
                                   nitt = 103000, burnin = 3000, thin = 100,
                                   family = rep("gaussian", length(growth_traits)))
 
-<<<<<<< HEAD
 save(growth_MCMC_null_model, file = paste0(Rdatas_folder, "growth_MCMC_DamNurse_model.Rdata"))
-=======
 load(paste0(Rdatas_folder, "growth_MCMC_DamNurse_model.Rdata"))
->>>>>>> 030e0e7256d9400a2e73cae4808e2c433ffe8142
 load(paste0(Rdatas_folder, "growth_MCMC_null_model.Rdata"))
 summary(growth_MCMC_null_model)
 
