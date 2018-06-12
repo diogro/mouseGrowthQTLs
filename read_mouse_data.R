@@ -1,9 +1,17 @@
-if(!require(install.load)) {install.packages("install.load"); library(install.load)}
-install_load("plyr", "dplyr", "tidyr", "readr", "lme4", "ggplot2", "cowplot", "corrplot", "purrr", 
-             "evolqg", "rstan", "doMC")
-if(!require(lmerTest)){devtools::install_github("runehaubo/lmerTest"); library(lmerTest)}
+if(!require(rstan)){install.packages("rstan"); library(rstan)}
+if(!require(plyr)){install.packages("plyr"); library(plyr)}
+if(!require(dplyr)){install.packages("dplyr"); library(dplyr)}
+if(!require(tidyr)){install.packages("tidyr"); library(tidyr)}
+if(!require(readr)){install.packages("readr"); library(readr)}
+if(!require(lme4)){install.packages("lme4"); library(lme4)}
 if(!require(qvalue)){source("https://bioconductor.org/biocLite.R"); biocLite("qvalue"); library(qvalue)}
 if(!require(lmerTest)){devtools::install_github("runehaubo/lmerTest"); library(lmerTest)}
+if(!require(ggplot2)){devtools::install_github("tidyverse/ggplot2"); library(ggplot2)}
+if(!require(cowplot)){devtools::install_github("wilkelab/cowplot"); library(cowplot); theme_set(theme_cowplot())
+  } else theme_set(theme_cowplot())
+if(!require(corrplot)){install.packages("corrplot"); library(corrplot)}
+if(!require(purrr)){install.packages("purrr"); library(purrr)}
+if(!require(evolqg)){install.packages("evolqg"); library(evolqg)}
 
 ## Meta data
 
