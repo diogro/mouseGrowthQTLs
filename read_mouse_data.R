@@ -1,6 +1,9 @@
 if(!require(install.load)) {install.packages("install.load"); library(install.load)}
-library(rstan)
-install_load("plyr", "dplyr", "tidyr", "readr", "lme4", "ggplot2", "cowplot", "corrplot", "purrr", "evolqg")
+install_load("plyr", "dplyr", "tidyr", "readr", "lme4", "ggplot2", "cowplot", "corrplot", "purrr", 
+             "evolqg", "rstan", "doMC")
+if(!require(lmerTest)){devtools::install_github("runehaubo/lmerTest"); library(lmerTest)}
+if(!require(qvalue)){source("https://bioconductor.org/biocLite.R"); biocLite("qvalue"); library(qvalue)}
+if(!require(lmerTest)){devtools::install_github("runehaubo/lmerTest"); library(lmerTest)}
 
 ## Meta data
 

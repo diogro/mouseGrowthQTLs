@@ -18,7 +18,6 @@ CalcInt = function(x) sd(eigen(cov2cor(x))$values)/(nrow(x) - 1)
 markerMatrix = ldply(1:19, function(x) data.frame(chrom = x, marker = 1:loci_per_chrom[[x]]))
 significantMarkerMatrix = read_csv("./data/growth_significant_markers.csv")
 
-install_load("doMC", "lme4qtl", "qvalue")
 registerDoMC(4)
 
  growth_data = inner_join(growth_phen_std,
@@ -152,11 +151,10 @@ effect_matrix_dominance = aaply(w_dm, c(2, 3), mean)
 save(w_ad, w_dm, effect_matrix_additive, effect_matrix_dominance, file = "Rdatas/growth_add_dom_effectsMatrix.Rdata")
 load(file = "Rdatas/growth_add_dom_effectsMatrix.Rdata")
 
-Va = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix), calcVa, w_ad[i,,], w_dm[i,,], significantMarkerMatrix)), .parallel = TRUE)
-
-Vd = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix), calcVd, w_dm[i,,], significantMarkerMatrix)), .parallel = TRUE)
-
-save(Va, Vd, file = paste0(Rdatas_folder, "VaVd_QTL.Rdata"))
+#Va = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix), calcVa, w_ad[i,,], w_dm[i,,], significantMarkerMatrix)), .parallel = TRUE)
+#Vd = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix), calcVd, w_dm[i,,], significantMarkerMatrix)), .parallel = TRUE)
+#save(Va, Vd, file = paste0(Rdatas_folder, "VaVd_QTL.Rdata"))
+load(paste0(Rdatas_folder, "VaVd_QTL.Rdata"))
 
 Va_mean = aaply(Va, c(2, 3), mean)
 Va_upper = aaply(Va, c(2, 3), quantile, 0.975)
@@ -194,10 +192,10 @@ PrintMatrix(matrices)
 png("./data/growth_family_Vg_FullSibG_correlation.png", width = 1500, height = 1500)
 old.par = par()
 par(mfrow = c(2, 2), cex=2, oma = c(0, 0, 0, 0))
-corrplot.mixed(cov2cor(G),       upper = "ellipse", mar = c(0, 0, 1, 0), main = "Family Full-Sib G")
-corrplot.mixed(cov2cor(Vg_mean), upper = "ellipse", mar = c(0, 0, 1, 0), main = "Va/2 + Vd/4")
-corrplot.mixed(cov2cor(Va_mean), upper = "ellipse", mar = c(0, 0, 1, 0), main = "Va")
-corrplot.mixed(cov2cor(Vd_mean), upper = "ellipse", mar = c(0, 0, 1, 0), main = "Vd")
+corrplot.mixed(cov2cor(G),       upper = "ellipse", mar = c(0, 0, 1, 0))
+corrplot.mixed(cov2cor(Vg_mean), upper = "ellipse", mar = c(0, 0, 1, 0))
+corrplot.mixed(cov2cor(Va_mean), upper = "ellipse", mar = c(0, 0, 1, 0))
+corrplot.mixed(cov2cor(Vd_mean), upper = "ellipse", mar = c(0, 0, 1, 0))
 dev.off()
 par(old.par)
 
@@ -290,8 +288,8 @@ additive_dz = ggplot(a_corrs, aes(norm, dzCorr)) + geom_point() + geom_smooth(me
   labs(x = "Additive effect vector norm", y = expression("Alligment with divergence"))
 dominance_dz = ggplot(d_corrs, aes(norm, dzCorr)) + geom_point() + geom_smooth(method = "lm", color = "black") + 
   labs(x = "Dominance effect vector norm", y = expression("Alligment with divergence"))
-regressions = plot_grid(additive_beta, dominance_beta, additive_dz, dominance_dz)
-save_plot("data/growth_effect_aligment_regressions.png", regressions, base_height = 5, base_aspect_ratio = 2, ncol = 2, nrow = 2)
+regressions = plot_grid(additive_beta, dominance_beta, additive_dz, dominance_dz, labels = LETTERS[1:4])
+save_plot("data/growth_effect_aligment_regressions.png", regressions, base_height = 4, base_aspect_ratio = 2, ncol = 2, nrow = 2)
 
 lm(beta~norm, data = a_corrs) %>% summary
 lm(norm~d_z, data = a_corrs) %>% summary
@@ -327,6 +325,12 @@ save_plot("data/growth_multiple_regression_ancestral_prediction.png", growth_pre
 
 growth_observed_plot = ggplot() + scale_x_discrete(labels = paste("Week", 1:7)) + labs(y = "Weekly growth (g)", x = "Start week") + geom_line(size = 1, data = filter(growth_prediction, Type == "Observed"), aes(trait, value, group = Line, color = Line))
 save_plot("data/growth_LG_SM_F3.png", growth_observed_plot, base_height = 7, base_aspect_ratio = 2)
+
+dev.new()
+corrplot.mixed(cov2cor(G),       upper = "ellipse", mar = c(0, 0, 1, 0))
+g_plot = recordPlot()
+dev.off
+plot_grid(growth_observed_plot, g_plot)
 
 growth_observed_parentals_plot = ggplot() + scale_x_discrete(labels = paste("Week", 1:7)) + labs(y = "Weekly growth (g)", x = "Start week") + geom_line(size = 1, data = filter(growth_prediction, Type == "Observed", Line != "F3"), aes(trait, value, group = Line, color = Line)) + scale_color_manual(values=c("#00BA38", "#619CFF")) 
 save_plot("data/growth_LG_SM.png", growth_observed_parentals_plot, base_height = 7, base_aspect_ratio = 2)
