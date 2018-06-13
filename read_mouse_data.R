@@ -9,9 +9,11 @@ if(!require(lmerTest)){devtools::install_github("runehaubo/lmerTest"); library(l
 if(!require(ggplot2)){devtools::install_github("tidyverse/ggplot2"); library(ggplot2)}
 if(!require(cowplot)){devtools::install_github("wilkelab/cowplot"); library(cowplot); theme_set(theme_cowplot())
   } else theme_set(theme_cowplot())
+if(!require(viridis)){install.packages("viridis"); library(viridis)}
 if(!require(corrplot)){install.packages("corrplot"); library(corrplot)}
 if(!require(purrr)){install.packages("purrr"); library(purrr)}
 if(!require(evolqg)){install.packages("evolqg"); library(evolqg)}
+if(!require(doMC)){install.packages("doMC"); library(doMC)}
 
 ## Meta data
 

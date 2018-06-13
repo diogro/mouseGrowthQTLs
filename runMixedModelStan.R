@@ -4,12 +4,15 @@ source('read_mouse_data.R')
 source('utils.R')
 old.par = par()
 
-library(MCMCglmm)
+if(!require(MCMCglmm)){install.packages("MCMCglmm"); library(MCMCglmm)}
 
 #Rdatas_folder = "~/gdrive/LGSM_project_Rdatas/"
 Rdatas_folder = "./Rdatas/"
 
-options(mc.cores = 4)
+ncores = 3
+registerDoMC(ncores)
+options(mc.cores = 3)
+setMKLthreads(ncores)
 
 growth_data = growth_phen_std
 getStanInputMM = function(current_data, trait_vector)
@@ -29,12 +32,12 @@ getStanInputMM = function(current_data, trait_vector)
 
 stan_MM = stan(file = "./mixedModelGmatrix.stan",
                data = getStanInputMM(growth_data, growth_traits),
-               chain=6, iter = 600, control = list(max_treedepth = 11))
+               chain=3, iter = 2000, warmup = 500, control = list(max_treedepth = 11))
 P_stan = colMeans(rstan::extract(stan_MM, pars = c("P"))[[1]]) * outer(growth_phen_sd, growth_phen_sd)
 G_stan = colMeans(rstan::extract(stan_MM, pars = c("G"))[[1]]) * outer(growth_phen_sd, growth_phen_sd)
 Gs_stan = aaply(rstan::extract(stan_MM, pars = c("G"))[[1]], 1, '*', outer(growth_phen_sd, growth_phen_sd))
 R_stan = colMeans(rstan::extract(stan_MM, pars = c("R"))[[1]]) * outer(growth_phen_sd, growth_phen_sd)
-load(file = "./Rdatas/growth_CovMatrices.Rdata")
+#load(file = "./Rdatas/growth_CovMatrices.Rdata")
 P = cov(growth_phen_std[growth_traits]) * outer(growth_phen_sd, growth_phen_sd)
 
 growth_phen_xf = growth_phen %>% 
@@ -95,10 +98,10 @@ growth_data_ncf = filter(growth_data, Dam == NURSE)
 
 stan_cf = stan(file = "./mixedModelGmatrix.stan",
                data = getStanInputMM(growth_data_cf, growth_traits),
-               chain=6, iter = 2000, control = list(max_treedepth = 11, adapt_delta = 0.99))
+               chain=3, iter = 2000, warmup = 500, control = list(max_treedepth = 11, adapt_delta = 0.99))
 stan_ncf = stan(file = "./mixedModelGmatrix.stan",
                 data = getStanInputMM(growth_data_ncf, growth_traits),
-                chain=6, iter = 2000, control = list(max_treedepth = 11, adapt_delta = 0.99))
+                chain=3, iter = 2000, control = list(max_treedepth = 11, adapt_delta = 0.99))
 
 G_cf  = colMeans(rstan::extract(stan_cf, pars = c("G"))[[1]]) * outer(growth_phen_sd, growth_phen_sd)
 G_ncf = colMeans(rstan::extract(stan_ncf, pars = c("G"))[[1]]) * outer(growth_phen_sd, growth_phen_sd)

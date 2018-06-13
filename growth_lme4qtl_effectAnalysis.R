@@ -1,7 +1,10 @@
 setwd("/home/diogro/projects/mouse-qtls")
 source('read_mouse_data.R')
 
-if(!require(viridis)){install.packages("viridis"); library(viridis)}
+ncores = 2
+registerDoMC(ncores)
+options(mc.cores = ncores)
+setMKLthreads(ncores)
 
 #Rdatas_folder = "~/gdrive/LGSM_project_Rdatas/"
 Rdatas_folder = "./Rdatas/"
@@ -18,9 +21,7 @@ CalcInt = function(x) sd(eigen(cov2cor(x))$values)/(nrow(x) - 1)
 markerMatrix = ldply(1:19, function(x) data.frame(chrom = x, marker = 1:loci_per_chrom[[x]]))
 significantMarkerMatrix = read_csv("./data/growth_significant_markers.csv")
 
-registerDoMC(4)
-
- growth_data = inner_join(growth_phen_std,
+growth_data = inner_join(growth_phen_std,
                         growth_markers,
                         by = "ID") %>%
   gather(variable, value, growth12:growth78)
@@ -28,15 +29,9 @@ growth_data = mutate(growth_data, FAMILY = as.factor(FAMILY), variable = as.fact
 
 e = read_csv("./data/growth_significant_marker_effects_SUR.csv") %>% arrange(trait, id, class)
 load(file = "./Rdatas/significant_stan_fit.Rdata")
-eHC = read_csv("./data/growth_significant_marker_effectsHC.csv") %>% arrange(trait, id, class)
-load(file = "./Rdatas/significant_stan_HCp_fit.Rdata")
 full_HCp = readRDS("./Rdatas/growth_scaled_allmarkers_HCPlus")
 
 a_effect_matrix = e %>%
-    select(id, class, trait, mean) %>%
-    spread(trait, mean) %>%
-    filter(class == "additive") %>% select(-class)
-a_effect_matrix_HC = eHC %>%
     select(id, class, trait, mean) %>%
     spread(trait, mean) %>%
     filter(class == "additive") %>% select(-class)
@@ -44,11 +39,19 @@ d_effect_matrix = e %>%
   select(id, class, trait, mean) %>%
   spread(trait, mean) %>%
   filter(class == "dominance") %>% select(-class)
-d_effect_matrix_HC = eHC %>%
-  select(id, class, trait, mean) %>%
-  spread(trait, mean) %>%
-  filter(class == "dominance") %>% select(-class)
 
+w_ad_HC = rstan::extract(full_HCp, pars = "w_ad")[[1]]
+w_dm_HC = rstan::extract(full_HCp, pars = "w_dm")[[1]]
+effect_matrix_ad_HC = aaply(w_ad_HC, c(2, 3), mean)
+effect_matrix_dm_HC = aaply(w_dm_HC, c(2, 3), mean)
+
+a_effect_matrix_HC = data.frame(id = paste(markerMatrix$chrom, markerMatrix$marker, sep = "_"), 
+                                as.data.frame(t(effect_matrix_ad_HC)))
+colnames(a_effect_matrix_HC)[2:8] = growth_traits
+d_effect_matrix_HC = data.frame(id = paste(markerMatrix$chrom, markerMatrix$marker, sep = "_"), 
+                                as.data.frame(t(effect_matrix_dm_HC)))
+colnames(d_effect_matrix_HC)[2:8] = growth_traits
+ 
 PCbiplot <- function(PC, ids, x="PC1", y="PC2") {
   # PC being a prcomp object
   data <- data.frame(obsnames=ids, PC$x)
@@ -65,12 +68,15 @@ PCbiplot <- function(PC, ids, x="PC1", y="PC2") {
   )
   plot <- plot + coord_equal() + geom_text(data=datapc, aes(x=v1, y=v2, label=varnames), size = 5, vjust=1, color="red")
   plot <- plot + geom_segment(data=datapc, aes(x=0, y=0, xend=v1, yend=v2), arrow=arrow(length=unit(0.2,"cm")), alpha=0.75, color="red")
-  plot
+  plot + theme_cowplot()
 }
-PC = prcomp(a_effect_matrix[,growth_traits])
 a_biplot = PCbiplot(prcomp(a_effect_matrix[,growth_traits]), ids = a_effect_matrix$id)
 d_biplot = PCbiplot(prcomp(d_effect_matrix[,growth_traits]), ids = a_effect_matrix$id)
 ad_biplot = plot_grid(a_biplot, d_biplot, labels = c("C", "D"))
+
+a_biplot_HC = PCbiplot(prcomp(a_effect_matrix_HC[,growth_traits]), ids = a_effect_matrix_HC$id)
+d_biplot_HC = PCbiplot(prcomp(d_effect_matrix_HC[,growth_traits]), ids = d_effect_matrix_HC$id)
+ad_biplot_HC = plot_grid(a_biplot_HC, d_biplot_HC, labels = c("C", "D"))
 
 LG = c(3.785,4.435,8.43,7.395,2.995,1.85,2.085)
 SM = c(3.31 ,2.98,3.82,2.175,0.765,1.165,0.51)
@@ -165,6 +171,7 @@ Vd_lower = aaply(Vd, c(2, 3), quantile, 0.025)
 Vd_upper = aaply(Vd, c(2, 3), quantile, 0.975)
 
 G = aaply(Gs_stan, c(2, 3), mean)
+dimnames(G) = list(1:7, 1:7)
 G_lower = aaply(Gs_stan, c(2, 3), quantile, 0.025)
 G_upper = aaply(Gs_stan, c(2, 3), quantile, 0.975)
 
@@ -221,7 +228,7 @@ png("./data/growth_family_qtl_cov.png", width = 1500, height = 800)
 par(mfrow = c(1, 1), cex=2)
 plot(lt(G)~lt(Vg_mean), pch = 19, 
      ylab = "Family G-matrix covariances", xlab = "Genetic covariances predicted from QTLs (1/2 * Va + 1/4 * Vd)", 
-     main = "Growth traits", xlim = c(-0.03, 0.17), ylim = c(-0.22, 0.6))
+     main = "", xlim = c(-0.03, 0.17), ylim = c(-0.22, 0.6))
 segments(x0 = lt(Vg_lower), y0 = lt(G), x1 = lt(Vg_upper), y1 = lt(G))
 segments(x0 = lt(Vg_mean), y0 = lt(G_lower), x1 = lt(Vg_mean), y1 = lt(G_upper))
 points(diag(G)~diag(Vg_mean), col = "tomato3", pch = 19)
@@ -249,10 +256,6 @@ dev.off()
 
 
 summary(lm(lt(G)~lt(Vg_mean)))
-w_ad_HC = rstan::extract(full_HCp, pars = "w_ad")[[1]]
-w_dm_HC = rstan::extract(full_HCp, pars = "w_dm")[[1]]
-effect_matrix_ad_HC = aaply(w_ad_HC, c(2, 3), mean)
-effect_matrix_dm_HC = aaply(w_dm_HC, c(2, 3), mean)
 markerMatrix = ldply(1:19, function(x) data.frame(chrom = x, marker = 1:loci_per_chrom[[x]]))
 Va_HC = colSums(laply(1:353, calcVa, effect_matrix_ad_HC, effect_matrix_dm_HC, markerMatrix))
 old.par = par()
@@ -320,24 +323,23 @@ growth_prediction = reshape2::melt(data.frame(trait = as.factor(growth_traits),
                                               LG_QTL = LG_e,
                                               F3_Observed = F3,
                                               LG_Observed = LG)) %>% separate(variable, c("Line", "Type"))
-growth_pred_plot_SUR = ggplot() + scale_x_discrete(labels = paste("Week", 1:7)) + labs(y = "Weekly growth (g)", x = "Start week") + geom_line(data = post, color = "gray", size = 0.5, linetype = 1, alpha = 0.1, aes(trait, value, group = interaction(Type, Line, iterations))) + geom_line(size = 1, data = growth_prediction, aes(trait, value, group = interaction(Type, Line), color = Line, linetype = Type))
+growth_pred_plot_SUR = ggplot() + scale_x_discrete(labels = paste("Week", 1:7)) + labs(y = "Weekly growth (g)", x = "Start week") + geom_line(data = post, color = "gray", size = 0.5, linetype = 1, alpha = 0.1, aes(trait, value, group = interaction(Type, Line, iterations))) + geom_line(size = 1, data = growth_prediction, aes(trait, value, group = interaction(Type, Line), color = Line, linetype = Type)) + theme_cowplot()
 save_plot("data/growth_multiple_regression_ancestral_prediction.png", growth_pred_plot_SUR, base_height = 7, base_aspect_ratio = 2)
 
-growth_observed_plot = ggplot() + scale_x_discrete(labels = paste("Week", 1:7)) + labs(y = "Weekly growth (g)", x = "Start week") + geom_line(size = 1, data = filter(growth_prediction, Type == "Observed"), aes(trait, value, group = Line, color = Line))
+growth_observed_plot = ggplot() + scale_x_discrete(labels = paste("Week", 1:7)) + labs(y = "Weekly growth (g)", x = "Start week") + geom_line(size = 1, data = filter(growth_prediction, Type == "Observed"), aes(trait, value, group = Line, color = Line)) + theme_cowplot()
 save_plot("data/growth_LG_SM_F3.png", growth_observed_plot, base_height = 7, base_aspect_ratio = 2)
 
-dev.new()
-corrplot.mixed(cov2cor(G),       upper = "ellipse", mar = c(0, 0, 1, 0))
-g_plot = recordPlot()
-dev.off
-plot_grid(growth_observed_plot, g_plot)
 
-growth_observed_parentals_plot = ggplot() + scale_x_discrete(labels = paste("Week", 1:7)) + labs(y = "Weekly growth (g)", x = "Start week") + geom_line(size = 1, data = filter(growth_prediction, Type == "Observed", Line != "F3"), aes(trait, value, group = Line, color = Line)) + scale_color_manual(values=c("#00BA38", "#619CFF")) 
+par(mar = c(0, 0, 0, 0))
+g_plot = ~corrplot.mixed(cov2cor(G),       upper = "ellipse", mar = c(0, 0, 0, 0))
+plot_grid(growth_observed_plot, g_plot, labels = LETTERS[1:2])
+
+growth_observed_parentals_plot = ggplot() + scale_x_discrete(labels = paste("Week", 1:7)) + labs(y = "Weekly growth (g)", x = "Start week") + geom_line(size = 1, data = filter(growth_prediction, Type == "Observed", Line != "F3"), aes(trait, value, group = Line, color = Line)) + scale_color_manual(values=c("#00BA38", "#619CFF")) + theme_cowplot()
 save_plot("data/growth_LG_SM.png", growth_observed_parentals_plot, base_height = 7, base_aspect_ratio = 2)
 
 growth_observed_parentals_Dz_plot = ggplot() + scale_x_discrete(labels = paste("Week", 1:7)) + labs(y = "Weekly growth (g)", x = "Start week") + geom_line(size = 1, data = filter(growth_prediction, Type == "Observed", Line != "F3"), aes(trait, value, group = Line, color = Line)) + scale_color_manual(values=c("#00BA38", "#619CFF")) + 
   annotate("segment", x = 1:7, xend = 1:7, y = SM, yend = LG) + 
-  annotate("text", x = 3.5, y = 6, label = "Phenotypic\ndivergence")
+  annotate("text", x = 3.5, y = 6, label = "Phenotypic\ndivergence") + theme_cowplot()
 save_plot("data/growth_LG_SM_DZ1.png", growth_observed_parentals_Dz_plot, base_height = 7, base_aspect_ratio = 2)
 
 growth_observed_parentals_Dz2_plot = ggplot() + scale_x_discrete(labels = paste("Week", 1:7)) + labs(y = "Weekly growth (g)", x = "Start week") + geom_line(size = 1, data = filter(growth_prediction, Type == "Observed", Line != "F3"), aes(trait, value, group = Line, color = Line)) + scale_color_manual(values=c("#00BA38", "#619CFF")) +
@@ -369,8 +371,6 @@ plot_grid(growth_pred_plot_SUR, growth_pred_plot_HC_full)
 
 
 ## Pleiotropic partition
-
-shannon = function(x) -sum(x*log(x))
 
 pleiotropic_partition = a_effect_matrix
 pleiotropic_partition[growth_traits] = sqrt(pleiotropic_partition[growth_traits]^2)
@@ -417,3 +417,52 @@ d_pleiotropic_partition_plot =
 pleiotropic_Effects_ad_dm = plot_grid(a_pleiotropic_partition_plot, d_pleiotropic_partition_plot, ad_biplot, ncol = 1, labels = c("A", "B"))
 save_plot("data/growth_pleiotropic_partition_ad_dm.png", pleiotropic_Effects_ad_dm, base_height = 4.5, base_aspect_ratio = 2.5, nrow = 3) 
 save_plot("data/growth_pleiotropic_partition_dominance.png", pleiotropic_partition_plot, base_height = 7, base_aspect_ratio = 2) 
+
+
+## Pleiotropic partition Genome prediction
+
+pleiotropic_partition = a_effect_matrix_HC
+pleiotropic_partition[growth_traits] = sqrt(pleiotropic_partition[growth_traits]^2)
+pleiotropic_partition$id = factor(pleiotropic_partition$id, levels = pleiotropic_partition$id)
+a_pleiotropic_partition = pleiotropic_partition %>% 
+  separate(id, c("chrom", "marker")) %>% 
+  mutate(chrom = as.numeric(chrom), 
+         marker = as.numeric(marker)) %>%
+  arrange(chrom, marker) %>%
+  mutate(id = factor(paste(chrom, marker, sep= "_"), levels = paste(chrom, marker, sep= "_")))
+
+a_pleiotropic_partition_plot =  
+  ggplot() + 
+  geom_bar(data = gather(a_pleiotropic_partition, key, value, growth_traits), 
+           aes(id, value, group = key, color = key, fill = key), stat = "identity") +
+  scale_y_continuous(limits = c(0, 0.35)) + background_grid(major = "xy", minor = "none") + 
+  scale_fill_viridis(discrete = TRUE, option = "D", 
+                     guide = guide_legend(direction = "horizontal", 
+                                          label.position = "top",
+                                          nrow = 1, title = NULL)) + 
+  scale_color_viridis(discrete = TRUE, option = "D", 
+                      guide = guide_legend(direction = "horizontal",
+                                           title = NULL)) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = c(0.5, 0.9)) + 
+  labs(x = "Marker", y = "Contribution to scaled\n pleitropic vector")
+#save_plot("data/growth_pleiotropic_partition_additive.png", pleiotropic_partition_plot, base_height = 7, base_aspect_ratio = 2) 
+
+pleiotropic_partition = d_effect_matrix_HC 
+pleiotropic_partition[growth_traits] = sqrt(pleiotropic_partition[growth_traits]^2)
+pleiotropic_partition$id = factor(pleiotropic_partition$id, levels = pleiotropic_partition$id)
+d_pleiotropic_partition = pleiotropic_partition %>% 
+  separate(id, c("chrom", "marker")) %>% 
+  mutate(chrom = as.numeric(chrom), 
+         marker = as.numeric(marker)) %>%
+  arrange(chrom, marker) %>%
+  mutate(id = factor(paste(chrom, marker, sep= "_"), levels = paste(chrom, marker, sep= "_")))
+d_pleiotropic_partition_plot =  
+  ggplot() + 
+  geom_bar(data = gather(d_pleiotropic_partition, key, value, growth_traits), aes(id, value, group = key, color = key, fill = key), stat = "identity") +
+  scale_fill_viridis(discrete = TRUE, option = "D") + scale_color_viridis(discrete = TRUE, option = "D") + 
+  scale_y_continuous(limits = c(0, 0.35)) + background_grid(major = "xy", minor = "none") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none") +
+  labs(x = "Marker", y = "Contribution to scaled\n pleitropic vector")
+pleiotropic_Effects_ad_dm = plot_grid(a_pleiotropic_partition_plot, d_pleiotropic_partition_plot, ad_biplot, ncol = 1, labels = c("A", "B"))
+#save_plot("data/growth_pleiotropic_partition_ad_dm.png", pleiotropic_Effects_ad_dm, base_height = 4.5, base_aspect_ratio = 2.5, nrow = 3) 
+#save_plot("data/growth_pleiotropic_partition_dominance.png", pleiotropic_partition_plot, base_height = 7, base_aspect_ratio = 2) 

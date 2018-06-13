@@ -13,7 +13,8 @@ growth_data = inner_join(growth_phen_std, growth_markers, by = "ID")
 growth_data[growth_traits] = scale(growth_data[growth_traits])
 growth_full_genome = stan(file = './SUR_horseShoePlus.stan',
                           data = getStanInputFullGenome(growth_data, growth_traits),
-                          chain=4, iter = 600, warmup = 200, control = list(adapt_delta = 0.99))
+                          chain=4, iter = 600, warmup = 200, 
+                          control = list(adapt_delta=0.99, max_treedepth=15))
 model_file = paste0(Rdatas_folder, "growth_scaled_allmarkers_HCPlus")
 saveRDS(growth_full_genome, model_file)
 
