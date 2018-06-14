@@ -36,7 +36,7 @@ transformed data{
 }
 
 parameters {
-    # Horseshoe prior
+    // Horseshoe prior
     vector<lower=0>[K] r1_global_ad;
     vector<lower=0>[K] r1_global_dm;
 
@@ -49,21 +49,21 @@ parameters {
     matrix<lower=0>[K, J] r1_local_dm;
     matrix<lower=0>[K, J] r2_local_dm;
 
-    # Effects matrix
+    // Effects matrix
     matrix[K,J] beta_ad;
     matrix[K,J] beta_dm;
 
-    # Intercept
+    // Intercept
     vector[K] w0;
 
-    # Family means
+    // Family means
     vector[K] beta_family[n_family];
 
-    # G matrix
+    // G matrix
     cholesky_factor_corr[K] L_Omega_G;
     vector<lower=0>[K] L_sigma_G;
 
-    # R matrix
+    // R matrix
     cholesky_factor_corr[K] L_Omega_R;
     vector<lower=0>[K] r1_sigma_R;
     vector<lower=0>[K] r2_sigma_R;
@@ -115,7 +115,7 @@ model {
 
     y ~ multi_normal_cholesky(mu, L_Sigma_R);
 
-    #// half t-priors for lambdas (nu = 1 corresponds to horseshoe)
+    //// half t-priors for lambdas (nu = 1 corresponds to horseshoe)
     to_vector(beta_ad) ~ normal(0, 1);
     to_vector(beta_dm) ~ normal(0, 1);
 

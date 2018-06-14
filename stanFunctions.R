@@ -1,4 +1,4 @@
-library(rstan)
+if(!require(rstan)){install.packages("rstan"); library(rstan)}
 rstan_options(auto_write = TRUE)
 getStanInputFullGenome = function(current_data, trait_vector, J = sum(loci_per_chrom))
 {
@@ -6,13 +6,9 @@ getStanInputFullGenome = function(current_data, trait_vector, J = sum(loci_per_c
     N        = dim(current_data)[1]
     n_family = length(unique(current_data$FAMILY))
     family   = as.integer(as.factor(current_data$FAMILY))
-    ad       = as.matrix(select(current_data, matches(paste0('chrom.*_A')))) / 5
-    dm       = as.matrix(select(current_data, matches(paste0('chrom.*_D')))) / 5
-    teVec_ad = t(eigen(cov(ad))$vectors)
-    teVec_dm = t(eigen(cov(dm))$vectors)
+    ad       = as.matrix(select(current_data, matches(paste0('chrom.*_A')))) 
+    dm       = as.matrix(select(current_data, matches(paste0('chrom.*_D')))) 
     y        = as.matrix(current_data[trait_vector])
-    beta_ad  = matrix(0., K, J)
-    beta_dm  = matrix(0., K, J)
     param_list = list(K        = K,
                       J        = J,
                       N        = N,
@@ -20,11 +16,7 @@ getStanInputFullGenome = function(current_data, trait_vector, J = sum(loci_per_c
                       family   = family,
                       ad       = ad,
                       dm       = dm,
-                      teVec_ad = teVec_ad,
-                      teVec_dm = teVec_dm,
-                      y        = y,
-                      beta_ad  = beta_ad,
-                      beta_dm  = beta_dm)
+                      y        = y)
     return(param_list)
 }
 getStanInput = function(current_chrom, current_data, trait_vector,
@@ -36,11 +28,7 @@ getStanInput = function(current_chrom, current_data, trait_vector,
     family   = as.integer(as.factor(current_data$FAMILY))
     ad       = as.matrix(select(current_data, matches(paste0('chrom', current_chrom, '_A'))))
     dm       = as.matrix(select(current_data, matches(paste0('chrom', current_chrom, '_D'))))
-    teVec_ad = t(eigen(cov(ad))$vectors)
-    teVec_dm = t(eigen(cov(dm))$vectors)
     y        = as.matrix(current_data[trait_vector])
-    beta_ad  = matrix(0., K, J)
-    beta_dm  = matrix(0., K, J)
     param_list = list(K        = K,
                       J        = J,
                       N        = N,
@@ -48,11 +36,7 @@ getStanInput = function(current_chrom, current_data, trait_vector,
                       family   = family,
                       ad       = ad,
                       dm       = dm,
-                      teVec_ad = teVec_ad,
-                      teVec_dm = teVec_dm,
-                      y        = y,
-                      beta_ad  = beta_ad,
-                      beta_dm  = beta_dm)
+                      y        = y)
     return(param_list)
 }
 getStanEffects = function(current_chrom, stan_model, trait_vector,

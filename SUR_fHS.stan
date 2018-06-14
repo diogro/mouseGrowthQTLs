@@ -11,11 +11,12 @@ data {
 
 transformed data {
   vector[K] zeros = rep_vector(0.0, K);
-  real m0 = 10;           // Expected number of large slopes
-  real slab_scale = 1;    // Scale for large slopes
+  real m0 = 3;           // Expected number of large slopes
+  real slab_scale = 3;    // Scale for large slopes
   real slab_scale2 = square(slab_scale);
-  real slab_df = 25;      // Effective degrees of freedom for large slopes
+  real slab_df = 8;      // Effective degrees of freedom for large slopes
   real half_slab_df = 0.5 * slab_df;
+  real nu_local = 3; // degrees of freedom of lambda
 }
 
 parameters {
@@ -72,11 +73,11 @@ transformed parameters {
   matrix[K, J] beta_dm;
   {
     for(k in 1:K){
-      tau0_ad[k] = (m0 / (J - m0)) * (L_sigma_R[k] / sqrt(1.0 * N));
-      tau0_dm[k] = (m0 / (J - m0)) * (L_sigma_R[k] / sqrt(1.0 * N));
+      tau0_ad[k] = (m0 / (J - m0)) * (L_sigma_R[k]/sqrt(1.0 * N));
+      tau0_dm[k] = (m0 / (J - m0)) * (L_sigma_R[k]/sqrt(1.0 * N));
     }
     tau_ad = tau0_ad .* tau_tilde_ad; // tau_ad ~ cauchy(0, tau0_ad)
-    tau_dm = tau0_dm .* tau_tilde_dm; // tau_ad ~ cauchy(0, tau0_ad)
+    tau_dm = tau0_dm .* tau_tilde_dm; // tau_dm ~ cauchy(0, tau0_dm)
 
     // c2_ad ~ inv_gamma(half_slab_df, half_slab_df * slab_scale2)
     // Implies that marginally beta_ad ~ student_t(slab_df, 0, slab_scale)
@@ -115,8 +116,8 @@ model {
   
   to_vector(beta_tilde_ad) ~ normal(0, 1);
   to_vector(beta_tilde_dm) ~ normal(0, 1);
-  to_vector(lambda_ad) ~ cauchy(0, 1);
-  to_vector(lambda_dm) ~ cauchy(0, 1);
+  to_vector(lambda_ad) ~ student_t ( nu_local , 0, 1);
+  to_vector(lambda_dm) ~ student_t ( nu_local , 0, 1);
   tau_tilde_ad ~ cauchy(0, 1);
   tau_tilde_dm ~ cauchy(0, 1);
   
