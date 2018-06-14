@@ -175,8 +175,8 @@ dimnames(G) = list(1:7, 1:7)
 G_lower = aaply(Gs_stan, c(2, 3), quantile, 0.025)
 G_upper = aaply(Gs_stan, c(2, 3), quantile, 0.975)
 
-G_dam_lower = aaply(Gs_dam, c(2, 3), quantile, 0.025)
-G_dam_upper = aaply(Gs_dam, c(2, 3), quantile, 0.975)
+#G_dam_lower = aaply(Gs_dam, c(2, 3), quantile, 0.025)
+#G_dam_upper = aaply(Gs_dam, c(2, 3), quantile, 0.975)
 
 Vg = 1/2 * Va + 1/4 * Vd
 
@@ -310,21 +310,7 @@ posterior_predict = function(beta_ad){
                                               LG_Predicted = LG_e)) %>% separate(variable, c("Line", "Type"))
 }
 
-w_ad = rstan::extract(stan_model_SUR, pars = "w_ad")[[1]]
-effect_matrix = aaply(w_ad, c(2, 3), mean)
-SM_e = rowSums(-1 * as.matrix(effect_matrix)) * sapply(growth_phen[,growth_traits], sd) + 
-    sapply(growth_phen[,growth_traits], mean)
-LG_e = rowSums(as.matrix(effect_matrix)) * sapply(growth_phen[,growth_traits], sd) + 
-    sapply(growth_phen[,growth_traits], mean)
-post = adply(w_ad, 1, posterior_predict)
-growth_prediction = reshape2::melt(data.frame(trait = as.factor(growth_traits), 
-                                              SM_QTL = SM_e,
-                                              SM_Observed = SM,
-                                              LG_QTL = LG_e,
-                                              F3_Observed = F3,
-                                              LG_Observed = LG)) %>% separate(variable, c("Line", "Type"))
-growth_pred_plot_SUR = ggplot() + scale_x_discrete(labels = paste("Week", 1:7)) + labs(y = "Weekly growth (g)", x = "Start week") + geom_line(data = post, color = "gray", size = 0.5, linetype = 1, alpha = 0.1, aes(trait, value, group = interaction(Type, Line, iterations))) + geom_line(size = 1, data = growth_prediction, aes(trait, value, group = interaction(Type, Line), color = Line, linetype = Type)) + theme_cowplot()
-save_plot("data/growth_multiple_regression_ancestral_prediction.png", growth_pred_plot_SUR, base_height = 7, base_aspect_ratio = 2)
+
 
 growth_observed_plot = ggplot() + scale_x_discrete(labels = paste("Week", 1:7)) + labs(y = "Weekly growth (g)", x = "Start week") + geom_line(size = 1, data = filter(growth_prediction, Type == "Observed"), aes(trait, value, group = Line, color = Line)) + theme_cowplot()
 save_plot("data/growth_LG_SM_F3.png", growth_observed_plot, base_height = 7, base_aspect_ratio = 2)
@@ -332,7 +318,8 @@ save_plot("data/growth_LG_SM_F3.png", growth_observed_plot, base_height = 7, bas
 
 par(mar = c(0, 0, 0, 0))
 g_plot = ~corrplot.mixed(cov2cor(G),       upper = "ellipse", mar = c(0, 0, 0, 0))
-plot_grid(growth_observed_plot, g_plot, labels = LETTERS[1:2])
+growth_curves_cov = plot_grid(growth_observed_plot, g_plot, labels = LETTERS[1:2], ncol = 2)
+save_plot("data/growth_LG_SM_F3_covF3.png", growth_curves_cov, base_height = 6, base_aspect_ratio = 1.5, ncol = 2)
 
 growth_observed_parentals_plot = ggplot() + scale_x_discrete(labels = paste("Week", 1:7)) + labs(y = "Weekly growth (g)", x = "Start week") + geom_line(size = 1, data = filter(growth_prediction, Type == "Observed", Line != "F3"), aes(trait, value, group = Line, color = Line)) + scale_color_manual(values=c("#00BA38", "#619CFF")) + theme_cowplot()
 save_plot("data/growth_LG_SM.png", growth_observed_parentals_plot, base_height = 7, base_aspect_ratio = 2)
@@ -350,6 +337,29 @@ save_plot("data/growth_LG_SM_DZ2.png", growth_observed_parentals_Dz2_plot, base_
 library(scales)
 show_col(hue_pal()(3))
 
+w_ad = rstan::extract(stan_model_SUR, pars = "w_ad")[[1]]
+effect_matrix = aaply(w_ad, c(2, 3), mean)
+SM_e = rowSums(-1 * as.matrix(effect_matrix)) * sapply(growth_phen[,growth_traits], sd) + 
+  sapply(growth_phen[,growth_traits], mean)
+LG_e = rowSums(as.matrix(effect_matrix)) * sapply(growth_phen[,growth_traits], sd) + 
+  sapply(growth_phen[,growth_traits], mean)
+post = adply(w_ad, 1, posterior_predict)
+growth_prediction = reshape2::melt(data.frame(trait = as.factor(growth_traits), 
+                                              SM_QTL = SM_e,
+                                              SM_Observed = SM,
+                                              LG_QTL = LG_e,
+                                              F3_Observed = F3,
+                                              LG_Observed = LG)) %>% separate(variable, c("Line", "Type"))
+growth_pred_plot_SUR = ggplot() + 
+  scale_x_discrete(labels = paste("Week", 1:7)) + 
+  labs(y = "Weekly growth (g)", x = "Start week") + 
+  geom_line(data = post, color = "gray", size = 0.5, 
+            linetype = 1, alpha = 0.1, aes(trait, value, group = interaction(Type, Line, iterations))) + 
+  geom_line(size = 1, data = growth_prediction, 
+            aes(trait, value, group = interaction(Type, Line), color = Line, linetype = Type)) +
+  theme(legend.position = "none")  + 
+  scale_y_continuous(limits = c(0,9.5)) + 
+  annotate("text", label = "QTL\n mapping", x= 1.1, y = 8)
 
 w_ad = rstan::extract(full_HCp, pars = "w_ad")[[1]]
 effect_matrix = aaply(w_ad, c(2, 3), mean)
@@ -357,17 +367,28 @@ SM_e = rowSums(-1 * as.matrix(effect_matrix)) * sapply(growth_phen[,growth_trait
     sapply(growth_phen[,growth_traits], mean)
 LG_e = rowSums(as.matrix(effect_matrix)) * sapply(growth_phen[,growth_traits], sd) + 
     sapply(growth_phen[,growth_traits], mean)
-post = adply(w_ad, 1, posterior_predict)
-growth_prediction = reshape2::melt(data.frame(trait = as.factor(growth_traits), 
-                                              SM_GenPred = SM_e,
+post_HC = adply(w_ad, 1, posterior_predict)
+growth_prediction_HC = reshape2::melt(data.frame(trait = as.factor(growth_traits), 
+                                              SM_QTL = SM_e,
                                               SM_Observed = SM,
-                                              LG_GenPred = LG_e,
+                                              LG_QTL = LG_e,
                                               F3_Observed = F3,
                                               LG_Observed = LG)) %>% separate(variable, c("Line", "Type"))
-growth_pred_plot_HC_full = ggplot() + scale_x_discrete(labels = paste("Week", 1:7)) + labs(y = "Weekly growth (g)", x = "Start week") + geom_line(data = post, color = "gray", size = 0.5, linetype = 1, alpha = 0.1, aes(trait, value, group = interaction(Type, Line, iterations))) + geom_line(size = 1, data = growth_prediction, aes(trait, value, group = interaction(Type, Line), color = Line, linetype = Type))
-save_plot("data/growth_multiple_regression_ancestral_prediction_full_genome.png", growth_pred_plot_HC_full, base_height = 7, base_aspect_ratio = 2)
+(growth_pred_plot_HC_full = ggplot() + 
+  scale_x_discrete(labels = paste("Week", 1:7)) + 
+  labs(y = "Weekly growth (g)", x = "Start week") + 
+  geom_line(data = post_HC, color = "gray", size = 0.5, 
+            linetype = 1, alpha = 0.1, aes(trait, value, group = interaction(Type, Line, iterations))) + 
+  geom_line(size = 1, data = growth_prediction_HC, 
+            aes(trait, value, group = interaction(Line, Type), color = Line, linetype = Type)) + 
+  theme(legend.position = c(0.7, 0.7), legend.title = element_blank()) + 
+  scale_linetype_discrete(labels = c("Observed", "Predicted")) +
+  scale_color_discrete(labels = c("F3", "LG/J", "SM/J")) + 
+  scale_y_continuous(limits = c(0,9.5)) + 
+  annotate("text", label = "Genome\n prediction", x= 1.1, y = 8))
 
-plot_grid(growth_pred_plot_SUR, growth_pred_plot_HC_full)
+predictions = plot_grid(growth_pred_plot_SUR, growth_pred_plot_HC_full, labels = LETTERS[1:2])
+save_plot("data/growth_LG_SM_F3_predictions.png", predictions, base_height = 6, base_aspect_ratio = 1, ncol = 2)
 
 
 ## Pleiotropic partition
