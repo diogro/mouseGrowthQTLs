@@ -440,6 +440,9 @@ save_plot("data/growth_pleiotropic_partition_ad_dm.png", pleiotropic_Effects_ad_
 
 ## Pleiotropic partition Genome prediction
 
+markerMatrix$id = 1:353
+significantMarkerPos = inner_join(significantMarkerMatrix, markerMatrix, by = c("chrom", "marker"))
+
 pleiotropic_partition = a_effect_matrix_HC
 pleiotropic_partition[growth_traits] = sqrt(pleiotropic_partition[growth_traits]^2)
 pleiotropic_partition$id = factor(pleiotropic_partition$id, levels = pleiotropic_partition$id)
@@ -450,11 +453,15 @@ a_pleiotropic_partition = pleiotropic_partition %>%
   arrange(chrom, marker) %>%
   mutate(id = factor(paste(chrom, marker, sep= "_"), levels = paste(chrom, marker, sep= "_")))
 
+markerMatrix$id = 1:353
+significantMarkerPos = inner_join(significantMarkerMatrix, markerMatrix, by = c("chrom", "marker"))
+significantMarkerPos$size_ad = rowSums(a_pleiotropic_partition[significantMarkerPos$id, growth_traits])
+
 a_pleiotropic_partition_plot =  
   ggplot() + 
   geom_bar(data = gather(a_pleiotropic_partition, key, value, growth_traits), 
            aes(id, value, group = key, color = key, fill = key), stat = "identity") +
-  scale_y_continuous(limits = c(0, 0.35)) + background_grid(major = "xy", minor = "none") + 
+  scale_y_continuous(limits = c(0, 0.35)) + background_grid(major = "x", minor = "none") + 
   scale_fill_viridis(discrete = TRUE, option = "D", 
                      guide = guide_legend(direction = "horizontal", 
                                           label.position = "top",
@@ -462,8 +469,11 @@ a_pleiotropic_partition_plot =
   scale_color_viridis(discrete = TRUE, option = "D", 
                       guide = guide_legend(direction = "horizontal",
                                            title = NULL)) + 
-  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = c(0.45, 0.9)) + 
-  labs(x = "Marker", y = "Squared contribution to\n scaled pleitropic vector")
+  geom_point(data = significantMarkerPos, aes(x = id, y = size_ad + 0.015), color = "tomato3", size = 2) +
+  theme(legend.position = c(0.45, 0.9)) + 
+  labs(x = "Chromossome Start", y = "Squared contribution to\n scaled pleitropic vector") +
+  scale_x_discrete(breaks = a_pleiotropic_partition[markerMatrix[markerMatrix$marker==1,"id"],"id"],
+                   labels = 1:19)
 #save_plot("data/growth_pleiotropic_partition_additive.png", pleiotropic_partition_plot, base_height = 7, base_aspect_ratio = 2) 
 
 pleiotropic_partition = d_effect_matrix_HC 
@@ -475,13 +485,20 @@ d_pleiotropic_partition = pleiotropic_partition %>%
          marker = as.numeric(marker)) %>%
   arrange(chrom, marker) %>%
   mutate(id = factor(paste(chrom, marker, sep= "_"), levels = paste(chrom, marker, sep= "_")))
+
+significantMarkerPos$size_dm = rowSums(d_pleiotropic_partition[significantMarkerPos$id, growth_traits])
+
+
 d_pleiotropic_partition_plot =  
   ggplot() + 
   geom_bar(data = gather(d_pleiotropic_partition, key, value, growth_traits), aes(id, value, group = key, color = key, fill = key), stat = "identity") +
   scale_fill_viridis(discrete = TRUE, option = "D") + scale_color_viridis(discrete = TRUE, option = "D") + 
-  scale_y_continuous(limits = c(0, 0.35)) + background_grid(major = "xy", minor = "none") + 
-  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none") +
-  labs(x = "Marker", y = "Squared contribution to\n scaled pleitropic vector")
+  scale_y_continuous(limits = c(0, 0.35)) + background_grid(major = "x", minor = "none") + 
+  theme(legend.position = "none") +
+  geom_point(data = significantMarkerPos, aes(x = id, y = size_dm + 0.015), color = "tomato3", size = 2) +
+  labs(x = "Marker", y = "Squared contribution to\n scaled pleitropic vector") +
+  scale_x_discrete(breaks = a_pleiotropic_partition[markerMatrix[markerMatrix$marker==1,"id"],"id"],
+                   labels = 1:19)
 pleiotropic_Effects_ad_dm = plot_grid(a_pleiotropic_partition_plot, d_pleiotropic_partition_plot, ad_biplot_HC, ncol = 1, labels = c("A", "B"))
 save_plot("data/growth_pleiotropic_partition_ad_dm_GP.png", pleiotropic_Effects_ad_dm, base_height = 4.5, base_aspect_ratio = 2.5, nrow = 3) 
 #save_plot("data/growth_pleiotropic_partition_dominance.png", pleiotropic_partition_plot, base_height = 7, base_aspect_ratio = 2) 
