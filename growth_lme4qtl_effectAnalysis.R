@@ -211,16 +211,16 @@ write.csv(MatrixCompare(Va_mean, G), file = "./data/TalkStuff/Va_FamilyG_compari
 write.csv(MatrixCompare(Vg_mean, G), file = "./data/TalkStuff/Vg_FamilyG_comparison.csv")
 write.csv(MatrixCompare(Vg_mean, Vd_mean), file = "./data/TalkStuff/Va_Vd_comparison.csv")
 
-write.csv(MatrixCompare(Vd_mean, G_dam), file = "./data/TalkStuff/Vd_DamG_comparison.csv")
-write.csv(MatrixCompare(Va_mean, G_dam), file = "./data/TalkStuff/Va_DamG_comparison.csv")
-write.csv(MatrixCompare(Vg_mean, G_dam), file = "./data/TalkStuff/Vg_DamG_comparison.csv")
-write.csv(MatrixCompare(G, G_dam), file = "./data/TalkStuff/GFamily_GDam_comparison.csv")
+# write.csv(MatrixCompare(Vd_mean, G_dam), file = "./data/TalkStuff/Vd_DamG_comparison.csv")
+# write.csv(MatrixCompare(Va_mean, G_dam), file = "./data/TalkStuff/Va_DamG_comparison.csv")
+# write.csv(MatrixCompare(Vg_mean, G_dam), file = "./data/TalkStuff/Vg_DamG_comparison.csv")
+# write.csv(MatrixCompare(G, G_dam), file = "./data/TalkStuff/GFamily_GDam_comparison.csv")
 
-write.csv(MatrixCompare(Vd_mean, G_nurse), file = "./data/TalkStuff/Vd_nurseG_comparison.csv")
-write.csv(MatrixCompare(Va_mean, G_nurse), file = "./data/TalkStuff/Va_nurseG_comparison.csv")
-write.csv(MatrixCompare(Vg_mean, G_nurse), file = "./data/TalkStuff/Vg_nurseG_comparison.csv")
-write.csv(MatrixCompare(G, G_nurse), file = "./data/TalkStuff/GFamily_Gnurse_comparison.csv")
-write.csv(MatrixCompare(G_dam, G_nurse), file = "./data/TalkStuff/Gdam_Gnurse_comparison.csv")
+# write.csv(MatrixCompare(Vd_mean, G_nurse), file = "./data/TalkStuff/Vd_nurseG_comparison.csv")
+# write.csv(MatrixCompare(Va_mean, G_nurse), file = "./data/TalkStuff/Va_nurseG_comparison.csv")
+# write.csv(MatrixCompare(Vg_mean, G_nurse), file = "./data/TalkStuff/Vg_nurseG_comparison.csv")
+# write.csv(MatrixCompare(G, G_nurse), file = "./data/TalkStuff/GFamily_Gnurse_comparison.csv")
+#write.csv(MatrixCompare(G_dam, G_nurse), file = "./data/TalkStuff/Gdam_Gnurse_comparison.csv")
 
 data.frame(Vg = diag(Vg_mean), G = diag(G)) %>% gather %>%
   ggplot(aes(c(1:7, 1:7), value, group = key, color = key)) + geom_point() + geom_line()
@@ -239,20 +239,20 @@ text(0.11, 0.35, "Variances", col = "tomato3")
 text(0.05, -0.05, "Co-variances")
 dev.off()
 
-png("./data/growth_dam_qtl_cov.png", width = 1500, height = 800)
-par(mfrow = c(1, 1), cex=2)
-plot(lt(G_dam)~lt(Vg_mean), pch = 19, 
-     ylab = "Dam G-matrix covariances", xlab = "Genetic covariances predicted from QTLs (1/2 * Va + 1/4 * Vd)", 
-     main = "Growth traits", xlim = c(-0.03, 0.17), ylim = c(-0.22, 0.6))
-segments(x0 = lt(Vg_lower), y0 = lt(G_dam), x1 = lt(Vg_upper), y1 = lt(G_dam))
-segments(x0 = lt(Vg_mean), y0 = lt(G_dam_lower), x1 = lt(Vg_mean), y1 = lt(G_dam_upper))
-points(diag(G_dam)~diag(Vg_mean), col = "tomato3", pch = 19)
-abline(lm(lt(G_dam)~lt(Vg_mean)))
-abline(0, 1, col = "blue")
-text(0.15, 0.12, "Identity", col = "blue")
-text(0.11, 0.35, "Variances", col = "tomato3")
-text(0.05, -0.05, "Co-variances")
-dev.off()
+# png("./data/growth_dam_qtl_cov.png", width = 1500, height = 800)
+# par(mfrow = c(1, 1), cex=2)
+# plot(lt(G_dam)~lt(Vg_mean), pch = 19, 
+#      ylab = "Dam G-matrix covariances", xlab = "Genetic covariances predicted from QTLs (1/2 * Va + 1/4 * Vd)", 
+#      main = "Growth traits", xlim = c(-0.03, 0.17), ylim = c(-0.22, 0.6))
+# segments(x0 = lt(Vg_lower), y0 = lt(G_dam), x1 = lt(Vg_upper), y1 = lt(G_dam))
+# segments(x0 = lt(Vg_mean), y0 = lt(G_dam_lower), x1 = lt(Vg_mean), y1 = lt(G_dam_upper))
+# points(diag(G_dam)~diag(Vg_mean), col = "tomato3", pch = 19)
+# abline(lm(lt(G_dam)~lt(Vg_mean)))
+# abline(0, 1, col = "blue")
+# text(0.15, 0.12, "Identity", col = "blue")
+# text(0.11, 0.35, "Variances", col = "tomato3")
+# text(0.05, -0.05, "Co-variances")
+# dev.off()
 
 
 summary(lm(lt(G)~lt(Vg_mean)))
