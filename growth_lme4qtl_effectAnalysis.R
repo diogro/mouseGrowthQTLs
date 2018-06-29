@@ -160,6 +160,9 @@ load(file = "Rdatas/growth_add_dom_effectsMatrix.Rdata")
 #Va = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix), calcVa, w_ad[i,,], w_dm[i,,], significantMarkerMatrix)), .parallel = TRUE)
 #Vd = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix), calcVd, w_dm[i,,], significantMarkerMatrix)), .parallel = TRUE)
 #save(Va, Vd, file = paste0(Rdatas_folder, "VaVd_QTL.Rdata"))
+
+
+
 load(paste0(Rdatas_folder, "VaVd_QTL.Rdata"))
 
 Va_mean = aaply(Va, c(2, 3), mean)
@@ -178,7 +181,7 @@ G_upper = aaply(Gs_stan, c(2, 3), quantile, 0.975)
 #G_dam_lower = aaply(Gs_dam, c(2, 3), quantile, 0.025)
 #G_dam_upper = aaply(Gs_dam, c(2, 3), quantile, 0.975)
 
-Vg = 1/2 * Va + 1/4 * Vd
+Vg = 0.5 * Va + 0.25 * Vd
 
 Vg_mean  = aaply(Vg, c(2, 3), mean)
 Vg_lower = aaply(Vg, c(2, 3), quantile, 0.025)
@@ -211,58 +214,126 @@ write.csv(MatrixCompare(Va_mean, G), file = "./data/TalkStuff/Va_FamilyG_compari
 write.csv(MatrixCompare(Vg_mean, G), file = "./data/TalkStuff/Vg_FamilyG_comparison.csv")
 write.csv(MatrixCompare(Vg_mean, Vd_mean), file = "./data/TalkStuff/Va_Vd_comparison.csv")
 
-write.csv(MatrixCompare(Vd_mean, G_dam), file = "./data/TalkStuff/Vd_DamG_comparison.csv")
-write.csv(MatrixCompare(Va_mean, G_dam), file = "./data/TalkStuff/Va_DamG_comparison.csv")
-write.csv(MatrixCompare(Vg_mean, G_dam), file = "./data/TalkStuff/Vg_DamG_comparison.csv")
-write.csv(MatrixCompare(G, G_dam), file = "./data/TalkStuff/GFamily_GDam_comparison.csv")
+# write.csv(MatrixCompare(Vd_mean, G_dam), file = "./data/TalkStuff/Vd_DamG_comparison.csv")
+# write.csv(MatrixCompare(Va_mean, G_dam), file = "./data/TalkStuff/Va_DamG_comparison.csv")
+# write.csv(MatrixCompare(Vg_mean, G_dam), file = "./data/TalkStuff/Vg_DamG_comparison.csv")
+# write.csv(MatrixCompare(G, G_dam), file = "./data/TalkStuff/GFamily_GDam_comparison.csv")
 
-write.csv(MatrixCompare(Vd_mean, G_nurse), file = "./data/TalkStuff/Vd_nurseG_comparison.csv")
-write.csv(MatrixCompare(Va_mean, G_nurse), file = "./data/TalkStuff/Va_nurseG_comparison.csv")
-write.csv(MatrixCompare(Vg_mean, G_nurse), file = "./data/TalkStuff/Vg_nurseG_comparison.csv")
-write.csv(MatrixCompare(G, G_nurse), file = "./data/TalkStuff/GFamily_Gnurse_comparison.csv")
-write.csv(MatrixCompare(G_dam, G_nurse), file = "./data/TalkStuff/Gdam_Gnurse_comparison.csv")
+# write.csv(MatrixCompare(Vd_mean, G_nurse), file = "./data/TalkStuff/Vd_nurseG_comparison.csv")
+# write.csv(MatrixCompare(Va_mean, G_nurse), file = "./data/TalkStuff/Va_nurseG_comparison.csv")
+# write.csv(MatrixCompare(Vg_mean, G_nurse), file = "./data/TalkStuff/Vg_nurseG_comparison.csv")
+# write.csv(MatrixCompare(G, G_nurse), file = "./data/TalkStuff/GFamily_Gnurse_comparison.csv")
+#write.csv(MatrixCompare(G_dam, G_nurse), file = "./data/TalkStuff/Gdam_Gnurse_comparison.csv")
 
-data.frame(Vg = diag(Vg_mean), G = diag(G)) %>% gather %>%
-  ggplot(aes(c(1:7, 1:7), value, group = key, color = key)) + geom_point() + geom_line()
-png("./data/growth_family_qtl_cov.png", width = 1500, height = 800)
-par(mfrow = c(1, 1), cex=2)
-plot(lt(G)~lt(Vg_mean), pch = 19, 
-     ylab = "Family G-matrix covariances", xlab = "Genetic covariances predicted from QTLs (1/2 * Va + 1/4 * Vd)", 
-     main = "", xlim = c(-0.03, 0.17), ylim = c(-0.22, 0.6))
+g_predict = function() {plot(lt(G)~lt(Vg_mean), pch = 19, 
+     ylab = "Mixed model\nG-matrix", xlab = "Genetic covariances predicted\n from pleiotropic vectors", 
+     main = "", xlim = c(-0.22, 0.55), ylim = c(-0.22, 0.55))
 segments(x0 = lt(Vg_lower), y0 = lt(G), x1 = lt(Vg_upper), y1 = lt(G))
 segments(x0 = lt(Vg_mean), y0 = lt(G_lower), x1 = lt(Vg_mean), y1 = lt(G_upper))
 points(diag(G)~diag(Vg_mean), col = "tomato3", pch = 19)
 abline(lm(lt(G)~lt(Vg_mean)))
 abline(0, 1, col = "blue")
-text(0.15, 0.12, "Identity", col = "blue")
-text(0.11, 0.35, "Variances", col = "tomato3")
-text(0.05, -0.05, "Co-variances")
-dev.off()
-
-png("./data/growth_dam_qtl_cov.png", width = 1500, height = 800)
-par(mfrow = c(1, 1), cex=2)
-plot(lt(G_dam)~lt(Vg_mean), pch = 19, 
-     ylab = "Dam G-matrix covariances", xlab = "Genetic covariances predicted from QTLs (1/2 * Va + 1/4 * Vd)", 
-     main = "Growth traits", xlim = c(-0.03, 0.17), ylim = c(-0.22, 0.6))
-segments(x0 = lt(Vg_lower), y0 = lt(G_dam), x1 = lt(Vg_upper), y1 = lt(G_dam))
-segments(x0 = lt(Vg_mean), y0 = lt(G_dam_lower), x1 = lt(Vg_mean), y1 = lt(G_dam_upper))
-points(diag(G_dam)~diag(Vg_mean), col = "tomato3", pch = 19)
-abline(lm(lt(G_dam)~lt(Vg_mean)))
-abline(0, 1, col = "blue")
-text(0.15, 0.12, "Identity", col = "blue")
-text(0.11, 0.35, "Variances", col = "tomato3")
-text(0.05, -0.05, "Co-variances")
-dev.off()
-
+abline(v = 0)
+abline(h = 0)
+text(0.2, 0.12, "Identity", col = "blue")
+text(0.25, 0.35, "Variances", col = "tomato3")
+text(0.1, -0.05, "Co-variances")};g_predict()
 
 summary(lm(lt(G)~lt(Vg_mean)))
-markerMatrix = ldply(1:19, function(x) data.frame(chrom = x, marker = 1:loci_per_chrom[[x]]))
-Va_HC = colSums(laply(1:353, calcVa, effect_matrix_ad_HC, effect_matrix_dm_HC, markerMatrix))
-old.par = par()
-par(mfrow = c(1, 2), cex=2)
-corrplot.mixed(cov2cor(G), upper = "ellipse", main = "\n\n\nFull-Sib G-matrix Correlation")
-corrplot.mixed(cov2cor(Va_HC), upper = "ellipse", main = "\n\n\nVa_HC")
-par(old.par)
+
+line = 2.5
+cex = 2
+las =2
+padj = -10.5
+png("data/growth_cov_prediction_composite.png", width = 900, height = 900)
+par(cex.lab=1.5, cex.axis=1.5, cex.main=1.5, cex.sub=1.5)
+layout(matrix(c(1,2,3, 4), 2, 2, byrow = TRUE))
+corrplot.mixed(cov2cor(Va_mean), upper = "ellipse", mar = c(0, 0, 2, 0), main = "Additive correlations")
+mtext("A", side=2, line=line, cex=cex, las=las, padj = padj)
+corrplot.mixed(cov2cor(Vd_mean), upper = "ellipse", mar = c(0, 0, 2, 0), main = "Dominance correlations")
+mtext("B", side=2, line=line, cex=cex, las=las, padj = padj)
+corrplot.mixed(cov2cor(Vg_mean), upper = "ellipse", mar = c(0, 0, 2, 0), main = "Genetic correlations")
+mtext("C", side=2, line=line, cex=cex, las=las, padj = padj)
+par(mar = c(6, 7, 1, 1), mgp=c(4,1,0))
+g_predict()
+mtext("D", side=2, line=line, cex=cex, las=las, padj = padj)
+dev.off()
+# png("./data/growth_dam_qtl_cov.png", width = 1500, height = 800)
+# par(mfrow = c(1, 1), cex=2)
+# plot(lt(G_dam)~lt(Vg_mean), pch = 19, 
+#      ylab = "Dam G-matrix covariances", xlab = "Genetic covariances predicted from QTLs (1/2 * Va + 1/4 * Vd)", 
+#      main = "Growth traits", xlim = c(-0.03, 0.17), ylim = c(-0.22, 0.6))
+# segments(x0 = lt(Vg_lower), y0 = lt(G_dam), x1 = lt(Vg_upper), y1 = lt(G_dam))
+# segments(x0 = lt(Vg_mean), y0 = lt(G_dam_lower), x1 = lt(Vg_mean), y1 = lt(G_dam_upper))
+# points(diag(G_dam)~diag(Vg_mean), col = "tomato3", pch = 19)
+# abline(lm(lt(G_dam)~lt(Vg_mean)))
+# abline(0, 1, col = "blue")
+# text(0.15, 0.12, "Identity", col = "blue")
+# text(0.11, 0.35, "Variances", col = "tomato3")
+# text(0.05, -0.05, "Co-variances")
+# dev.off()
+
+Va_GP = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix), 
+                                                          calcVa, 
+                                                          w_ad_HC[i,,], 
+                                                          w_dm_HC[i,,], 
+                                                          markerMatrix)), 
+              .parallel = TRUE)
+Vd_GP = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix), 
+                                                          calcVd, 
+                                                          w_dm_HC[i,,], 
+                                                          markerMatrix)), 
+              .parallel = TRUE)
+#save(Va_GP, Vd_GP, file = paste0(Rdatas_folder, "VaVd_GP_QTL.Rdata"))
+
+Va_GP_mean = aaply(Va_GP, c(2, 3), mean)
+Va_GP_upper = aaply(Va_GP, c(2, 3), quantile, 0.975)
+Va_GP_lower = aaply(Va_GP, c(2, 3), quantile, 0.025)
+
+Vd_GP_mean  = aaply(Vd_GP, c(2, 3), mean)
+Vd_GP_lower = aaply(Vd_GP, c(2, 3), quantile, 0.025)
+Vd_GP_upper = aaply(Vd_GP, c(2, 3), quantile, 0.975)
+
+Vg_GP = 0.5 * Va_GP + 0.25 * Vd_GP
+
+Vg_GP_mean  = aaply(Vg_GP, c(2, 3), mean)
+Vg_GP_lower = aaply(Vg_GP, c(2, 3), quantile, 0.025)
+Vg_GP_upper = aaply(Vg_GP, c(2, 3), quantile, 0.975)
+
+g_predict_GP = function() {
+  plot(lt(G)~lt(Vg_GP_mean), pch = 19, 
+                             ylab = "Mixed model\nG-matrix", xlab = "Genetic covariances predicted\n from pleiotropic vectors", 
+                             main = "", xlim = c(-0.22, 0.55), ylim = c(-0.22, 0.55))
+  segments(x0 = lt(Vg_GP_lower), y0 = lt(G), x1 = lt(Vg_GP_upper), y1 = lt(G))
+  segments(x0 = lt(Vg_GP_mean), y0 = lt(G_lower), x1 = lt(Vg_GP_mean), y1 = lt(G_upper))
+  points(diag(G)~diag(Vg_GP_mean), col = "tomato3", pch = 19)
+  abline(0, 1, col = "blue")
+  text(0.2, 0.12, "Identity", col = "blue")
+  #abline(lm(lt(G)~lt(Vg_GP_mean)))
+  abline(v = 0)
+  abline(h = 0)
+  text(0.03, 0.35, "Variances", col = "tomato3")
+  text(0.025, -0.05, "Co-variances")
+}; g_predict_GP()
+
+line = 2.5
+cex = 2
+las =2
+padj = -10.5
+png("data/growth_cov_prediction_composite_GP.png", width = 900, height = 900)
+layout(matrix(c(1,2,3, 4), 2, 2, byrow = TRUE))
+corrplot.mixed(cov2cor(Va_GP_mean), upper = "ellipse", mar = c(0, 0, 0, 0))
+mtext("A", side=2, line=line, cex=cex, las=las, padj = padj)
+corrplot.mixed(cov2cor(Vd_GP_mean), upper = "ellipse", mar = c(0, 0, 0, 0))
+mtext("B", side=2, line=line, cex=cex, las=las, padj = padj)
+corrplot.mixed(cov2cor(Vg_GP_mean), upper = "ellipse", mar = c(0, 0, 0, 0))
+mtext("C", side=2, line=line, cex=cex, las=las, padj = padj)
+par(mar = c(4, 5, 1, 1))
+g_predict_GP()
+mtext("D", side=2, line=line, cex=cex, las=las, padj = padj)
+dev.off()
+
+
 
 library(viridis)
 
@@ -440,6 +511,9 @@ save_plot("data/growth_pleiotropic_partition_ad_dm.png", pleiotropic_Effects_ad_
 
 ## Pleiotropic partition Genome prediction
 
+markerMatrix$id = 1:353
+significantMarkerPos = inner_join(significantMarkerMatrix, markerMatrix, by = c("chrom", "marker"))
+
 pleiotropic_partition = a_effect_matrix_HC
 pleiotropic_partition[growth_traits] = sqrt(pleiotropic_partition[growth_traits]^2)
 pleiotropic_partition$id = factor(pleiotropic_partition$id, levels = pleiotropic_partition$id)
@@ -450,11 +524,15 @@ a_pleiotropic_partition = pleiotropic_partition %>%
   arrange(chrom, marker) %>%
   mutate(id = factor(paste(chrom, marker, sep= "_"), levels = paste(chrom, marker, sep= "_")))
 
+markerMatrix$id = 1:353
+significantMarkerPos = inner_join(significantMarkerMatrix, markerMatrix, by = c("chrom", "marker"))
+significantMarkerPos$size_ad = rowSums(a_pleiotropic_partition[significantMarkerPos$id, growth_traits])
+
 a_pleiotropic_partition_plot =  
   ggplot() + 
   geom_bar(data = gather(a_pleiotropic_partition, key, value, growth_traits), 
            aes(id, value, group = key, color = key, fill = key), stat = "identity") +
-  scale_y_continuous(limits = c(0, 0.35)) + background_grid(major = "xy", minor = "none") + 
+  scale_y_continuous(limits = c(0, 0.35)) + background_grid(major = "x", minor = "none") + 
   scale_fill_viridis(discrete = TRUE, option = "D", 
                      guide = guide_legend(direction = "horizontal", 
                                           label.position = "top",
@@ -462,8 +540,11 @@ a_pleiotropic_partition_plot =
   scale_color_viridis(discrete = TRUE, option = "D", 
                       guide = guide_legend(direction = "horizontal",
                                            title = NULL)) + 
-  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = c(0.45, 0.9)) + 
-  labs(x = "Marker", y = "Squared contribution to\n scaled pleitropic vector")
+  geom_point(data = significantMarkerPos, aes(x = id, y = size_ad + 0.015), color = "tomato3", size = 2) +
+  theme(legend.position = c(0.45, 0.9)) + 
+  labs(x = "Chromossome Start", y = "Squared contribution to\n scaled pleitropic vector") +
+  scale_x_discrete(breaks = a_pleiotropic_partition[markerMatrix[markerMatrix$marker==1,"id"],"id"],
+                   labels = 1:19)
 #save_plot("data/growth_pleiotropic_partition_additive.png", pleiotropic_partition_plot, base_height = 7, base_aspect_ratio = 2) 
 
 pleiotropic_partition = d_effect_matrix_HC 
@@ -475,13 +556,20 @@ d_pleiotropic_partition = pleiotropic_partition %>%
          marker = as.numeric(marker)) %>%
   arrange(chrom, marker) %>%
   mutate(id = factor(paste(chrom, marker, sep= "_"), levels = paste(chrom, marker, sep= "_")))
+
+significantMarkerPos$size_dm = rowSums(d_pleiotropic_partition[significantMarkerPos$id, growth_traits])
+
+
 d_pleiotropic_partition_plot =  
   ggplot() + 
   geom_bar(data = gather(d_pleiotropic_partition, key, value, growth_traits), aes(id, value, group = key, color = key, fill = key), stat = "identity") +
   scale_fill_viridis(discrete = TRUE, option = "D") + scale_color_viridis(discrete = TRUE, option = "D") + 
-  scale_y_continuous(limits = c(0, 0.35)) + background_grid(major = "xy", minor = "none") + 
-  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "none") +
-  labs(x = "Marker", y = "Squared contribution to\n scaled pleitropic vector")
+  scale_y_continuous(limits = c(0, 0.35)) + background_grid(major = "x", minor = "none") + 
+  theme(legend.position = "none") +
+  geom_point(data = significantMarkerPos, aes(x = id, y = size_dm + 0.015), color = "tomato3", size = 2) +
+  labs(x = "Marker", y = "Squared contribution to\n scaled pleitropic vector") +
+  scale_x_discrete(breaks = a_pleiotropic_partition[markerMatrix[markerMatrix$marker==1,"id"],"id"],
+                   labels = 1:19)
 pleiotropic_Effects_ad_dm = plot_grid(a_pleiotropic_partition_plot, d_pleiotropic_partition_plot, ad_biplot_HC, ncol = 1, labels = c("A", "B"))
 save_plot("data/growth_pleiotropic_partition_ad_dm_GP.png", pleiotropic_Effects_ad_dm, base_height = 4.5, base_aspect_ratio = 2.5, nrow = 3) 
 #save_plot("data/growth_pleiotropic_partition_dominance.png", pleiotropic_partition_plot, base_height = 7, base_aspect_ratio = 2) 
