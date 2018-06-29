@@ -14,7 +14,7 @@ necropsy_data = inner_join(necropsy_phen_std,
 necropsy_data = mutate(necropsy_data, FAMILY = as.factor(FAMILY), variable = as.factor(variable))
 null_formula = "value ~ variable + (0 + variable|FAMILY)"
 
-makeMarkerList = function(pos) paste(paste('variable:chrom', pos[1],"_", c('A', 'D', 'I'), pos[2], sep = ''), collapse = ' + ')
+makeMarkerList = function(pos) paste(paste('variable:chrom', pos[1],"_", c('A', 'D'), pos[2], sep = ''), collapse = ' + ')
 markerMatrix = ldply(1:19, function(x) data.frame(chrom = x, marker = 1:loci_per_chrom[[x]]))
 markerList = alply(markerMatrix, 1, makeMarkerList)
 markerPositions = cbind(markerMatrix, read_csv("./data/markers/marker_positions.csv")[,3])
@@ -36,8 +36,8 @@ load(file = "./Rdatas/necropsy_significant_lmer_fit.Rdata")
 coef_df = summary(significant_markers_model)$coef[-c(1:5), ]
 coef_mean = matrix(coef_df[,1], ncol = 5, byrow = T)
 coef_sd = matrix(coef_df[,2], ncol = 5, byrow = T)
-ID = unlist(paste(rep(c("A", "D", "I"), nrow(significantMarkerMatrix)),
-                  rep(apply(significantMarkerMatrix, 1, paste, collapse = "_"), each = 3)) %>% {gsub(" ", "", .)})
+ID = unlist(paste(rep(c("A", "D"), nrow(significantMarkerMatrix)),
+                  rep(apply(significantMarkerMatrix, 1, paste, collapse = "_"), each = 2)) %>% {gsub(" ", "", .)})
 
 colnames(coef_mean) = colnames(coef_sd) = necropsy_traits
 rownames(coef_mean) = rownames(coef_sd) = ID 
@@ -45,12 +45,12 @@ rownames(coef_mean) = rownames(coef_sd) = ID
 coef_upper = coef_mean + 2*coef_sd
 coef_lower = coef_mean - 2*coef_sd
 
-ID = unlist(rep(apply(significantMarkerMatrix, 1, paste, collapse = "_"), each = 3) %>% {gsub(" ", "", .)})
+ID = unlist(rep(apply(significantMarkerMatrix, 1, paste, collapse = "_"), each = 2) %>% {gsub(" ", "", .)})
 
 effects = data.frame(coef_mean) %>%
            mutate(id = ID) %>%
            gather(trait, mean, FATPAD:SPLEEN)
-effects$class = c("additive", "dominance", "imprinting")
+effects$class = c("additive", "dominance")
 effects$upper = (data.frame(coef_upper) %>% mutate(id = ID) %>% gather(trait, upper, FATPAD:SPLEEN))$upper
 effects$lower = (data.frame(coef_lower) %>% mutate(id = ID) %>% gather(trait, lower, FATPAD:SPLEEN))$lower
 write_csv(effects, "./data/necropsy_significant_marker_effects.csv")
@@ -85,7 +85,7 @@ param_list = list(K        = K,
                   
 stan_model_SUR_HC = stan(file = "./SUR_horseShoePlus.stan",
                          data = param_list,
-                         chain=6, iter = 700, warmup = 500,
+                         chain=8, iter = 600, warmup = 500,
                          control = list(adapt_delta = 0.99, max_treedepth = 12))
 save(stan_model_SUR_HC, file = "./Rdatas/necropsy_significant_stan_HCp_fit.Rdata")
 load(file = "./Rdatas/necropsy_significant_stan_HCp_fit.Rdata")
