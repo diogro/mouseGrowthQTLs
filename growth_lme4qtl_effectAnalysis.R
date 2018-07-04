@@ -1,7 +1,7 @@
 #setwd("/home/diogro/projects/mouse-qtls")
 source('read_mouse_data.R')
 
-ncores = 2
+ncores = 8
 registerDoMC(ncores)
 options(mc.cores = ncores)
 setMKLthreads(ncores)
@@ -35,6 +35,7 @@ a_effect_matrix = e %>%
     select(id, class, trait, mean) %>%
     spread(trait, mean) %>%
     filter(class == "additive") %>% select(-class)
+   
 d_effect_matrix = e %>%
   select(id, class, trait, mean) %>%
   spread(trait, mean) %>%
@@ -103,7 +104,7 @@ vectorCor(mean_d, d_z)
 vectorCor(mean_a, beta)
 vectorCor(mean_d, beta)
 
-calcVa = function(i, a_effects, d_effects, markerMatrix){
+calcVa = function(i, a_effects, d_effects, markerMatrix, include_LD = TRUE){
   trait_sd = sapply(growth_phen[,growth_traits], sd)
   a_effects = a_effects * trait_sd
   d_effects = d_effects * trait_sd
@@ -123,13 +124,15 @@ calcVa = function(i, a_effects, d_effects, markerMatrix){
   V_a = V_a + 2*p*q * (q - p)  * (outer(a_effects[,i], d_effects[,i]) + 
                                   outer(d_effects[,i], a_effects[,i]))
   # Variance due to LD with focal marker
-  for(j in 1:nrow(markerMatrix)){
-    if (i != j) V_a = V_a + markerCov(focal_marker, markerMatrix[j,]) * 
-                                      outer(a_effects[,i], a_effects[,j])
+  if(include_LD){
+    for(j in 1:nrow(markerMatrix)){
+      if (i != j) V_a = V_a + markerCov(focal_marker, markerMatrix[j,]) * 
+          outer(a_effects[,i], a_effects[,j])
+    }
   }
   V_a
 }
-calcVd = function(i, d_effects, markerMatrix){
+calcVd = function(i, d_effects, markerMatrix, include_LD = TRUE){
   trait_sd = sapply(growth_phen[,growth_traits], sd)
   d_effects = d_effects * trait_sd
   current_chrom = markerMatrix[i,1]
@@ -143,9 +146,11 @@ calcVd = function(i, d_effects, markerMatrix){
   # additive contribution to Va
   V_d = (2*p*q)^2 * outer(d_effects[,i], d_effects[,i]) 
   # Variance due to LD with focal marker
-  for(j in 1:nrow(markerMatrix)){
-    d2ij = markerCov(focal_marker, markerMatrix[j,])
-    if (i != j) V_d = V_d + d2ij^2 * outer(d_effects[,i], d_effects[,j])
+  if(include_LD){
+    for(j in 1:nrow(markerMatrix)){
+      d2ij = markerCov(focal_marker, markerMatrix[j,])
+      if (i != j) V_d = V_d + d2ij^2 * outer(d_effects[,i], d_effects[,j])
+    }
   }
   V_d
 }
@@ -157,21 +162,28 @@ effect_matrix_dominance = aaply(w_dm, c(2, 3), mean)
 save(w_ad, w_dm, effect_matrix_additive, effect_matrix_dominance, file = "Rdatas/growth_add_dom_effectsMatrix.Rdata")
 load(file = "Rdatas/growth_add_dom_effectsMatrix.Rdata")
 
-#Va = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix), calcVa, w_ad[i,,], w_dm[i,,], significantMarkerMatrix)), .parallel = TRUE)
-#Vd = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix), calcVd, w_dm[i,,], significantMarkerMatrix)), .parallel = TRUE)
-#save(Va, Vd, file = paste0(Rdatas_folder, "VaVd_QTL.Rdata"))
-
-
-
+# Va = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix), calcVa, w_ad[i,,], w_dm[i,,], significantMarkerMatrix)), .parallel = TRUE)
+# Va_pleio = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix), calcVa, w_ad[i,,], w_dm[i,,], significantMarkerMatrix, include_LD = FALSE)), .parallel = TRUE)
+# Vd = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix), calcVd, w_dm[i,,], significantMarkerMatrix)), .parallel = TRUE)
+# Vd_pleio = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix), calcVd, w_dm[i,,], significantMarkerMatrix, include_LD = FALSE)), .parallel = TRUE)
+# save(Va,Va_pleio, Vd, Vd_pleio, file = paste0(Rdatas_folder, "VaVd_QTL.Rdata"))
 load(paste0(Rdatas_folder, "VaVd_QTL.Rdata"))
 
 Va_mean = aaply(Va, c(2, 3), mean)
 Va_upper = aaply(Va, c(2, 3), quantile, 0.975)
 Va_lower = aaply(Va, c(2, 3), quantile, 0.025)
 
+VaP_mean = aaply(Va_pleio, c(2, 3), mean)
+VaP_upper = aaply(Va_pleio, c(2, 3), quantile, 0.975)
+VaP_lower = aaply(Va_pleio, c(2, 3), quantile, 0.025)
+
 Vd_mean  = aaply(Vd, c(2, 3), mean)
 Vd_lower = aaply(Vd, c(2, 3), quantile, 0.025)
 Vd_upper = aaply(Vd, c(2, 3), quantile, 0.975)
+
+VdP_mean  = aaply(Vd_pleio, c(2, 3), mean)
+VdP_lower = aaply(Vd_pleio, c(2, 3), quantile, 0.025)
+VdP_upper = aaply(Vd_pleio, c(2, 3), quantile, 0.975)
 
 G = aaply(Gs_stan, c(2, 3), mean)
 dimnames(G) = list(1:7, 1:7)
@@ -186,6 +198,12 @@ Vg = 0.5 * Va + 0.25 * Vd
 Vg_mean  = aaply(Vg, c(2, 3), mean)
 Vg_lower = aaply(Vg, c(2, 3), quantile, 0.025)
 Vg_upper = aaply(Vg, c(2, 3), quantile, 0.975)
+
+Vg_pleio = 0.5 * Va_pleio + 0.25 * Vd_pleio
+
+VgP_mean  = aaply(Vg_pleio, c(2, 3), mean)
+VgP_lower = aaply(Vg_pleio, c(2, 3), quantile, 0.025)
+VgP_upper = aaply(Vg_pleio, c(2, 3), quantile, 0.975)
 
 matrices <- list(FullSib = G_stan,
                  "Va QTL" = Va_mean,
@@ -208,6 +226,16 @@ corrplot.mixed(cov2cor(Va_mean), upper = "ellipse", mar = c(0, 0, 1, 0))
 corrplot.mixed(cov2cor(Vd_mean), upper = "ellipse", mar = c(0, 0, 1, 0))
 dev.off()
 par(old.par)
+
+png("./data/growth_Va_PleiotropyLD_and_OnlyPleitropy.png", width = 1500, height = 800)
+par(mfrow = c(1, 2), cex=2, oma = c(0, 0, 0, 0))
+corrplot.mixed(cov2cor(Va_mean), upper = "ellipse", mar = c(0, 0, 1, 0), main = "Pleiotropy + LD")
+corrplot.mixed(cov2cor(VaP_mean), upper = "ellipse", mar = c(0, 0, 1, 0), main = "Pleiotropy only")
+dev.off()
+
+diag(VaP_mean)
+diag(Va_mean)
+MatrixCompare(Va_mean, VaP_mean)
 
 write.csv(MatrixCompare(Vd_mean, G), file = "./data/TalkStuff/Vd_FamilyG_comparison.csv")
 write.csv(MatrixCompare(Va_mean, G), file = "./data/TalkStuff/Va_FamilyG_comparison.csv")
@@ -237,7 +265,7 @@ abline(v = 0)
 abline(h = 0)
 text(0.2, 0.12, "Identity", col = "blue")
 text(0.25, 0.35, "Variances", col = "tomato3")
-text(0.1, -0.05, "Co-variances")};g_predict()
+text(0.1, -0.05, "Co-variances")}; g_predict()
 
 summary(lm(lt(G)~lt(Vg_mean)))
 
@@ -343,10 +371,49 @@ quantile(abs(apply(random_vec, 1, vectorCor, rep(1, 7))), 0.95)
 crss = data.frame(beta = apply(a_effect_matrix[,growth_traits], 1, vectorCor, beta),
                     dz = apply(a_effect_matrix[,growth_traits], 1, vectorCor,  d_z)) %>% gather(class, value, beta:dz)
 
+calcPleitropicPartition = function(effect_matrix, normalize = FALSE){
+  pleiotropic_partition = effect_matrix
+  pleiotropic_partition[growth_traits] = (pleiotropic_partition[growth_traits]^2)
+  pleiotropic_partition$id = factor(pleiotropic_partition$id, levels = pleiotropic_partition$id)
+  pleiotropic_partition = pleiotropic_partition %>% 
+    separate(id, c("chrom", "marker")) %>% 
+    mutate(chrom = as.numeric(chrom), 
+           marker = as.numeric(marker)) %>%
+    arrange(chrom, marker) %>%
+    mutate(id = factor(paste(chrom, marker, sep= "_"), levels = paste(chrom, marker, sep= "_")))
+  if(normalize) pleiotropic_partition[,growth_traits] = pleiotropic_partition[,growth_traits]/rowSums(pleiotropic_partition[,growth_traits])
+  return(pleiotropic_partition)
+
+}
+
+
+a_effect_matrix %>% print(n = 32)
+gather(trait, value, growth_traits) %>%
+  ggplot(aes(value)) + geom_histogram() + 
+  facet_wrap(~trait, scales = "free_x")
+
+x = calcPleitropicPartition(a_effect_matrix, normalize = TRUE)
+mask = as.matrix(x[,growth_traits]) > 1/6
+effect_m = as.matrix(a_effect_matrix[,growth_traits])
+effect_m[!mask] = 0
+a_effects_sig = a_effect_matrix
+a_effects_sig[,growth_traits] = effect_m
+a_effects_sig$norm = apply(as.matrix(a_effect_matrix[,growth_traits]), 1, Norm) 
+a_effects_sig %>%
+  #filter(norm > 0.1) %>%
+  arrange(desc(norm)) %>%
+  print(n = nrow(.))
+
+
+a_pleiotropic_partition = calcPleitropicPartition(a_effect_matrix, normalize = TRUE)
+Early = rowSums(a_pleiotropic_partition[,growth_traits[1:3]])
+
+
 a_corrs = data.frame(marker = 1:32, 
                      betaCorr = abs(apply(a_effect_matrix[,growth_traits], 1, vectorCor, beta)),
                      dzCorr = abs(apply(a_effect_matrix[,growth_traits], 1, vectorCor, d_z)),
-                     norm = apply(a_effect_matrix[,growth_traits], 1, Norm))
+                     norm = apply(a_effect_matrix[,growth_traits], 1, Norm),
+                     Early_proportion = Early)
 d_corrs = data.frame(marker = 1:32,
                      betaCorr = abs(apply(d_effect_matrix[,growth_traits], 1, vectorCor, beta)),
                      dzCorr = abs(apply(d_effect_matrix[,growth_traits], 1, vectorCor, d_z)),
@@ -354,7 +421,11 @@ d_corrs = data.frame(marker = 1:32,
 write.csv(a_corrs, "./data/growth_additive_correlations_beta_dZ.csv")
 write.csv(d_corrs, "./data/growth_dominance_correlations_beta_dZ.csv")
 ggplot(crss, aes(class, value, fill = class)) + geom_violin()
-additive_beta = ggplot(a_corrs, aes(norm, betaCorr)) + geom_point() + geom_smooth(method = "lm", color = "black") + 
+additive_beta = 
+  ggplot(a_corrs, aes(norm, betaCorr)) + 
+  geom_point(aes(color = Early_proportion), size = 3) + 
+  geom_smooth(method = "lm", color = "black") + 
+  scale_color_viridis() + 
   labs(x = "Additive effect vector norm", y = expression(paste("Alligment with ", beta)))
 dominance_beta = ggplot(d_corrs, aes(norm, betaCorr)) + geom_point() + geom_smooth(method = "lm", color = "black") + 
   labs(x = "Dominance effect vector norm", y = expression(paste("Alligment with ", beta)))
@@ -464,17 +535,9 @@ save_plot("data/growth_LG_SM_F3_predictions.png", predictions, base_height = 6, 
 
 ## Pleiotropic partition
 
-pleiotropic_partition = a_effect_matrix
-pleiotropic_partition[growth_traits] = (pleiotropic_partition[growth_traits]^2)
-pleiotropic_partition$id = factor(pleiotropic_partition$id, levels = pleiotropic_partition$id)
-a_pleiotropic_partition = pleiotropic_partition %>% 
-  separate(id, c("chrom", "marker")) %>% 
-  mutate(chrom = as.numeric(chrom), 
-         marker = as.numeric(marker)) %>%
-  arrange(chrom, marker) %>%
-  mutate(id = factor(paste(chrom, marker, sep= "_"), levels = paste(chrom, marker, sep= "_")))
+a_pleiotropic_partition = calcPleitropicPartition(a_effect_matrix)
 
-a_pleiotropic_partition_plot =  
+  a_pleiotropic_partition_plot =  
   ggplot() + 
   geom_bar(data = gather(a_pleiotropic_partition, key, value, growth_traits), 
            aes(id, value, group = key, color = key, fill = key), stat = "identity") +
@@ -573,3 +636,26 @@ d_pleiotropic_partition_plot =
 pleiotropic_Effects_ad_dm = plot_grid(a_pleiotropic_partition_plot, d_pleiotropic_partition_plot, ad_biplot_HC, ncol = 1, labels = c("A", "B"))
 save_plot("data/growth_pleiotropic_partition_ad_dm_GP.png", pleiotropic_Effects_ad_dm, base_height = 4.5, base_aspect_ratio = 2.5, nrow = 3) 
 #save_plot("data/growth_pleiotropic_partition_dominance.png", pleiotropic_partition_plot, base_height = 7, base_aspect_ratio = 2) 
+
+## Comparison of QTL effects with GP effects for the same loci
+a_effects_QTL_m = 
+  gather(a_effect_matrix, trait, value, growth_traits) %>% 
+  mutate(type = "QTL") %>%
+  arrange(id, trait)
+a_effects_GP_m = 
+  gather(a_effect_matrix_HC, trait, value, growth_traits) %>% 
+  mutate(type = "GP") %>%
+  filter(id %in% a_effects_QTL_m$id) %>% 
+  arrange(id, trait)
+par(mfrow = c(1, 1), mar = c(4, 4, 4, 4))
+plot(a_effects_QTL_m$value, a_effects_GP_m$value, pch = 19)
+abline(0, 1)
+
+
+## Comparison of direction between additive and dominance effects
+i = 1
+
+hist(laply(1:32, function(i) vectorCor(as.numeric(a_effect_matrix[i,growth_traits]), 
+                                       as.numeric(d_effect_matrix[i,growth_traits]))[1]), breaks = 20,
+     main = "Additive-Dominance correlation distribution", xlab = "Correlations")
+
