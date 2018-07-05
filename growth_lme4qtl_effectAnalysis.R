@@ -637,6 +637,14 @@ pleiotropic_Effects_ad_dm = plot_grid(a_pleiotropic_partition_plot, d_pleiotropi
 save_plot("data/growth_pleiotropic_partition_ad_dm_GP.png", pleiotropic_Effects_ad_dm, base_height = 4.5, base_aspect_ratio = 2.5, nrow = 3) 
 #save_plot("data/growth_pleiotropic_partition_dominance.png", pleiotropic_partition_plot, base_height = 7, base_aspect_ratio = 2) 
 
+
+# Vizualising pleitropy per marker
+load(file = "./Rdatas/significant_stan_fit.Rdata")
+effectsStan = getStanEffects(significantMarkerMatrix, stan_model_SUR, growth_traits)
+(effectsStan_plot = ggplot(filter(effectsStan, class == "additive"), aes(trait, mean)) + geom_point() + geom_pointrange(aes(ymin = lower, ymax = upper)) + geom_hline(yintercept = 0) + facet_wrap(~id, scale = "free_y", ncol = 4))
+save_plot("./data/growth_per_marker_additive_vectors_QTL.png", effectsStan_plot, base_height = 3, base_aspect_ratio = 2, 
+          ncol = 4, nrow = 5)
+
 ## Comparison of QTL effects with GP effects for the same loci
 a_effects_QTL_m = 
   gather(a_effect_matrix, trait, value, growth_traits) %>% 
