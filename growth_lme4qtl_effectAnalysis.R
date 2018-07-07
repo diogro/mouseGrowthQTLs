@@ -1,7 +1,7 @@
 #setwd("/home/diogro/projects/mouse-qtls")
 source('read_mouse_data.R')
 
-ncores = 8
+ncores = 4
 registerDoMC(ncores)
 options(mc.cores = ncores)
 setMKLthreads(ncores)
@@ -640,14 +640,35 @@ save_plot("data/growth_pleiotropic_partition_ad_dm_GP.png", pleiotropic_Effects_
 
 # Vizualising pleitropy per marker
 load(file = "./Rdatas/significant_stan_fit.Rdata")
+getStanEffects = function(markerMatrix, stan_model, trait_vector,
+                          J = nrow(markerMatrix),
+                          markers = 1:loci_per_chrom[current_chrom])
+{
+  K = length(trait_vector)
+  HC_summary = summary(stan_model, pairs = c("w_ad", "w_dm"))$summary
+  s = J * K * 2
+  mask = grepl("w_", rownames(HC_summary))
+  effects = data.frame(HC_summary[mask, c("mean", "2.5%", "97.5%")])
+  colnames(effects) <- c("mean", "lower", "upper")
+  effects$class = rep(c("additive", "dominance"), each = s/2)
+  effects$chrom = rep(markerMatrix$chrom, K)
+  effects$marker = rep(markerMatrix$marker, 2*K)
+  effects$trait = rep(trait_vector, each = J)
+  effects$id = factor(paste(effects$chrom, effects$marker, sep= "_"), 
+                      levels = unique(paste(effects$chrom, effects$marker, sep= "_")))
+  tbl_df(effects)
+}
 effectsStan = getStanEffects(significantMarkerMatrix, stan_model_SUR, growth_traits)
-(effectsStan_plot = ggplot(filter(effectsStan, class == "additive"), aes(trait, mean)) + geom_point() + geom_pointrange(aes(ymin = lower, ymax = upper)) + geom_hline(yintercept = 0) + facet_wrap(~id, scale = "free_y", ncol = 4))
-save_plot("./data/growth_per_marker_additive_vectors_QTL.png", effectsStan_plot, base_height = 3, base_aspect_ratio = 2, 
+(effectsStan_plot = ggplot(effectsStan, aes(trait, mean, group = class, color = class)) + 
+    geom_point(position = position_dodge(width = 0.2)) + 
+    geom_pointrange(aes(ymin = lower, ymax = upper), position = position_dodge(width = 0.2)) + 
+    geom_hline(yintercept = 0) + 
+    scale_color_manual(values = c("black", "tomato3")) +
+    facet_wrap(~id, scale = "free_y", ncol = 4)) + 
+  labs(x = "Week", y = "QTL effect") + scale_x_discrete(labels = 1:7)
+save_plot("./data/growth_per_marker_additive_dominance_vectors_QTL.png", effectsStan_plot, base_height = 3, base_aspect_ratio = 1.3, 
           ncol = 4, nrow = 5)
 
-(effectsStan_plot = ggplot(filter(effectsStan, class == "dominance"), aes(trait, mean)) + geom_point() + geom_pointrange(aes(ymin = lower, ymax = upper)) + geom_hline(yintercept = 0) + facet_wrap(~id, scale = "free_y", ncol = 4))
-save_plot("./data/growth_per_marker_dominance_vectors_QTL.png", effectsStan_plot, base_height = 3, base_aspect_ratio = 2, 
-          ncol = 4, nrow = 5)
 
 
 ## Comparison of QTL effects with GP effects for the same loci

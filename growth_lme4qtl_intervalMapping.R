@@ -79,20 +79,20 @@ ldply(intervalMapping, function(x) -log10(x$p.value)) %>%
 effect_file = paste0("./data/growth traits/growth_effectsInterval_", flank_dist, "cM.csv")
 write_csv(all_effectsInterval, effect_file)
 
+thresholds = read.csv("./data/F3_BONFERRONI_thresholds.csv")
+
 Pvalues = function(flank_dist, ...){
     model_file = paste0(Rdatas_folder, "growth_intervalMapping_", flank_dist, "cM.Rdata")
     load(model_file)
     p.values = ldply(intervalMapping, function(x) x$p.value) 
-    qobj = qvalue(p.values$V1, ...)
     p.values = rename(p.values, p_lrt = V1)
-    p.values$q_values = qobj$qvalues
-    p.values$significant = qobj$significant
+    p.values$significant = sapply(1:353, function(i) p.values$p_lrt[i] < thresholds[thresholds$chrom == markerMatrix[i, "chrom"], "p_value"])
     p.values$flank_dist = flank_dist
     p.values$pos = markerPositions$cM
     p.values$snp = 1:353
     return(p.values)
 }
-p_values = ldply(c(5, 10, 15, 20), Pvalues, 0.05)
+p_values = ldply(c(5, 10, 15, 20), Pvalues)
 p_values$flank_dist_chr = factor(paste0("Flanking markers at ", p_values$flank_dist, "cM"), 
                                  levels = paste0("Flanking markers at ", c(20, 15, 10, 5), "cM"))
 chrtable <- data.frame(table(p_values$chrom))
@@ -110,11 +110,10 @@ xbreaks <- sapply(dfmsplit, function(x) {
 })
 
 x = list("1" = c(4, 19, 29),
-         "2" = c(17, 23), 
-         "3" = 16,
+         "2" = c(23), 
          "4" = c(15, 21),
-         "5" = c(11, 16),
-         "6" = c(4, 14, 19),
+         "5" = c(11, 16, 18),
+         "6" = c(4, 14, 18, 22),
          "7" = 9,
          "8" = c(2, 8, 12),
          "9" = 4,
@@ -126,6 +125,7 @@ x = list("1" = c(4, 19, 29),
          "15"= 15,
          "17"= 5,
          "18"= c(5, 12))
+length(unlist(x))
 
 significantMarkerMatrix = ldply(x, function(x) data.frame(marker = x), .id = "chrom") 
 significantMarkerMatrix$chrom = as.integer(as.character(significantMarkerMatrix$chrom))
@@ -133,12 +133,13 @@ p_values_sig = inner_join(p_values, significantMarkerMatrix, by = c("chrom", "ma
 write_csv(significantMarkerMatrix, "./data/growth_significant_markers.csv")
 filter(p_values, significant == TRUE, chrom == 4, flank_dist == 10)
 library(ggman)
-p1 = ggplot(p_values, aes(snp, -log10(p_lrt), color = as.factor(chrom_alt))) + 
-  geom_point(aes(alpha = significant)) + 
+(p1 = ggplot(p_values, aes(snp, -log10(p_lrt), color = as.factor(chrom_alt))) + 
+  geom_point(aes(alpha = significant), size = 2) + 
   facet_wrap(~flank_dist_chr, ncol  = 1, scales = "free") + 
   scale_x_continuous(breaks = xbreaks) + labs(x = "Chromossome", y = "-log(p value)") + 
   guides(colour = FALSE) + geom_vline(data = p_values_sig, aes(xintercept = snp), color = "lightgrey") + 
-  theme(legend.position = "none")
+  geom_hline(yintercept = -log10(thresholds[1,3]), size = 0.8, color = "grey", linetype = "dashed") + 
+  theme(legend.position = "none") + scale_alpha_discrete(range = c(0.25, 1)) + scale_color_manual(values = c("black", "tomato3")))
 save_plot("./data/TalkStuff/growth_manhattan.png", p1, base_height = 7, base_aspect_ratio = 1.5)
 
 significantMarkerList = alply(significantMarkerMatrix, 1, makeMarkerList)
