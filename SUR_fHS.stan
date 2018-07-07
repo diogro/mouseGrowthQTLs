@@ -11,7 +11,7 @@ data {
 
 transformed data {
   vector[K] zeros = rep_vector(0.0, K);
-  real m0 = 10;           // Expected number of large slopes
+  real m0 = 40;           // Expected number of large slopes
   real slab_scale = 1;    // Scale for large slopes
   real slab_scale2 = square(slab_scale);
   real slab_df = 25;      // Effective degrees of freedom for large slopes
