@@ -139,6 +139,8 @@ area_markers = semi_join(markers, area_phen, by = "ID")
 area_traits = paste0("area", 1:7)
 num_area_traits = length(area_traits)
 
+area_phen[,area_traits] = sqrt(area_phen[,area_traits])
+
 m_area_phen = gather(area_phen, variable, value, area1:area7)
 
 null.formula = "value ~ variable * SEX + variable * LSB + variable * LSW + variable * COHORT"

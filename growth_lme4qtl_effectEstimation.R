@@ -1,6 +1,6 @@
 setwd("/home/diogro/projects/mouse-qtls")
 source('read_mouse_data.R')
-options(mc.cores = 8)
+options(mc.cores = 4)
 
 #Rdatas_folder = "~/gdrive/LGSM_project_Rdatas/"
 Rdatas_folder = "./Rdatas/"

@@ -99,26 +99,29 @@ Pvalues = function(flank_dist, ...){
     model_file = paste0(Rdatas_folder, "area_intervalMapping_", flank_dist, "cM.Rdata")
     load(model_file)
     p.values = ldply(intervalMapping, function(x) x$p.value) 
-    qobj = qvalue(p.values$V1, ...)
-    p.values$q_values = qobj$qvalues
-    p.values$significant = qobj$significant
+    p.values = rename(p.values, p_lrt = V1)
+    p.values$significant = sapply(1:353, function(i) p.values$p_lrt[i] < thresholds[thresholds$chrom == markerMatrix[i, "chrom"], "p_value"])
     p.values$flank_dist = flank_dist
+    p.values$pos = markerPositions$cM
+    p.values$snp = 1:353
     return(p.values)
 }
-p_values = ldply(c(5, 10, 15, 20), Pvalues, 0.05)
-p_values %>% 
-    filter(flank_dist == 5) %>% 
-    ggplot(aes(x =seq_along(V1), -log10(V1), color = as.factor(chrom))) + geom_point() + geom_line()
-
-ch = 7
-p_values %>%
-    select(chrom, marker, significant, flank_dist) %>%
-    filter(chrom == ch) %>%
-    spread(flank_dist, significant)
-
-ldply(intervalMapping, function(x) -log10(x$p.value)) %>%
-    filter(chrom == ch) %>%
-    ggplot(aes(x =seq_along(V1), V1)) + geom_point() + geom_line()
+p_values = ldply(c(5, 10, 15, 20), Pvalues)
+p_values$flank_dist_chr = factor(paste0("Flanking markers at ", p_values$flank_dist, "cM"), 
+                                 levels = paste0("Flanking markers at ", c(20, 15, 10, 5), "cM"))
+chrtable <- data.frame(table(p_values$chrom))
+chrtable$Var1 <- as.character(chrtable$Var1)
+chrtable <- chrtable[gtools:::mixedorder(chrtable$Var1), ]
+oddchrom <- as.character(chrtable$Var1[seq(1, nrow(chrtable), 2)])
+p_values$chrom_alt <- replace(p_values$chrom, p_values$chrom %in% oddchrom, 0)
+p_values$chrom_alt <- replace(p_values$chrom_alt, p_values$chrom_alt != 0, 1)
+dfmsplit <- split(p_values, p_values$chrom)
+xbreaks <- sapply(dfmsplit, function(x) {
+  midpoint <- length(x$snp)/8
+  if (midpoint < 1) 
+    midpoint <- 1
+  return(x$snp[midpoint])
+})
 
 x = list("1" = c(13, 29),
          "2" = c(5, 25), 
@@ -141,6 +144,18 @@ x = list("1" = c(13, 29),
 
 significantMarkerMatrix = ldply(x, function(x) data.frame(marker = x), .id = "chrom")
 write_csv(significantMarkerMatrix, "./data/area_significant_markers.csv")
+p_values_sig = inner_join(p_values, significantMarkerMatrix, by = c("chrom", "marker"))
+write_csv(significantMarkerMatrix, "./data/area_significant_markers.csv")
+filter(p_values, significant == TRUE, chrom == 4, flank_dist == 10)
+library(ggman)
+(p1 = ggplot(p_values, aes(snp, -log10(p_lrt), color = as.factor(chrom_alt))) + 
+  geom_point(aes(alpha = significant), size = 2) + 
+  facet_wrap(~flank_dist_chr, ncol  = 1, scales = "free") + 
+  scale_x_continuous(breaks = xbreaks) + labs(x = "Chromossome", y = "-log(p value)") + 
+  guides(colour = FALSE) + geom_vline(data = p_values_sig, aes(xintercept = snp), color = "lightgrey") + 
+  geom_hline(yintercept = -log10(thresholds[1,3]), size = 0.8, color = "grey", linetype = "dashed") + 
+  theme(legend.position = "none") + scale_alpha_discrete(range = c(0.25, 1)) + scale_color_manual(values = c("black", "tomato3")))
+save_plot("./data/TalkStuff/area_manhattan.png", p1, base_height = 7, base_aspect_ratio = 1.5)
 
 significantMarkerList = alply(significantMarkerMatrix, 1, makeMarkerList)
 significant_marker_term = paste(significantMarkerList, collapse = " + ")

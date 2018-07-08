@@ -87,9 +87,9 @@ d_z = LG - SM
 load("./Rdatas/growth_CovMatrices.Rdata")
 growth_sds = apply(growth_phen[,growth_traits], 2, sd)
 G = G_stan #* outer(growth_sds, growth_sds)
-png("~/G_LGSM", width = 600, height = 600)
+#png("~/G_LGSM", width = 600, height = 600)
 corrplot.mixed(cov2cor(G), upper = "ellipse")
-dev.off()
+#dev.off()
 plot(eigen(G)$values)
 G_ext4 = ExtendMatrix(G, ret.dim = 4)[[1]]
 G_ext5 = ExtendMatrix(G, ret.dim = 5)[[1]]
@@ -162,11 +162,11 @@ effect_matrix_dominance = aaply(w_dm, c(2, 3), mean)
 save(w_ad, w_dm, effect_matrix_additive, effect_matrix_dominance, file = "Rdatas/growth_add_dom_effectsMatrix.Rdata")
 load(file = "Rdatas/growth_add_dom_effectsMatrix.Rdata")
 
-# Va = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix), calcVa, w_ad[i,,], w_dm[i,,], significantMarkerMatrix)), .parallel = TRUE)
-# Va_pleio = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix), calcVa, w_ad[i,,], w_dm[i,,], significantMarkerMatrix, include_LD = FALSE)), .parallel = TRUE)
-# Vd = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix), calcVd, w_dm[i,,], significantMarkerMatrix)), .parallel = TRUE)
-# Vd_pleio = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix), calcVd, w_dm[i,,], significantMarkerMatrix, include_LD = FALSE)), .parallel = TRUE)
-# save(Va,Va_pleio, Vd, Vd_pleio, file = paste0(Rdatas_folder, "VaVd_QTL.Rdata"))
+ # Va = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix), calcVa, w_ad[i,,], w_dm[i,,], significantMarkerMatrix)), .parallel = TRUE)
+ # Va_pleio = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix), calcVa, w_ad[i,,], w_dm[i,,], significantMarkerMatrix, include_LD = FALSE)), .parallel = TRUE)
+ # Vd = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix), calcVd, w_dm[i,,], significantMarkerMatrix)), .parallel = TRUE)
+ # Vd_pleio = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix), calcVd, w_dm[i,,], significantMarkerMatrix, include_LD = FALSE)), .parallel = TRUE)
+ # save(Va,Va_pleio, Vd, Vd_pleio, file = paste0(Rdatas_folder, "VaVd_QTL.Rdata"))
 load(paste0(Rdatas_folder, "VaVd_QTL.Rdata"))
 
 Va_mean = aaply(Va, c(2, 3), mean)
@@ -301,18 +301,19 @@ dev.off()
 # text(0.05, -0.05, "Co-variances")
 # dev.off()
 
-Va_GP = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix), 
-                                                          calcVa, 
-                                                          w_ad_HC[i,,], 
-                                                          w_dm_HC[i,,], 
-                                                          markerMatrix)), 
-              .parallel = TRUE)
-Vd_GP = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix), 
-                                                          calcVd, 
-                                                          w_dm_HC[i,,], 
-                                                          markerMatrix)), 
-              .parallel = TRUE)
-#save(Va_GP, Vd_GP, file = paste0(Rdatas_folder, "VaVd_GP_QTL.Rdata"))
+# Va_GP = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix), 
+#                                                           calcVa, 
+#                                                           w_ad_HC[i,,], 
+#                                                           w_dm_HC[i,,], 
+#                                                           markerMatrix)), 
+#               .parallel = TRUE)
+# Vd_GP = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix), 
+#                                                           calcVd, 
+#                                                           w_dm_HC[i,,], 
+#                                                           markerMatrix)), 
+#               .parallel = TRUE)
+# save(Va_GP, Vd_GP, file = paste0(Rdatas_folder, "VaVd_GP_QTL.Rdata"))
+load(paste0(Rdatas_folder, "VaVd_GP_QTL.Rdata"))
 
 Va_GP_mean = aaply(Va_GP, c(2, 3), mean)
 Va_GP_upper = aaply(Va_GP, c(2, 3), quantile, 0.975)
@@ -423,15 +424,15 @@ write.csv(d_corrs, "./data/growth_dominance_correlations_beta_dZ.csv")
 ggplot(crss, aes(class, value, fill = class)) + geom_violin()
 additive_beta = 
   ggplot(a_corrs, aes(norm, betaCorr)) + 
-  geom_point(aes(color = Early_proportion), size = 3) + 
+  geom_point(size = 3) + 
+  #geom_point(aes(color = Early_proportion), size = 3) + scale_color_viridis() + 
   geom_smooth(method = "lm", color = "black") + 
-  scale_color_viridis() + 
   labs(x = "Additive effect vector norm", y = expression(paste("Alligment with ", beta)))
-dominance_beta = ggplot(d_corrs, aes(norm, betaCorr)) + geom_point() + geom_smooth(method = "lm", color = "black") + 
+dominance_beta = ggplot(d_corrs, aes(norm, betaCorr)) + geom_point(size = 3) + geom_smooth(method = "lm", color = "black") + 
   labs(x = "Dominance effect vector norm", y = expression(paste("Alligment with ", beta)))
-additive_dz = ggplot(a_corrs, aes(norm, dzCorr)) + geom_point() + geom_smooth(method = "lm", color = "black") + 
+additive_dz = ggplot(a_corrs, aes(norm, dzCorr)) + geom_point(size = 3) + geom_smooth(method = "lm", color = "black") + 
   labs(x = "Additive effect vector norm", y = expression("Alligment with divergence"))
-dominance_dz = ggplot(d_corrs, aes(norm, dzCorr)) + geom_point() + geom_smooth(method = "lm", color = "black") + 
+dominance_dz = ggplot(d_corrs, aes(norm, dzCorr)) + geom_point(size = 3) + geom_smooth(method = "lm", color = "black") + 
   labs(x = "Dominance effect vector norm", y = expression("Alligment with divergence"))
 regressions = plot_grid(additive_beta, dominance_beta, additive_dz, dominance_dz, labels = LETTERS[1:4])
 save_plot("data/growth_effect_aligment_regressions.png", regressions, base_height = 4, base_aspect_ratio = 2, ncol = 2, nrow = 2)
@@ -633,6 +634,7 @@ d_pleiotropic_partition_plot =
   labs(x = "Marker", y = "Squared contribution to\n scaled pleitropic vector") +
   scale_x_discrete(breaks = a_pleiotropic_partition[markerMatrix[markerMatrix$marker==1,"id"],"id"],
                    labels = 1:19)
+pleiotropic_Effects_ad_dm = plot_grid(a_pleiotropic_partition_plot, d_pleiotropic_partition_plot, ncol = 1, labels = c("A", "B"))
 pleiotropic_Effects_ad_dm = plot_grid(a_pleiotropic_partition_plot, d_pleiotropic_partition_plot, ad_biplot_HC, ncol = 1, labels = c("A", "B"))
 save_plot("data/growth_pleiotropic_partition_ad_dm_GP.png", pleiotropic_Effects_ad_dm, base_height = 4.5, base_aspect_ratio = 2.5, nrow = 3) 
 #save_plot("data/growth_pleiotropic_partition_dominance.png", pleiotropic_partition_plot, base_height = 7, base_aspect_ratio = 2) 
@@ -689,7 +691,7 @@ abline(0, 1)
 ## Comparison of direction between additive and dominance effects
 i = 1
 
-hist(laply(1:32, function(i) vectorCor(as.numeric(a_effect_matrix[i,growth_traits]), 
-                                       as.numeric(d_effect_matrix[i,growth_traits]))[1]), breaks = 20,
+hist(laply(1:32, function(i) abs(vectorCor(as.numeric(a_effect_matrix[i,growth_traits]), 
+                                       as.numeric(d_effect_matrix[i,growth_traits]))[1])), breaks = 30,
      main = "Additive-Dominance correlation distribution", xlab = "Correlations")
 
