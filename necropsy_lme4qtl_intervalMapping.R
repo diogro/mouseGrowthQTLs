@@ -53,27 +53,27 @@ runIntervalModel <- function(marker_term, null_formula){
                 p.value = test$'Pr(>Chisq)'[2],
                 model_summary = summary(focal_model)))
 }
-flank_dist = 5
-model_file = paste0(Rdatas_folder, "necropsy_intervalMapping_", flank_dist, "cM.Rdata")
-intervalMapping = llply(markerList, runIntervalModel, null_formula, .parallel = TRUE)
-save(intervalMapping, file = model_file)
-
-flank_dist = 10
-model_file = paste0(Rdatas_folder, "necropsy_intervalMapping_", flank_dist, "cM.Rdata")
-intervalMapping = llply(markerList, runIntervalModel, null_formula, .parallel = TRUE)
-save(intervalMapping, file = model_file)
-load(model_file)
-
-flank_dist = 15
-model_file = paste0(Rdatas_folder, "necropsy_intervalMapping_", flank_dist, "cM.Rdata")
-intervalMapping = llply(markerList, runIntervalModel, null_formula, .parallel = TRUE)
-save(intervalMapping, file = model_file)
-
-flank_dist = 20
-model_file = paste0(Rdatas_folder, "necropsy_intervalMapping_", flank_dist, "cM.Rdata")
-intervalMapping = llply(markerList, runIntervalModel, null_formula, .parallel = TRUE)
-save(intervalMapping, file = model_file)
-load(model_file)
+# flank_dist = 5
+# model_file = paste0(Rdatas_folder, "necropsy_intervalMapping_", flank_dist, "cM.Rdata")
+# intervalMapping = llply(markerList, runIntervalModel, null_formula, .parallel = TRUE)
+# save(intervalMapping, file = model_file)
+# 
+# flank_dist = 10
+# model_file = paste0(Rdatas_folder, "necropsy_intervalMapping_", flank_dist, "cM.Rdata")
+# intervalMapping = llply(markerList, runIntervalModel, null_formula, .parallel = TRUE)
+# save(intervalMapping, file = model_file)
+# load(model_file)
+# 
+# flank_dist = 15
+# model_file = paste0(Rdatas_folder, "necropsy_intervalMapping_", flank_dist, "cM.Rdata")
+# intervalMapping = llply(markerList, runIntervalModel, null_formula, .parallel = TRUE)
+# save(intervalMapping, file = model_file)
+# 
+# flank_dist = 20
+# model_file = paste0(Rdatas_folder, "necropsy_intervalMapping_", flank_dist, "cM.Rdata")
+# intervalMapping = llply(markerList, runIntervalModel, null_formula, .parallel = TRUE)
+# save(intervalMapping, file = model_file)
+# load(model_file)
 
 all_effectsInterval = ldply(intervalMapping,
                             function(x){
@@ -97,7 +97,7 @@ write_csv(all_effectsInterval, effect_file)
 thresholds = read.csv("./data/F3_BONFERRONI_thresholds.csv")
 
 Pvalues = function(flank_dist, ...){
-    model_file = paste0(Rdatas_folder, "growth_intervalMapping_", flank_dist, "cM.Rdata")
+    model_file = paste0(Rdatas_folder, "necropsy_intervalMapping_", flank_dist, "cM.Rdata")
     load(model_file)
     p.values = ldply(intervalMapping, function(x) x$p.value) 
     p.values = rename(p.values, p_lrt = V1)
@@ -136,6 +136,7 @@ x = list("1" = c(5, 11, 29),
          "11"= 14,
          "12"= c(4, 9),
          "13"= 9,
+         "15"=1,
          "16"= 11,
          "17"= 5,
          "18"= 11, 
