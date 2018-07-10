@@ -82,14 +82,14 @@ param_list = list(K        = K,
                   ad       = ad,
                   dm       = dm,
                   y        = y)
-                  
-stan_model_SUR_HC = stan(file = "./SUR_horseShoePlus.stan",
-                         data = param_list,
-                         chain=8, iter = 600, warmup = 500,
-                         control = list(adapt_delta = 0.99, max_treedepth = 12))
-save(stan_model_SUR_HC, file = "./Rdatas/necropsy_significant_stan_HCp_fit.Rdata")
-load(file = "./Rdatas/necropsy_significant_stan_HCp_fit.Rdata")
-plot(stan_model_SUR_HC, pars = "w_ad")
+
+# stan_model_SUR_HC = stan(file = "./SUR_horseShoePlus.stan",
+#                          data = param_list,
+#                          chain=8, iter = 600, warmup = 500,
+#                          control = list(adapt_delta = 0.99, max_treedepth = 12))
+# save(stan_model_SUR_HC, file = "./Rdatas/necropsy_significant_stan_HCp_fit.Rdata")
+# load(file = "./Rdatas/necropsy_significant_stan_HCp_fit.Rdata")
+# plot(stan_model_SUR_HC, pars = "w_ad")
 
 stan_model_SUR = stan(file = "./SUR.stan",
                          data = param_list,

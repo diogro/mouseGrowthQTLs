@@ -162,7 +162,7 @@ raw.necropsy_phen = tbl_df(select(raw.necropsy_phen, c(ID, FATPAD, HEART:LIVER))
 
 necropsy_phen = inner_join(mouse_meta, raw.necropsy_phen, by = "ID") %>% 
   semi_join(markers, by = "ID") %>%
-  select(ID, FAMILY, SEX, LSB, LSW, COHORT, FATPAD:LIVER) %>%
+  select(ID, FAMILY, Dam, NURSE, SEX, LSB, LSW, COHORT, xfostpair, FATPAD:LIVER) %>%
   na.omit %>%
   arrange(ID)
 
@@ -181,3 +181,4 @@ m_necropsy_phen_std$value = residuals(mouse_no_fixed)
 necropsy_phen_std = spread(m_necropsy_phen_std, variable, value)
 necropsy_phen_sd = sapply(necropsy_phen_std[necropsy_traits], sd)
 necropsy_phen_std[necropsy_traits] = scale(necropsy_phen_std[necropsy_traits])
+

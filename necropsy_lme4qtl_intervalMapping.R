@@ -107,7 +107,7 @@ Pvalues = function(flank_dist, ...){
     p.values$snp = 1:353
     return(p.values)
 }
-p_values = ldply(c(5, 10, 15, 20), Pvalues)
+p_values = ldply(c(5, 10, 15, 20), Pvalues, .parallel = TRUE)
 p_values$flank_dist_chr = factor(paste0("Flanking markers at ", p_values$flank_dist, "cM"), 
                                  levels = paste0("Flanking markers at ", c(20, 15, 10, 5), "cM"))
 chrtable <- data.frame(table(p_values$chrom))
@@ -132,14 +132,14 @@ x = list("1" = c(5, 11, 29),
          "7" = c(9, 13, 17),
          "8" = 2, 
          "9" = 6,
-         "10"= c(4, 14),
-         "11"= 14,
-         "12"= c(4, 9),
+         "10"= c(4, 15),
+         "11"= 12,
+         "12"= c(3, 9),
          "13"= 9,
          "15"=1,
          "16"= 11,
          "17"= 5,
-         "18"= 11, 
+         "18"= 10, 
          "19"= 2)
 
 significantMarkerMatrix = ldply(x, function(x) data.frame(marker = x), .id = "chrom")
