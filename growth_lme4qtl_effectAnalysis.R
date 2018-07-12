@@ -704,7 +704,6 @@ save_plot("./data/growth_per_marker_additive_dominance_vectors_QTL.png", effects
           base_height = 3, base_aspect_ratio = 1.3, ncol = 4, nrow = 5)
 
 
-
 ## Comparison of QTL effects with GP effects for the same loci
 a_effects_QTL_m = 
   gather(a_effect_matrix, trait, value, growth_traits) %>% 
