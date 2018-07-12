@@ -5,7 +5,7 @@ source('read_mouse_data.R')
 Rdatas_folder = "./Rdatas/"
 
 install_load("doMC", "lme4qtl", "qvalue")
-registerDoMC(10)
+registerDoMC(2)
 
 necropsy_data = inner_join(necropsy_phen_std,
                            necropsy_markers,

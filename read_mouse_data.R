@@ -78,13 +78,14 @@ growth_phen = inner_join(mouse_meta, raw.growth_phen, by = "ID") %>%
          growth78 = WEEK8 - WEEK7,
          growth89 = WEEK9 - WEEK8,
          growth910= WEEK10 - WEEK9) %>%
-  select(ID, FAMILY, Dam, NURSE, SEX, LSB, LSW, COHORT, xfostpair, growth12:growth78) %>%
+  select(ID, FAMILY, Dam, NURSE, SEX, LSB, LSW, COHORT, xfostpair, growth12:growth78, WEEK9) %>%
   na.omit %>%
   arrange(ID)
 
 growth_markers = semi_join(markers, growth_phen, by = "ID")
 
 growth_traits = c("growth12", "growth23", "growth34", "growth45", "growth56", "growth67", "growth78")
+growth_traits_fitness = c("WEEK9", growth_traits)
 num_growth_traits = length(growth_traits)
 
 m_growth_phen = gather(growth_phen, variable, value, growth12:growth78)
