@@ -512,9 +512,16 @@ growth_observed_parentals_Dz_plot = ggplot() + scale_x_discrete(labels = paste("
   annotate("text", x = 3.5, y = 6, label = "Phenotypic\ndivergence") + theme_cowplot()
 save_plot("data/growth_LG_SM_DZ1.png", growth_observed_parentals_Dz_plot, base_height = 7, base_aspect_ratio = 2)
 
-growth_observed_parentals_Dz2_plot = ggplot() + scale_x_discrete(labels = paste("Week", 1:7)) + labs(y = "Weekly growth (g)", x = "Start week") + geom_line(size = 1, data = filter(growth_prediction, Type == "Observed", Line != "F3"), aes(trait, value, group = Line, color = Line)) + scale_color_manual(values=c("#00BA38", "#619CFF")) +
+growth_observed_parentals_Dz2_plot = ggplot() + 
+  scale_x_discrete(labels = paste("Week", 1:7)) + 
+  labs(y = "Weekly growth (g)", x = "Start week") + 
+  geom_line(size = 1, data = filter(growth_prediction,
+                                    Type == "Observed", Line != "F3"), 
+            aes(trait, value, group = Line, color = Line)) + scale_color_manual(values=c("#00BA38", "#619CFF")) +
   geom_line(data = data.frame(trait = as.factor(growth_traits), dz = d_z), aes(trait, dz, group = 1)) +
-  annotate("text", x = 3.5, y = 5.5, label = "Phenotypic\ndivergence")
+  geom_line(data = data.frame(trait = as.factor(growth_traits), dz = d_z_w), aes(trait, dz, group = 1), color =  "red") +
+  annotate("text", x = 3.5, y = 5.5, label = "Phenotypic\ndivergence") + 
+  annotate("text", x = 3.9, y = 3.4, label = "Estimated\nPhenotypic\ndivergence", color = "red")
 save_plot("data/growth_LG_SM_DZ2.png", growth_observed_parentals_Dz2_plot, base_height = 7, base_aspect_ratio = 2)
 
 
