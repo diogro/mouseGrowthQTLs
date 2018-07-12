@@ -700,8 +700,8 @@ effectsStan = getStanEffects(significantMarkerMatrix, stan_model_SUR, growth_tra
     scale_color_manual(values = c("black", "tomato3")) +
     facet_wrap(~id, scale = "free_y", ncol = 4) + 
   labs(x = "Week", y = "QTL effect") + scale_x_discrete(labels = 1:7))
-save_plot("./data/growth_per_marker_additive_dominance_vectors_QTL.png", effectsStan_plot, base_height = 3, base_aspect_ratio = 1.3, 
-          ncol = 4, nrow = 5)
+save_plot("./data/growth_per_marker_additive_dominance_vectors_QTL.png", effectsStan_plot, 
+          base_height = 3, base_aspect_ratio = 1.3, ncol = 4, nrow = 5)
 
 
 
