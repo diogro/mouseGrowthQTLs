@@ -1,7 +1,7 @@
 #setwd("/home/diogro/projects/mouse-qtls")
 source('read_mouse_data.R')
 
-ncores = 4
+ncores = 8
 registerDoMC(ncores)
 options(mc.cores = ncores)
 setMKLthreads(ncores)
@@ -86,7 +86,7 @@ F3 = sapply(growth_phen[,growth_traits], mean)
 d_z = LG - SM
 load("./Rdatas/growth_CovMatrices.Rdata")
 growth_sds = apply(growth_phen[,growth_traits], 2, sd)
-G = G_stan #* outer(growth_sds, growth_sds)
+G = G_stan
 #png("~/G_LGSM", width = 600, height = 600)
 corrplot.mixed(cov2cor(G), upper = "ellipse")
 #dev.off()
@@ -94,15 +94,27 @@ plot(eigen(G)$values)
 G_ext4 = ExtendMatrix(G, ret.dim = 4)[[1]]
 G_ext5 = ExtendMatrix(G, ret.dim = 5)[[1]]
 solve(G, d_z)
-(beta = solve(G_ext4, d_z))
+(beta = Normalize(solve(G_ext4, d_z)))
+beta_w = Normalize((G_stan_w %*% c(1, rep(0, length(growth_traits))))[-1])
 solve(G_ext5, d_z)
 
-mean_a = colMeans(a_effect_matrix[,growth_traits])
-mean_d = colMeans(d_effect_matrix[,growth_traits])
+scale = Norm(G %*% beta_w)/Norm(d_z)
+beta_scaled = (beta_w/scale)
+d_z_w = (G %*% beta_scaled)[,1]
+vectorCor(d_z_w, d_z)
+Norm(d_z_w)
+Norm(d_z)
+
+mean_a = colMeans(aaply(as.matrix(a_effect_matrix[,growth_traits]), 1, function(x) x * growth_phen_sd))
+mean_d = colMeans(aaply(as.matrix(d_effect_matrix[,growth_traits]), 1, function(x) x * growth_phen_sd))
 vectorCor(mean_a, d_z)
 vectorCor(mean_d, d_z)
-vectorCor(mean_a, beta)
-vectorCor(mean_d, beta)
+
+vectorCor(mean_a, beta_w)
+vectorCor(mean_d, beta_w)
+vectorCor(beta_w, d_z)
+vectorCor(beta, d_z)
+vectorCor(beta_w, beta)
 
 calcVa = function(i, a_effects, d_effects, markerMatrix, include_LD = TRUE){
   trait_sd = sapply(growth_phen[,growth_traits], sd)
@@ -213,9 +225,10 @@ matrices <- list(FullSib = G_stan,
                  "FullSib non-cross-foster" = G_ncf,
                  #"G_dam" = G_dam,
                  #"G_nurse" = G_nurse,
-                 "beta" = beta,
+                 "beta_r" = beta,
+                 "beta_w" = beta_w,
                  "delta Z" = d_z)
-PrintMatrix(matrices)
+PrintMatrix(matrices, output.file = "./matrix.csv")
 
 png("./data/growth_family_Vg_FullSibG_correlation.png", width = 1500, height = 1500)
 old.par = par()
@@ -301,27 +314,47 @@ dev.off()
 # text(0.05, -0.05, "Co-variances")
 # dev.off()
 
-# Va_GP = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix), 
-#                                                           calcVa, 
-#                                                           w_ad_HC[i,,], 
-#                                                           w_dm_HC[i,,], 
-#                                                           markerMatrix)), 
+# Va_GP = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix),
+#                                                           calcVa,
+#                                                           w_ad_HC[i,,],
+#                                                           w_dm_HC[i,,],
+#                                                           markerMatrix)),
 #               .parallel = TRUE)
-# Vd_GP = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix), 
-#                                                           calcVd, 
-#                                                           w_dm_HC[i,,], 
-#                                                           markerMatrix)), 
+# Va_GP_pleio = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix),
+#                                                           calcVa,
+#                                                           w_ad_HC[i,,],
+#                                                           w_dm_HC[i,,],
+#                                                           markerMatrix, include_LD = FALSE)),
 #               .parallel = TRUE)
-# save(Va_GP, Vd_GP, file = paste0(Rdatas_folder, "VaVd_GP_QTL.Rdata"))
+# Vd_GP = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix),
+#                                                           calcVd,
+#                                                           w_dm_HC[i,,],
+#                                                           markerMatrix)),
+#               .parallel = TRUE)
+# Vd_GP_pleio = laply(seq_along(1:400), function(i) colSums(laply(1:nrow(significantMarkerMatrix),
+#                                                           calcVd,
+#                                                           w_dm_HC[i,,],
+#                                                           markerMatrix, include_LD = FALSE)),
+#               .parallel = TRUE)
+# 
+# save(Va_GP, Va_GP_pleio, Vd_GP, Vd_GP_pleio, file = paste0(Rdatas_folder, "VaVd_GP_QTL.Rdata"))
 load(paste0(Rdatas_folder, "VaVd_GP_QTL.Rdata"))
 
 Va_GP_mean = aaply(Va_GP, c(2, 3), mean)
 Va_GP_upper = aaply(Va_GP, c(2, 3), quantile, 0.975)
 Va_GP_lower = aaply(Va_GP, c(2, 3), quantile, 0.025)
 
+Va_GP_pleio_mean = aaply(Va_GP_pleio, c(2, 3), mean)
+Va_GP_pleio_upper = aaply(Va_GP_pleio, c(2, 3), quantile, 0.975)
+Va_GP_pleio_lower = aaply(Va_GP_pleio, c(2, 3), quantile, 0.025)
+
 Vd_GP_mean  = aaply(Vd_GP, c(2, 3), mean)
 Vd_GP_lower = aaply(Vd_GP, c(2, 3), quantile, 0.025)
 Vd_GP_upper = aaply(Vd_GP, c(2, 3), quantile, 0.975)
+
+Vd_GP_pleio_mean  = aaply(Vd_GP_pleio, c(2, 3), mean)
+Vd_GP_pleio_lower = aaply(Vd_GP_pleio, c(2, 3), quantile, 0.025)
+Vd_GP_pleio_upper = aaply(Vd_GP_pleio, c(2, 3), quantile, 0.975)
 
 Vg_GP = 0.5 * Va_GP + 0.25 * Vd_GP
 
@@ -363,62 +396,16 @@ mtext("D", side=2, line=line, cex=cex, las=las, padj = padj)
 dev.off()
 
 
-
-library(viridis)
-
-vectorCor(d_z, beta)
-random_vec = matrix(rnorm(7*1000), 1000, 7)
-quantile(abs(apply(random_vec, 1, vectorCor, rep(1, 7))), 0.95)
-crss = data.frame(beta = apply(a_effect_matrix[,growth_traits], 1, vectorCor, beta),
-                    dz = apply(a_effect_matrix[,growth_traits], 1, vectorCor,  d_z)) %>% gather(class, value, beta:dz)
-
-calcPleitropicPartition = function(effect_matrix, normalize = FALSE){
-  pleiotropic_partition = effect_matrix
-  pleiotropic_partition[growth_traits] = (pleiotropic_partition[growth_traits]^2)
-  pleiotropic_partition$id = factor(pleiotropic_partition$id, levels = pleiotropic_partition$id)
-  pleiotropic_partition = pleiotropic_partition %>% 
-    separate(id, c("chrom", "marker")) %>% 
-    mutate(chrom = as.numeric(chrom), 
-           marker = as.numeric(marker)) %>%
-    arrange(chrom, marker) %>%
-    mutate(id = factor(paste(chrom, marker, sep= "_"), levels = paste(chrom, marker, sep= "_")))
-  if(normalize) pleiotropic_partition[,growth_traits] = pleiotropic_partition[,growth_traits]/rowSums(pleiotropic_partition[,growth_traits])
-  return(pleiotropic_partition)
-
-}
-
-
-a_effect_matrix %>% print(n = 32)
-gather(trait, value, growth_traits) %>%
-  ggplot(aes(value)) + geom_histogram() + 
-  facet_wrap(~trait, scales = "free_x")
-
-x = calcPleitropicPartition(a_effect_matrix, normalize = TRUE)
-mask = as.matrix(x[,growth_traits]) > 1/6
-effect_m = as.matrix(a_effect_matrix[,growth_traits])
-effect_m[!mask] = 0
-a_effects_sig = a_effect_matrix
-a_effects_sig[,growth_traits] = effect_m
-a_effects_sig$norm = apply(as.matrix(a_effect_matrix[,growth_traits]), 1, Norm) 
-a_effects_sig %>%
-  #filter(norm > 0.1) %>%
-  arrange(desc(norm)) %>%
-  print(n = nrow(.))
-
-
-a_pleiotropic_partition = calcPleitropicPartition(a_effect_matrix, normalize = TRUE)
-Early = rowSums(a_pleiotropic_partition[,growth_traits[1:3]])
-
+### Regressions with selection and divergence
 
 a_corrs = data.frame(marker = 1:32, 
-                     betaCorr = abs(apply(a_effect_matrix[,growth_traits], 1, vectorCor, beta)),
-                     dzCorr = abs(apply(a_effect_matrix[,growth_traits], 1, vectorCor, d_z)),
-                     norm = apply(a_effect_matrix[,growth_traits], 1, Norm),
-                     Early_proportion = Early)
+                     betaCorr = abs(apply(a_effect_matrix[,growth_traits], 1, function(x) vectorCor(x * growth_phen_sd, beta))),
+                     dzCorr = abs(apply(a_effect_matrix[,growth_traits], 1, function(x) vectorCor(x * growth_phen_sd, d_z))),
+                     norm = apply(a_effect_matrix[,growth_traits], 1, function(x) Norm(x * growth_phen_sd)))
 d_corrs = data.frame(marker = 1:32,
-                     betaCorr = abs(apply(d_effect_matrix[,growth_traits], 1, vectorCor, beta)),
-                     dzCorr = abs(apply(d_effect_matrix[,growth_traits], 1, vectorCor, d_z)),
-                     norm = apply(d_effect_matrix[,growth_traits], 1, Norm))
+                     betaCorr = abs(apply(d_effect_matrix[,growth_traits], 1, function(x) vectorCor(x * growth_phen_sd, beta))),
+                     dzCorr = abs(apply(d_effect_matrix[,growth_traits], 1, function(x) vectorCor(x * growth_phen_sd, d_z))),
+                     norm = apply(d_effect_matrix[,growth_traits], 1, function(x) Norm(x * growth_phen_sd)))
 write.csv(a_corrs, "./data/growth_additive_correlations_beta_dZ.csv")
 write.csv(d_corrs, "./data/growth_dominance_correlations_beta_dZ.csv")
 ggplot(crss, aes(class, value, fill = class)) + geom_violin()
@@ -437,8 +424,48 @@ dominance_dz = ggplot(d_corrs, aes(norm, dzCorr)) + geom_point(size = 3) + geom_
 regressions = plot_grid(additive_beta, dominance_beta, additive_dz, dominance_dz, labels = LETTERS[1:4])
 save_plot("data/growth_effect_aligment_regressions.png", regressions, base_height = 4, base_aspect_ratio = 2, ncol = 2, nrow = 2)
 
-lm(beta~norm, data = a_corrs) %>% summary
-lm(norm~d_z, data = a_corrs) %>% summary
+lm(betaCorr~norm, data = a_corrs) %>% summary
+lm(dzCorr~norm, data = a_corrs) %>% summary
+lm(betaCorr~norm, data = d_corrs) %>% summary
+lm(dzCorr~norm, data = d_corrs) %>% summary
+
+#### Prediction
+
+a_corrs = data.frame(marker = 1:353, 
+                     betaCorr = abs(apply(a_effect_matrix_HC[,growth_traits], 1, 
+                                          function(x) vectorCor(x * growth_phen_sd, beta_w))),
+                     dzCorr = abs(apply(a_effect_matrix_HC[,growth_traits], 1, 
+                                        function(x) vectorCor(x * growth_phen_sd, d_z))),
+                     norm = apply(a_effect_matrix_HC[,growth_traits], 1, 
+                                  function(x) Norm(x * growth_phen_sd)))
+d_corrs = data.frame(marker = 1:353,
+                     betaCorr = abs(apply(d_effect_matrix_HC[,growth_traits], 1, 
+                                          function(x) vectorCor(x * growth_phen_sd, beta_w))),
+                     dzCorr = abs(apply(d_effect_matrix_HC[,growth_traits], 1, 
+                                        function(x) vectorCor(x * growth_phen_sd, d_z))),
+                     norm = apply(d_effect_matrix_HC[,growth_traits], 1, 
+                                  function(x) Norm(x * growth_phen_sd)))
+
+additive_beta = 
+  ggplot(a_corrs, aes(norm, betaCorr)) + 
+  geom_point(size = 3) + 
+  geom_smooth(method = "lm", color = "black") + 
+  labs(x = "Additive effect vector norm", y = expression(paste("Alligment with ", beta)))
+dominance_beta = ggplot(d_corrs, aes(norm, betaCorr)) + geom_point(size = 3) + geom_smooth(method = "lm", color = "black") + 
+  labs(x = "Dominance effect vector norm", y = expression(paste("Alligment with ", beta)))
+additive_dz = ggplot(a_corrs, aes(norm, dzCorr)) + geom_point(size = 3) + geom_smooth(method = "lm", color = "black") + 
+  labs(x = "Additive effect vector norm", y = expression("Alligment with divergence"))
+dominance_dz = ggplot(d_corrs, aes(norm, dzCorr)) + geom_point(size = 3) + geom_smooth(method = "lm", color = "black") + 
+  labs(x = "Dominance effect vector norm", y = expression("Alligment with divergence"))
+regressions = plot_grid(additive_beta, dominance_beta, additive_dz, dominance_dz, labels = LETTERS[1:4])
+save_plot("data/growth_effect_aligment_regressions_GP.png", regressions, base_height = 4, base_aspect_ratio = 2, ncol = 2, nrow = 2)
+
+lm(betaCorr~norm, data = a_corrs) %>% summary
+lm(dzCorr~norm, data = a_corrs) %>% summary
+lm(betaCorr~norm, data = d_corrs) %>% summary
+lm(dzCorr~norm, data = d_corrs) %>% summary
+
+### Predictions
 
 growth_m = as.numeric(ddply(growth_phen, .(SEX), numcolwise(mean))[2,growth_traits])
 growth_f = as.numeric(ddply(growth_phen, .(SEX), numcolwise(mean))[1,growth_traits])
@@ -453,11 +480,24 @@ posterior_predict = function(beta_ad){
                                               LG_Predicted = LG_e)) %>% separate(variable, c("Line", "Type"))
 }
 
+w_ad = rstan::extract(stan_model_SUR, pars = "w_ad")[[1]]
+effect_matrix = aaply(w_ad, c(2, 3), mean)
+SM_e = rowSums(-1 * as.matrix(effect_matrix)) * sapply(growth_phen[,growth_traits], sd) + 
+  sapply(growth_phen[,growth_traits], mean)
+LG_e = rowSums(as.matrix(effect_matrix)) * sapply(growth_phen[,growth_traits], sd) + 
+  sapply(growth_phen[,growth_traits], mean)
+post = adply(w_ad, 1, posterior_predict)
+growth_prediction = reshape2::melt(data.frame(trait = as.factor(growth_traits), 
+                                              SM_QTL = SM_e,
+                                              SM_Observed = SM,
+                                              LG_QTL = LG_e,
+                                              F3_Observed = F3,
+                                              LG_Observed = LG)) %>% separate(variable, c("Line", "Type"))
 
+library(scales)
 
 growth_observed_plot = ggplot() + scale_x_discrete(labels = paste("Week", 1:7)) + labs(y = "Weekly growth (g)", x = "Start week") + geom_line(size = 1, data = filter(growth_prediction, Type == "Observed"), aes(trait, value, group = Line, color = Line)) + theme_cowplot()
 save_plot("data/growth_LG_SM_F3.png", growth_observed_plot, base_height = 7, base_aspect_ratio = 2)
-
 
 par(mar = c(0, 0, 0, 0))
 g_plot = ~corrplot.mixed(cov2cor(G),       upper = "ellipse", mar = c(0, 0, 0, 0))
@@ -477,22 +517,7 @@ growth_observed_parentals_Dz2_plot = ggplot() + scale_x_discrete(labels = paste(
   annotate("text", x = 3.5, y = 5.5, label = "Phenotypic\ndivergence")
 save_plot("data/growth_LG_SM_DZ2.png", growth_observed_parentals_Dz2_plot, base_height = 7, base_aspect_ratio = 2)
 
-library(scales)
-show_col(hue_pal()(3))
 
-w_ad = rstan::extract(stan_model_SUR, pars = "w_ad")[[1]]
-effect_matrix = aaply(w_ad, c(2, 3), mean)
-SM_e = rowSums(-1 * as.matrix(effect_matrix)) * sapply(growth_phen[,growth_traits], sd) + 
-  sapply(growth_phen[,growth_traits], mean)
-LG_e = rowSums(as.matrix(effect_matrix)) * sapply(growth_phen[,growth_traits], sd) + 
-  sapply(growth_phen[,growth_traits], mean)
-post = adply(w_ad, 1, posterior_predict)
-growth_prediction = reshape2::melt(data.frame(trait = as.factor(growth_traits), 
-                                              SM_QTL = SM_e,
-                                              SM_Observed = SM,
-                                              LG_QTL = LG_e,
-                                              F3_Observed = F3,
-                                              LG_Observed = LG)) %>% separate(variable, c("Line", "Type"))
 growth_pred_plot_SUR = ggplot() + 
   scale_x_discrete(labels = paste("Week", 1:7)) + 
   labs(y = "Weekly growth (g)", x = "Start week") + 
@@ -550,7 +575,7 @@ a_pleiotropic_partition = calcPleitropicPartition(a_effect_matrix)
   scale_color_viridis(discrete = TRUE, option = "D", 
                       guide = guide_legend(direction = "horizontal",
                                            title = NULL)) + 
-  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = c(0.5, 0.9)) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = c(0.45, 0.9)) + 
   labs(x = "Marker", y = "Squared contribution to\n scaled pleitropic vector")
 
 pleiotropic_partition = d_effect_matrix 
@@ -666,8 +691,8 @@ effectsStan = getStanEffects(significantMarkerMatrix, stan_model_SUR, growth_tra
     geom_pointrange(aes(ymin = lower, ymax = upper), position = position_dodge(width = 0.2)) + 
     geom_hline(yintercept = 0) + 
     scale_color_manual(values = c("black", "tomato3")) +
-    facet_wrap(~id, scale = "free_y", ncol = 4)) + 
-  labs(x = "Week", y = "QTL effect") + scale_x_discrete(labels = 1:7)
+    facet_wrap(~id, scale = "free_y", ncol = 4) + 
+  labs(x = "Week", y = "QTL effect") + scale_x_discrete(labels = 1:7))
 save_plot("./data/growth_per_marker_additive_dominance_vectors_QTL.png", effectsStan_plot, base_height = 3, base_aspect_ratio = 1.3, 
           ncol = 4, nrow = 5)
 

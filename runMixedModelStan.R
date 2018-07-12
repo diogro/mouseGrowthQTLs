@@ -9,9 +9,9 @@ if(!require(MCMCglmm)){install.packages("MCMCglmm"); library(MCMCglmm)}
 #Rdatas_folder = "~/gdrive/LGSM_project_Rdatas/"
 Rdatas_folder = "./Rdatas/"
 
-ncores = 3
+ncores = 8
 registerDoMC(ncores)
-options(mc.cores = 3)
+options(mc.cores = 8)
 setMKLthreads(ncores)
 
 growth_data = growth_phen_std
@@ -30,9 +30,14 @@ getStanInputMM = function(current_data, trait_vector)
     return(param_list)
 }
 
+growth_phen_growth_phen_sd_W = c(1, growth_phen_sd)
 stan_MM_with_week9 = stan(file = "./mixedModelGmatrix.stan",
                data = getStanInputMM(growth_data, growth_traits_fitness),
-               chain=3, iter = 2000, warmup = 500, control = list(max_treedepth = 11))
+               chain=4, iter = 2000, warmup = 500, control = list(max_treedepth = 11))
+P_stan_w = colMeans(rstan::extract(stan_MM_with_week9, pars = c("P"))[[1]]) * outer(growth_phen_growth_phen_sd_W, growth_phen_growth_phen_sd_W)
+G_stan_w = colMeans(rstan::extract(stan_MM_with_week9, pars = c("G"))[[1]]) * outer(growth_phen_growth_phen_sd_W, growth_phen_growth_phen_sd_W)
+Gs_stan_w = aaply(rstan::extract(stan_MM_with_week9, pars = c("G"))[[1]], 1, '*', outer(growth_phen_growth_phen_sd_W, growth_phen_growth_phen_sd_W))
+R_stan_w = colMeans(rstan::extract(stan_MM_with_week9, pars = c("R"))[[1]]) * outer(growth_phen_growth_phen_sd_W, growth_phen_growth_phen_sd_W)
 
 stan_MM = stan(file = "./mixedModelGmatrix.stan",
                data = getStanInputMM(growth_data, growth_traits),
@@ -118,7 +123,8 @@ corrplot.mixed(cov2cor(G_ncf),  upper = "ellipse", mar = c(0, 0, 1, 0), main = "
 par(old.par)
 dev.off()
 
-save(P_stan, G_stan, Gs_stan, R_stan, G_cf, G_ncf, file = "./Rdatas/growth_CovMatrices.Rdata")
+save(P_stan_w, G_stan_w, Gs_stan_w, R_stan_w, 
+     P_stan, G_stan, Gs_stan, R_stan, G_cf, G_ncf, file = "./Rdatas/growth_CovMatrices.Rdata")
 load(file = "./Rdatas/growth_CovMatrices.Rdata")
 
 ### Dam nurse separation
