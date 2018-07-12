@@ -30,6 +30,10 @@ getStanInputMM = function(current_data, trait_vector)
     return(param_list)
 }
 
+stan_MM_with_week9 = stan(file = "./mixedModelGmatrix.stan",
+               data = getStanInputMM(growth_data, growth_traits_fitness),
+               chain=3, iter = 2000, warmup = 500, control = list(max_treedepth = 11))
+
 stan_MM = stan(file = "./mixedModelGmatrix.stan",
                data = getStanInputMM(growth_data, growth_traits),
                chain=3, iter = 2000, warmup = 500, control = list(max_treedepth = 11))
