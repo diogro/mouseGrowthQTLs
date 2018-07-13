@@ -70,15 +70,15 @@ Pvalues = function(i, ...){
     return(p.values)
 }
 p_values = ldply(1:6, Pvalues)
-chrtable <- data.frame(table(p_values$chrom))
+chrtable <- data.frame(table(filter(p_values, trait == "growth23")$chrom))
 chrtable$Var1 <- as.character(chrtable$Var1)
 chrtable <- chrtable[gtools:::mixedorder(chrtable$Var1), ]
 oddchrom <- as.character(chrtable$Var1[seq(1, nrow(chrtable), 2)])
 p_values$chrom_alt <- replace(p_values$chrom, p_values$chrom %in% oddchrom, 0)
 p_values$chrom_alt <- replace(p_values$chrom_alt, p_values$chrom_alt != 0, 1)
-dfmsplit <- split(p_values, p_values$chrom)
+dfmsplit <- split(filter(p_values, trait == "growth23"), filter(p_values, trait == "growth23")$chrom)
 xbreaks <- sapply(dfmsplit, function(x) {
-  midpoint <- length(x$snp)/8
+  midpoint <- length(x$snp)/2
   if (midpoint < 1) 
     midpoint <- 1
   return(x$snp[midpoint])
@@ -102,11 +102,9 @@ x = list("1" = c(4, 19, 29),
          "18"= c(5, 12))
 length(unlist(x))
 
-significantMarkerMatrix = ldply(x, function(x) data.frame(marker = x), .id = "chrom") 
-significantMarkerMatrix$chrom = as.integer(as.character(significantMarkerMatrix$chrom))
+significantMarkerMatrix = read_csv("./data/growth_significant_markers.csv")
 p_values_sig = inner_join(p_values, significantMarkerMatrix, by = c("chrom", "marker"))
-#write_csv(significantMarkerMatrix, "./data/growth_significant_markers.csv")
-library(ggman)
+
 (p1 = ggplot(p_values, aes(snp, -log10(p_lrt), color = as.factor(chrom_alt))) + 
   geom_point(aes(alpha = significant), size = 2) + 
   facet_wrap(~trait, ncol  = 1, scales = "free") + 
@@ -117,6 +115,12 @@ library(ggman)
 
 #save_plot("./data/TalkStuff/growth_manhattan.png", p1, base_height = 7, base_aspect_ratio = 1.5)
 
-significantMarkerList = alply(significantMarkerMatrix, 1, makeMarkerList)
-significant_marker_term = paste(significantMarkerList, collapse = " + ")
+significant_mask = vector("list", 6)
+for(i in 1:6){
+  aux = filter(p_values, significant == TRUE, trait == growth_traits[[i+1]])
+  significant_mask[[i]] = aux$snp
+}
+
+map(conditional_gwas[[5]][significant_mask[[5]]], function(x) x$model_summary$coefficients)
+
 
