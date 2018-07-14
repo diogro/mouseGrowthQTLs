@@ -4,8 +4,8 @@ source('read_mouse_data.R')
 #Rdatas_folder = "~/gdrive/LGSM_project_Rdatas/"
 Rdatas_folder = "./Rdatas/"
 
-ncores = 1
-nthreads = 8
+ncores = 2
+nthreads = 2
 registerDoMC(ncores)
 options(mc.cores = ncores)
 setMKLthreads(nthreads)
@@ -13,7 +13,7 @@ setMKLthreads(nthreads)
 growth_data = inner_join(growth_phen_std,
                         growth_markers,
                         by = "ID") 
-growth_data = mutate(growth_data, FAMILY = as.factor(FAMILY), variable = as.factor(variable))
+growth_data = mutate(growth_data, FAMILY = as.factor(FAMILY))
 
 markerMatrix = ldply(1:19, function(x) data.frame(chrom = x, marker = 1:loci_per_chrom[[x]]))
 makeMarkerList = function(pos) paste(paste('chrom', pos[1],"_", c('A', 'D'), pos[2], sep = ''), collapse = ' + ')
@@ -21,7 +21,8 @@ markerList = alply(markerMatrix, 1, makeMarkerList)
 markerPositions = cbind(markerMatrix, read_csv("./data/markers/marker_positions.csv")[,3])
 names(markerPositions)[3] = "cM"
 
-current_trait = 2
+current_trait = 7
+current_marker = 110
 runInteractionModel <- function(current_trait, markers = 1:353){
   trait_term = growth_traits[1:(current_trait-1)]
   null_formula = paste(growth_traits[current_trait], " ~ (1|FAMILY)")
@@ -32,29 +33,29 @@ runInteractionModel <- function(current_trait, markers = 1:353){
   interactionMarkerList = alply(markerMatrix, 1, makeInteractionMarkerList)
   
   runInteractionModelSingleMaker = function(current_marker){
-    direct_formula = paste(null_formula, markerList[current_marker], trait_term, sep = " + ")
+    direct_formula = paste(null_formula, markerList[current_marker], paste(trait_term, collapse = " + "), sep = " + ")
     direct_lmm = lmer(as.formula(direct_formula), data = growth_data, REML = FALSE)
     conditional_formula = paste(direct_formula, interactionMarkerList[current_marker], sep = " + ")
-    conditional_lmm = lmer(growth23 ~ (1|FAMILY) + chrom1_A1 + chrom1_D1 + 
-                             growth12:chrom1_A1 + growth12:chrom1_D1, 
+    conditional_lmm = lmer(as.formula(conditional_formula), 
                            data = growth_data, REML = FALSE)
     test = anova(direct_lmm, conditional_lmm)
+    model_summary = summary(conditional_lmm)
     
     return(list(direct_lmm = direct_lmm,
                 conditional_lmm = conditional_lmm, 
                 test = test,
                 p.value = test$'Pr(>Chisq)'[2],
-                model_summary = summary(conditional_lmm)))
+                model_summary = model_summary))
   }
   llply(markers, runInteractionModelSingleMaker, .progress = "text")
 }
-# conditional_gwas = vector("list", num_growth_traits-1)
-# names(conditional_gwas) = growth_traits[-1]
-# for(i in 1:(num_growth_traits-1)){
-#   print(growth_traits[i+1])
-#   conditional_gwas[[i]] = runInteractionModel(i+1)
-# }
-# save(conditional_gwas, file = "./Rdatas/growth_conditional_all_previous.Rdata")
+conditional_gwas = vector("list", num_growth_traits-1)
+names(conditional_gwas) = growth_traits[-1]
+for(i in 1:(num_growth_traits-1)){
+  print(growth_traits[i+1])
+  conditional_gwas[[i]] = runInteractionModel(i+1)
+}
+save(conditional_gwas, file = "./Rdatas/growth_conditional_all_previous.Rdata")
 load("./Rdatas/growth_conditional_all_previous.Rdata")
 
 thresholds = read.csv("./data/F3_BONFERRONI_thresholds.csv")
@@ -113,7 +114,7 @@ p_values_sig = inner_join(p_values, significantMarkerMatrix, by = c("chrom", "ma
   geom_hline(yintercept = -log10(thresholds[1,3]), size = 0.8, color = "grey", linetype = "dashed") + 
   theme(legend.position = "none") + scale_alpha_discrete(range = c(0.25, 1)) + scale_color_manual(values = c("black", "tomato3")))
 
-#save_plot("./data/TalkStuff/growth_manhattan.png", p1, base_height = 7, base_aspect_ratio = 1.5)
+save_plot("./data/growth_conditionalEffects_manhattan.png", p1, base_height = 7, base_aspect_ratio = 1.5)
 
 significant_mask = vector("list", 6)
 for(i in 1:6){
