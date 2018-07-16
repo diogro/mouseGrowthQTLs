@@ -1,7 +1,7 @@
 #setwd("/home/diogro/projects/mouse-qtls")
 source('read_mouse_data.R')
 
-ncores = 8
+ncores = 2
 registerDoMC(ncores)
 options(mc.cores = ncores)
 setMKLthreads(ncores)
@@ -79,8 +79,8 @@ a_biplot_HC = PCbiplot(prcomp(a_effect_matrix_HC[,growth_traits]), ids = a_effec
 d_biplot_HC = PCbiplot(prcomp(d_effect_matrix_HC[,growth_traits]), ids = d_effect_matrix_HC$id)
 ad_biplot_HC = plot_grid(a_biplot_HC, d_biplot_HC, labels = c("C", "D"))
 
-LG = c(3.785,4.435,8.43,7.395,2.995,1.85,2.085)
-SM = c(3.31 ,2.98,3.82,2.175,0.765,1.165,0.51)
+LG = c(3.785, 4.435, 8.43, 7.395, 2.995, 1.85, 2.085)
+SM = c(3.31 , 2.98, 3.82, 2.175, 0.765, 1.165, 0.51)
 F3 = sapply(growth_phen[,growth_traits], mean)
 
 d_z = LG - SM
@@ -92,29 +92,30 @@ corrplot.mixed(cov2cor(G), upper = "ellipse")
 #dev.off()
 plot(eigen(G)$values)
 G_ext4 = ExtendMatrix(G, ret.dim = 4)[[1]]
-G_ext5 = ExtendMatrix(G, ret.dim = 5)[[1]]
-solve(G, d_z)
 (beta = Normalize(solve(G_ext4, d_z)))
-beta_w = Normalize((G_stan_w %*% c(1, rep(0, length(growth_traits))))[-1])
-solve(G_ext5, d_z)
 
-scale = Norm(G %*% beta_w)/Norm(d_z)
-beta_scaled = (beta_w/scale)
-d_z_w = (G %*% beta_scaled)[,1]
-vectorCor(d_z_w, d_z)
-Norm(d_z_w)
+beta_w = coef(lm(WEEK9 ~ growth12 + growth23 + growth34 + growth45 + growth56 + growth67 + growth78, data = growth_phen_std))[-1]
+dz_w = G %*% beta_w
+scale = Norm(dz_w)/Norm(d_z)
+beta_w_scaled = beta_w/scale
+dz_w_scaled = G %*% beta_w_scaled
+vectorCor(d_z, dz_w_scaled)
+Norm(dz_w_scaled)
 Norm(d_z)
 
 mean_a = colMeans(aaply(as.matrix(a_effect_matrix[,growth_traits]), 1, function(x) x * growth_phen_sd))
 mean_d = colMeans(aaply(as.matrix(d_effect_matrix[,growth_traits]), 1, function(x) x * growth_phen_sd))
 vectorCor(mean_a, d_z)
 vectorCor(mean_d, d_z)
-
 vectorCor(mean_a, beta_w)
 vectorCor(mean_d, beta_w)
+
 vectorCor(beta_w, d_z)
 vectorCor(beta, d_z)
 vectorCor(beta_w, beta)
+vectorCor(d_z, dz_w)
+vectorCor(beta, dz_w)
+vectorCor(beta_w, dz_w)
 
 calcVa = function(i, a_effects, d_effects, markerMatrix, include_LD = TRUE){
   trait_sd = sapply(growth_phen[,growth_traits], sd)
@@ -399,11 +400,11 @@ dev.off()
 ### Regressions with selection and divergence
 
 a_corrs = data.frame(marker = 1:32, 
-                     betaCorr = abs(apply(a_effect_matrix[,growth_traits], 1, function(x) vectorCor(x * growth_phen_sd, beta))),
+                     betaCorr = abs(apply(a_effect_matrix[,growth_traits], 1, function(x) vectorCor(x * growth_phen_sd, beta_w))),
                      dzCorr = abs(apply(a_effect_matrix[,growth_traits], 1, function(x) vectorCor(x * growth_phen_sd, d_z))),
                      norm = apply(a_effect_matrix[,growth_traits], 1, function(x) Norm(x * growth_phen_sd)))
 d_corrs = data.frame(marker = 1:32,
-                     betaCorr = abs(apply(d_effect_matrix[,growth_traits], 1, function(x) vectorCor(x * growth_phen_sd, beta))),
+                     betaCorr = abs(apply(d_effect_matrix[,growth_traits], 1, function(x) vectorCor(x * growth_phen_sd, beta_w))),
                      dzCorr = abs(apply(d_effect_matrix[,growth_traits], 1, function(x) vectorCor(x * growth_phen_sd, d_z))),
                      norm = apply(d_effect_matrix[,growth_traits], 1, function(x) Norm(x * growth_phen_sd)))
 write.csv(a_corrs, "./data/growth_additive_correlations_beta_dZ.csv")
@@ -519,7 +520,7 @@ growth_observed_parentals_Dz2_plot = ggplot() +
                                     Type == "Observed", Line != "F3"), 
             aes(trait, value, group = Line, color = Line)) + scale_color_manual(values=c("#00BA38", "#619CFF")) +
   geom_line(data = data.frame(trait = as.factor(growth_traits), dz = d_z), aes(trait, dz, group = 1)) +
-  geom_line(data = data.frame(trait = as.factor(growth_traits), dz = d_z_w), aes(trait, dz, group = 1), color =  "red") +
+  geom_line(data = data.frame(trait = as.factor(growth_traits), dz = dz_w_scaled), aes(trait, dz, group = 1), color =  "red") +
   annotate("text", x = 3.5, y = 5.5, label = "Phenotypic\ndivergence") + 
   annotate("text", x = 3.9, y = 3.4, label = "Estimated\nPhenotypic\ndivergence", color = "red")
 save_plot("data/growth_LG_SM_DZ2.png", growth_observed_parentals_Dz2_plot, base_height = 7, base_aspect_ratio = 2)
