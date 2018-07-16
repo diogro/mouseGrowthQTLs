@@ -15,6 +15,7 @@ if(!require(corrplot)){install.packages("corrplot"); library(corrplot)}
 if(!require(purrr)){install.packages("purrr"); library(purrr)}
 if(!require(evolqg)){install.packages("evolqg"); library(evolqg)}
 if(!require(doMC)){install.packages("doMC"); library(doMC)}
+if(!require(here)){install.packages("here"); library(here)}
 
 ## Meta data
 
