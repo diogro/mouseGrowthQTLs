@@ -96,7 +96,7 @@ p_values_sig = inner_join(p_values, significantMarkerMatrix, by = c("chrom", "ma
   geom_hline(yintercept = -log10(thresholds[1,3]), size = 0.8, color = "grey", linetype = "dashed") + 
   theme(legend.position = "none") + scale_alpha_discrete(range = c(0.25, 1)) + scale_color_manual(values = c("black", "tomato3")))
 
-save_plot("./data/growth_conditionalEffects_manhattan.png", p1, base_height = 7, base_aspect_ratio = 1.5)
+save_plot("./data/growth_conditionalEffects_weight_manhattan.png", p1, base_height = 7, base_aspect_ratio = 1.5)
 
 significant_mask = vector("list", 7)
 for(i in 1:7){
