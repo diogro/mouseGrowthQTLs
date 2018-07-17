@@ -24,7 +24,7 @@ names(markerPositions)[3] = "cM"
 current_trait = 7
 current_marker = 110
 runInteractionModel <- function(current_trait, markers = 1:353){
-  trait_term = weight_traits[1:current_trait]
+  trait_term = weight_traits[current_trait]
   null_formula = paste(growth_traits[current_trait], " ~ (1|FAMILY)")
   makeInteractionMarkerList = function(pos){
     marker_term = paste('chrom', pos[1],"_", c('A', 'D'), pos[2], sep = '')
@@ -98,32 +98,33 @@ p_values_sig = inner_join(p_values, significantMarkerMatrix, by = c("chrom", "ma
 
 save_plot("./data/growth_conditionalEffects_manhattan.png", p1, base_height = 7, base_aspect_ratio = 1.5)
 
-significant_mask = vector("list", 6)
-for(i in 1:6){
-  aux = filter(p_values, significant == TRUE, trait == growth_traits[[i+1]])
+significant_mask = vector("list", 7)
+for(i in 1:7){
+  aux = filter(p_values, significant == TRUE, trait == growth_traits[[i]])
   significant_mask[[i]] = cbind(aux$snp, aux$chrom, aux$marker, aux$p_lrt)
 }
-significant_mask[[6]]
-x = list("1" = c(49, 67, 86, 202, 285, 296, 307),
-         "2" = c(110, 156, 254, 277, 313, 344), 
-         "3" = c(24, 56, 82, 105, 178, 210, 218, 267, 309),
-         "4" = c(32, 51, 83, 89, 134, 196, 206, 220, 248, 320, 333),
-         "5" = c(25, 116, 128, 156, 175, 221, 264, 302),
-         "6" = c(67, 115, 125, 149, 167, 190, 228, 241, 283, 339))
-for(i in 1:6){
+significant_mask[[7]]
+x = list("1" = c(19, 27, 49, 62, 78, 109, 115, 131, 147, 166, 169, 176, 218, 246, 254, 298, 307, 345),
+         "2" = c(108, 126, 165, 244, 307, 346), 
+         "3" = c(60, 156, 277),
+         "4" = c(178, 293),
+         "5" = c(30, 91, 121, 204, 226, 334),
+         "6" = c(128, 221, 300, 337),
+         "7" = c(117, 148, 219))
+for(i in 1:7){
   aux = significant_mask[[i]]
   significant_mask[[i]] = aux[aux[,1] %in% x[[i]],]
 }
-names(significant_mask) = growth_traits[-1]
+names(significant_mask) = growth_traits
 
-conditional_effects = vector("list", 6)
-for(trait in 1:6){
+conditional_effects = vector("list", 7)
+for(trait in 1:7){
   conditional_effects[[trait]] = list()
   for(marker in 1:(nrow(significant_mask[[trait]]))){
       x = conditional_gwas[[trait]][significant_mask[[trait]][marker,1]][[1]]
       coef = x$model_summary$coefficients
       n_coef = nrow(coef)
-      n_conditional = 2*trait
+      n_conditional = 2
       get_lines = (n_coef - n_conditional + 1):n_coef
       coef = data.frame(coef[get_lines, c(1, 2, 5)])
       coef$trait = growth_traits[trait+1]
@@ -131,16 +132,16 @@ for(trait in 1:6){
       coef$chrom = significant_mask[[trait]][marker,2]
       coef$marker = significant_mask[[trait]][marker,3]
       coef$id = paste(coef$chrom, coef$marker, sep = "_")
-      coef$type = rep(c("additive", "dominance"), each = trait)
-      coef$p_trait = rep(growth_traits[1:(trait)], 2)
+      coef$type = c("additive", "dominance")
+      coef$p_trait = rep(weight_traits[trait], 2)
       conditional_effects[[trait]][[marker]] = coef
       names(conditional_effects[[trait]][[marker]])[1:3] = c("mean", "sd", "p") 
   }
   conditional_effects[[trait]] = do.call(rbind, conditional_effects[[trait]])
 }
 
-conditional_effect_plots = vector("list", 6)
-for (i in 1:6){
+conditional_effect_plots = vector("list", 7)
+for (i in 1:7){
 conditional_effect_plots[[i]]= ggplot(conditional_effects[[i]], aes(p_trait, mean, group = id, color = id)) + 
   geom_point(position = position_dodge(width = 0.3), size = 3) + 
   geom_pointrange(aes(ymin = mean - sd, ymax = mean + sd), position = position_dodge(width = 0.3)) +
@@ -149,5 +150,5 @@ conditional_effect_plots[[i]]= ggplot(conditional_effects[[i]], aes(p_trait, mea
   scale_color_viridis_d(option ="B") +
   labs(x = "Week", y = "QTL effect") + scale_x_discrete(labels = 1:7)
 }
-all_conditiona = plot_grid(plotlist = conditional_effect_plots, labels = growth_traits[-1])
-save_plot(here("data", "growth_conditional_effects.png"), all_conditiona, base_height = 5, base_aspect_ratio = 1.2, ncol = 3, nrow = 2)
+all_conditiona = plot_grid(plotlist = conditional_effect_plots, labels = growth_traits)
+save_plot(here("data", "growth_conditional_effects_previous_weight.png"), all_conditiona, base_height = 5, base_aspect_ratio = 1.2, ncol = 3, nrow = 2)
