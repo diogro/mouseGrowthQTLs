@@ -441,7 +441,7 @@ a_corrs = data.frame(marker = 1:353,
                                   function(x) Norm(x * growth_phen_sd)))
 d_corrs = data.frame(marker = 1:353,
                      betaCorr = abs(apply(d_effect_matrix_HC[,growth_traits], 1, 
-                                          function(x) vectorCor(x * growth_phen_sd, beta_w))),
+                                          function(x) vectorCor(x * growth_phen_sd, beta))),
                      dzCorr = abs(apply(d_effect_matrix_HC[,growth_traits], 1, 
                                         function(x) vectorCor(x * growth_phen_sd, d_z))),
                      norm = apply(d_effect_matrix_HC[,growth_traits], 1, 
