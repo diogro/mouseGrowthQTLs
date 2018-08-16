@@ -148,7 +148,7 @@ conditional_effect_plots[[i]]= ggplot(conditional_effects[[i]], aes(p_trait, mea
   geom_hline(yintercept = 0) + 
   facet_wrap(~type) +
   scale_color_viridis_d(option ="B") +
-  labs(x = "Week", y = "QTL effect") + scale_x_discrete(labels = 1:7)
+  labs(x = "Week", y = "QTL effect") + scale_x_discrete(labels = i)
 }
 all_conditiona = plot_grid(plotlist = conditional_effect_plots, labels = growth_traits)
 save_plot(here("data", "growth_conditional_effects_previous_weight.png"), all_conditiona, base_height = 5, base_aspect_ratio = 1.2, ncol = 3, nrow = 2)

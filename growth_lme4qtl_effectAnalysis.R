@@ -1,12 +1,11 @@
 #setwd("/home/diogro/projects/mouse-qtls")
 source('read_mouse_data.R')
 
-ncores = 2
+ncores = 8
 registerDoMC(ncores)
 options(mc.cores = ncores)
 setMKLthreads(ncores)
 
-#Rdatas_folder = "~/gdrive/LGSM_project_Rdatas/"
 Rdatas_folder = "./Rdatas/"
 
 vectorCor = function(x, y) Normalize(x) %*% Normalize(y)
@@ -78,6 +77,11 @@ ad_biplot = plot_grid(a_biplot, d_biplot, labels = c("C", "D"))
 a_biplot_HC = PCbiplot(prcomp(a_effect_matrix_HC[,growth_traits]), ids = a_effect_matrix_HC$id)
 d_biplot_HC = PCbiplot(prcomp(d_effect_matrix_HC[,growth_traits]), ids = d_effect_matrix_HC$id)
 ad_biplot_HC = plot_grid(a_biplot_HC, d_biplot_HC, labels = c("C", "D"))
+
+a_vals = eigen(cov(a_effect_matrix[,growth_traits]))$values
+cumsum(a_vals/sum(a_vals))
+vals = eigen(cov(d_effect_matrix[,growth_traits]))$values
+cumsum(vals/sum(vals))
 
 LG = c(3.785, 4.435, 8.43, 7.395, 2.995, 1.85, 2.085)
 SM = c(3.31 , 2.98, 3.82, 2.175, 0.765, 1.165, 0.51)
@@ -280,8 +284,17 @@ abline(h = 0)
 text(0.2, 0.12, "Identity", col = "blue")
 text(0.25, 0.35, "Variances", col = "tomato3")
 text(0.1, -0.05, "Co-variances")}; g_predict()
+par(mfrow = c(1, 1))
 
+## Significance of the regression
 summary(lm(lt(G)~lt(Vg_mean)))
+b = coef(lm(lt(G)~lt(Vg_mean)))[2]
+null_b = vector("numeric", 10000)
+for(i in 1:10000)
+  null_b[i] = coef(lm(lt(G[perm <- sample(1:7), perm])~lt(Vg_mean)))[2]
+sum(null_b >= b)/length(null_b)
+hist(null_b ,breaks = 80, xlim = c(0.5, 3))
+abline(v = b)
 
 line = 2.5
 cex = 2
@@ -362,6 +375,10 @@ Vg_GP = 0.5 * Va_GP + 0.25 * Vd_GP
 Vg_GP_mean  = aaply(Vg_GP, c(2, 3), mean)
 Vg_GP_lower = aaply(Vg_GP, c(2, 3), quantile, 0.025)
 Vg_GP_upper = aaply(Vg_GP, c(2, 3), quantile, 0.975)
+
+MatrixCompare(Va_GP_mean, G)
+MatrixCompare(Vd_GP_mean, G)
+MatrixCompare(Vg_GP_mean, G)
 
 g_predict_GP = function() {
   plot(lt(G)~lt(Vg_GP_mean), pch = 19, 
@@ -497,13 +514,16 @@ growth_prediction = reshape2::melt(data.frame(trait = as.factor(growth_traits),
 
 library(scales)
 
-growth_observed_plot = ggplot() + scale_x_discrete(labels = paste("Week", 1:7)) + labs(y = "Weekly growth (g)", x = "Start week") + geom_line(size = 1, data = filter(growth_prediction, Type == "Observed"), aes(trait, value, group = Line, color = Line)) + theme_cowplot()
-save_plot("data/growth_LG_SM_F3.png", growth_observed_plot, base_height = 7, base_aspect_ratio = 2)
+growth_observed_plot = ggplot() + scale_x_discrete(labels = paste("Week", 1:7)) + 
+  labs(y = "Weekly growth (g)", x = "Start week") + 
+  geom_line(size = 1, data = filter(growth_prediction, Type == "Observed"), 
+            aes(trait, value, group = Line, color = Line)) + theme_cowplot()
+save_plot("data/growth_LG_SM_F3.pdf", growth_observed_plot, base_height = 6, base_aspect_ratio = 1.5)
 
 par(mar = c(0, 0, 0, 0))
 g_plot = ~corrplot.mixed(cov2cor(G),       upper = "ellipse", mar = c(0, 0, 0, 0))
 growth_curves_cov = plot_grid(growth_observed_plot, g_plot, labels = LETTERS[1:2], ncol = 2)
-save_plot("data/growth_LG_SM_F3_covF3.png", growth_curves_cov, base_height = 6, base_aspect_ratio = 1.5, ncol = 2)
+save_plot("data/growth_LG_SM_F3_covF3.pdf", growth_curves_cov, base_height = 6, base_aspect_ratio = 1.5, ncol = 2)
 
 growth_observed_parentals_plot = ggplot() + scale_x_discrete(labels = paste("Week", 1:7)) + labs(y = "Weekly growth (g)", x = "Start week") + geom_line(size = 1, data = filter(growth_prediction, Type == "Observed", Line != "F3"), aes(trait, value, group = Line, color = Line)) + scale_color_manual(values=c("#00BA38", "#619CFF")) + theme_cowplot()
 save_plot("data/growth_LG_SM.png", growth_observed_parentals_plot, base_height = 7, base_aspect_ratio = 2)
@@ -522,7 +542,7 @@ growth_observed_parentals_Dz2_plot = ggplot() +
   geom_line(data = data.frame(trait = as.factor(growth_traits), dz = d_z), aes(trait, dz, group = 1)) +
   geom_line(data = data.frame(trait = as.factor(growth_traits), dz = dz_w_scaled), aes(trait, dz, group = 1), color =  "red") +
   annotate("text", x = 3.5, y = 5.5, label = "Phenotypic\ndivergence") + 
-  annotate("text", x = 3.9, y = 3.4, label = "Estimated\nPhenotypic\ndivergence", color = "red")
+  annotate("text", x = 3.9, y = 3.4, label = "Expected\nPhenotypic\ndivergence", color = "red")
 save_plot("data/growth_LG_SM_DZ2.png", growth_observed_parentals_Dz2_plot, base_height = 7, base_aspect_ratio = 2)
 
 
