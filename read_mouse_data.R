@@ -1,4 +1,6 @@
 if(!require(rstan)){install.packages("rstan"); library(rstan)}
+options(mc.cores = parallel::detectCores())
+rstan_options(auto_write = TRUE)
 if(!require(plyr)){install.packages("plyr"); library(plyr)}
 if(!require(dplyr)){install.packages("dplyr"); library(dplyr)}
 if(!require(tidyr)){install.packages("tidyr"); library(tidyr)}
