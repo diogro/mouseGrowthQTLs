@@ -4,8 +4,10 @@ source('read_mouse_data.R')
 #Rdatas_folder = "~/gdrive/LGSM_project_Rdatas/"
 Rdatas_folder = "./Rdatas/"
 
-install_load("doMC", "lme4qtl", "qvalue")
-registerDoMC(10)
+if(!require(doMC)){install.packages("doMC"); library(doMC)}
+if(!require(lme4qtl)){install.packages("lme4qtl"); library(lme4qtl)}
+if(!require(qvalue)){install.packages("qvalue"); library(qvalue)}
+registerDoMC(3)
 
 area_data = inner_join(area_phen_std,
                        area_markers,

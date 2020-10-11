@@ -1,10 +1,13 @@
 if(!require(rstan)){install.packages("rstan"); library(rstan)}
+options(mc.cores = parallel::detectCores())
+rstan_options(auto_write = TRUE)
 if(!require(plyr)){install.packages("plyr"); library(plyr)}
 if(!require(dplyr)){install.packages("dplyr"); library(dplyr)}
 if(!require(tidyr)){install.packages("tidyr"); library(tidyr)}
 if(!require(readr)){install.packages("readr"); library(readr)}
 if(!require(lme4)){install.packages("lme4"); library(lme4)}
-if(!require(qvalue)){source("https://bioconductor.org/biocLite.R"); biocLite("qvalue"); library(qvalue)}
+if(!require(qvalue)){if (!requireNamespace("BiocManager", quietly = TRUE))
+  install.packages("BiocManager"); BiocManager::install("qvalue"); library(qvalue)}
 if(!require(lmerTest)){devtools::install_github("runehaubo/lmerTest"); library(lmerTest)}
 if(!require(ggplot2)){devtools::install_github("tidyverse/ggplot2"); library(ggplot2)}
 if(!require(cowplot)){devtools::install_github("wilkelab/cowplot"); library(cowplot); theme_set(theme_cowplot())
@@ -13,7 +16,7 @@ if(!require(gridGraphics)){install.packages("gridGraphics"); library(gridGraphic
 if(!require(viridis)){install.packages("viridis"); library(viridis)}
 if(!require(corrplot)){install.packages("corrplot"); library(corrplot)}
 if(!require(purrr)){install.packages("purrr"); library(purrr)}
-if(!require(evolqg)){install.packages("evolqg"); library(evolqg)}
+if(!require(evolqg)){devtools::install_github("diogro/evolqg"); library(evolqg)}
 if(!require(doMC)){install.packages("doMC"); library(doMC)}
 if(!require(here)){install.packages("here"); library(here)}
 
@@ -66,7 +69,7 @@ loci_per_chrom = laply(chroms, function(chrom) ncol(markers_list[[chrom]][-1])/3
 ##growth traits
 
 raw.growth_phen = read_csv("data/growth traits/F3Phenotypes_further corrected family data_corrected litter sizes.csv")
-raw.growth_phen = tbl_df(select(raw.growth_phen, c(ID, WEEK1:WEEK10)))
+raw.growth_phen = tibble::as_tibble(select(raw.growth_phen, c(ID, WEEK1:WEEK10)))
 
 growth_phen = inner_join(mouse_meta, raw.growth_phen, by = "ID") %>% 
   semi_join(markers, by = "ID") %>% 

@@ -1,7 +1,7 @@
 #setwd("/home/diogro/projects/mouse-qtls")
 source('read_mouse_data.R')
 
-ncores = 8
+ncores = 3
 registerDoMC(ncores)
 options(mc.cores = ncores)
 setMKLthreads(ncores)
@@ -271,20 +271,7 @@ write.csv(MatrixCompare(Vg_mean, Vd_mean), file = "./data/TalkStuff/Va_Vd_compar
 # write.csv(MatrixCompare(G, G_nurse), file = "./data/TalkStuff/GFamily_Gnurse_comparison.csv")
 #write.csv(MatrixCompare(G_dam, G_nurse), file = "./data/TalkStuff/Gdam_Gnurse_comparison.csv")
 
-g_predict = function() {plot(lt(G)~lt(Vg_mean), pch = 19, 
-     ylab = "Mixed model\nG-matrix", xlab = "Genetic covariances predicted\n from pleiotropic vectors", 
-     main = "", xlim = c(-0.22, 0.55), ylim = c(-0.22, 0.55))
-segments(x0 = lt(Vg_lower), y0 = lt(G), x1 = lt(Vg_upper), y1 = lt(G))
-segments(x0 = lt(Vg_mean), y0 = lt(G_lower), x1 = lt(Vg_mean), y1 = lt(G_upper))
-points(diag(G)~diag(Vg_mean), col = "tomato3", pch = 19)
-abline(lm(lt(G)~lt(Vg_mean)))
-abline(0, 1, col = "blue")
-abline(v = 0)
-abline(h = 0)
-text(0.2, 0.12, "Identity", col = "blue")
-text(0.25, 0.35, "Variances", col = "tomato3")
-text(0.1, -0.05, "Co-variances")}; g_predict()
-par(mfrow = c(1, 1))
+
 
 ## Significance of the regression
 summary(lm(lt(G)~lt(Vg_mean)))
@@ -296,20 +283,38 @@ sum(null_b >= b)/length(null_b)
 hist(null_b ,breaks = 80, xlim = c(0.5, 3))
 abline(v = b)
 
-line = 2.5
-cex = 2
-las =2
-padj = -10.5
-png("data/growth_cov_prediction_composite.png", width = 900, height = 900)
-par(cex.lab=1.5, cex.axis=1.5, cex.main=1.5, cex.sub=1.5)
-layout(matrix(c(1,2,3, 4), 2, 2, byrow = TRUE))
-corrplot.mixed(cov2cor(Va_mean), upper = "ellipse", mar = c(0, 0, 2, 0), main = "Additive correlations")
+g_predict = function() {plot(lt(G)~lt(Vg_mean), pch = 19, 
+                             ylab = "", xlab = "", 
+                             main = "", xlim = c(-0.22, 0.55), ylim = c(-0.22, 0.55))
+  segments(x0 = lt(Vg_lower), y0 = lt(G), x1 = lt(Vg_upper), y1 = lt(G))
+  segments(x0 = lt(Vg_mean), y0 = lt(G_lower), x1 = lt(Vg_mean), y1 = lt(G_upper))
+  points(diag(G)~diag(Vg_mean), col = "tomato3", pch = 19)
+  abline(lm(lt(G)~lt(Vg_mean)))
+  abline(0, 1, col = "blue")
+  abline(v = 0)
+  abline(h = 0)
+  text(0.2, 0.12, "Identity", col = "blue", cex = 2.9)
+  text(0.265, 0.36, "Variances", col = "tomato3", cex = 2.9)
+  text(0.13, -0.05, "Co-variances", cex = 2.9)
+  mtext("Genetic covariances predicted\n from pleiotropic vectors",side=1, line = 7, cex = 2.5)
+  mtext("Mixed model\nFull-Sib matrix",side=2, line = 4, cex = 2.5)
+  }; g_predict()
+par(mfrow = c(1, 1))
+
+line = 2
+cex = 2.9
+las = 1.1
+padj = -16
+png("data/growth_cov_prediction_composite.png", width = 1800, height = 1800)
+par(cex.lab=4, cex.axis=2, cex.main=3, cex.sub=4)
+layout(matrix(c(1, 2,3, 4), 2, 2, byrow = TRUE))
+corrplot.mixed(cov2cor(Va_mean), upper = "ellipse", mar = c(0, 2, 2, 0), main = "Additive correlations", number.cex=3)
 mtext("A", side=2, line=line, cex=cex, las=las, padj = padj)
-corrplot.mixed(cov2cor(Vd_mean), upper = "ellipse", mar = c(0, 0, 2, 0), main = "Dominance correlations")
+corrplot.mixed(cov2cor(Vd_mean), upper = "ellipse", mar = c(0, 2, 2, 0), main = "Dominance correlations", number.cex=3)
 mtext("B", side=2, line=line, cex=cex, las=las, padj = padj)
-corrplot.mixed(cov2cor(Vg_mean), upper = "ellipse", mar = c(0, 0, 2, 0), main = "Genetic correlations")
+corrplot.mixed(cov2cor(Vg_mean), upper = "ellipse", mar = c(0, 2, 2, 1), main = "Genetic correlations", number.cex=3)
 mtext("C", side=2, line=line, cex=cex, las=las, padj = padj)
-par(mar = c(6, 7, 1, 1), mgp=c(4,1,0))
+par(mar = c(8.5, 7, 1, 1), mgp=c(4,1,0))
 g_predict()
 mtext("D", side=2, line=line, cex=cex, las=las, padj = padj)
 dev.off()
@@ -684,7 +689,7 @@ d_pleiotropic_partition_plot =
   scale_y_continuous(limits = c(0, 0.35)) + background_grid(major = "x", minor = "none") + 
   theme(legend.position = "none") +
   geom_point(data = significantMarkerPos, aes(x = id, y = size_dm + 0.015), color = "tomato3", size = 2) +
-  labs(x = "Marker", y = "Squared contribution to\n scaled pleitropic vector") +
+  labs(x = "Chromossome Start", y = "Squared contribution to\n scaled pleitropic vector") +
   scale_x_discrete(breaks = a_pleiotropic_partition[markerMatrix[markerMatrix$marker==1,"id"],"id"],
                    labels = 1:19)
 pleiotropic_Effects_ad_dm = plot_grid(a_pleiotropic_partition_plot, d_pleiotropic_partition_plot, ncol = 1, labels = c("A", "B"))
