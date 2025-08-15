@@ -4,9 +4,7 @@
 *.Rdata
 *.csv
 *.xls
-data/*
 mcmcqtl/*
-data
 .ipynb_checkpoints
 .ipynb_checkpoints/*
 .httr-oauth
