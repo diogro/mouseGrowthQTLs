@@ -17,3 +17,4 @@ animation/*
 *.rds
 Rdatas/
 Rdatas
+.DS_Store
